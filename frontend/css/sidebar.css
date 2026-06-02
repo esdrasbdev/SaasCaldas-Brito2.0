@@ -1,0 +1,207 @@
+/* Estilos da Barra Lateral (Sidebar) */
+
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: var(--branco);
+  border-right: 1px solid var(--cinza-borda);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.02);
+}
+
+/* Cabeçalho da Sidebar (Logo) */
+.sidebar-header {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid var(--cinza-fundo);
+}
+
+.brand-logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.brand-logo-text span {
+  font-family: 'Playfair Display', serif, var(--fonte-principal);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--azul-escuro);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  transition: color 0.3s ease;
+}
+
+.brand-logo-text small {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--azul-medio);
+  margin-top: 4px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+/* Logo no tema escuro - sempre claro */
+body.dark-mode .brand-logo-text span,
+body.dark-mode .brand-logo-text small {
+  color: #ffffff !important;
+}
+
+/* Navegação (Links) */
+.sidebar-nav {
+  padding: 16px;
+  flex: 1; /* Ocupa o espaço disponível */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--cinza-escuro);
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.nav-item i {
+  width: 20px;
+  text-align: center;
+  color: var(--cinza-medio);
+  transition: color 0.2s;
+}
+
+.nav-item:hover {
+  background-color: var(--azul-claro);
+  color: var(--azul-medio);
+  transform: translateX(4px); /* Movimento sutil para a direita */
+}
+
+.nav-item:hover i {
+  color: var(--azul-medio);
+}
+
+.nav-item.active {
+  background-color: var(--azul-claro);
+  color: var(--azul-medio);
+  font-weight: 600;
+}
+
+/* Grupos de itens (Título de seção) */
+.sidebar-header-group {
+  padding: 24px 16px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cinza-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Rodapé da Sidebar (Perfil do Usuário) */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--cinza-borda);
+  background-color: transparent; /* Remove fundo para manter consistência na troca de tema */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-theme-inline {
+  background: none;
+  border: none;
+  color: var(--cinza-medio);
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 4px;
+}
+
+.btn-theme-inline:hover {
+  background: var(--cinza-fundo);
+  color: var(--azul-medio);
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--azul-escuro);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.user-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.user-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--texto-primario, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tema escuro - nome do usuário */
+body.dark-mode .user-name {
+  color: #ffffff !important;
+}
+
+.user-role {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--cinza-medio);
+  margin-top: 2px;
+}
+
+.btn-logout {
+  background: none;
+  border: none;
+  color: var(--cinza-medio);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+#btn-theme-toggle:hover {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--azul-medio);
+}

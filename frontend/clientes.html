@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clientes - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <!-- Configuração de Ambiente (Obrigatório) -->
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+    
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Gestão de Clientes</h1>
+          <p>Consulte, edite e gerencie sua base de contatos.</p>
+        </div>
+        <button id="btn-novo-cliente" class="btn-primary">
+          <i class="fa-solid fa-plus"></i> Novo Cliente
+        </button>
+      </div>
+
+      <!-- Modal / Formulário (Oculto por padrão) -->
+      <div id="modal-container" class="modal-overlay" style="display: none;">
+        <!-- Removido 'card-section' e estilo inline para usar classes CSS novas -->
+        <div class="modal-content">
+          <form id="form-cliente">
+            <div class="modal-header">
+              <h2 id="modal-titulo">Novo Cliente</h2>
+            </div>
+
+            <div class="modal-body">
+              <input type="hidden" id="cliente-id">
+              
+              <!-- Linha 1: Dados Principais -->
+              <div class="form-grid-main">
+                <div class="form-group">
+                  <label for="cliente-nome">Nome / Razão Social *</label>
+                  <input type="text" id="cliente-nome" placeholder="Ex: João da Silva" required>
+                </div>
+                <div class="form-group">
+                  <label for="cliente-documento">CPF/CNPJ *</label>
+                  <input type="text" id="cliente-documento" placeholder="Apenas números">
+                </div>
+                <div class="form-group">
+                  <label for="cliente-telefone">Telefone</label>
+                  <input type="text" id="cliente-telefone" placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group">
+                  <label for="cliente-tipo">Tipo</label>
+                  <select id="cliente-tipo">
+                    <option value="PF">Física</option>
+                    <option value="PJ">Jurídica</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="cliente-advogado">Advogado Responsável</label>
+                  <select id="cliente-advogado">
+                    <option value="">Selecione...</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Linha 2: Contato e Pessoais -->
+              <div class="form-grid-contact">
+                <div class="form-group">
+                  <label for="cliente-email">E-mail</label>
+                  <input type="email" id="cliente-email" placeholder="email@exemplo.com">
+                </div>
+                <div class="form-group">
+                  <label>Profissão</label>
+                  <input type="text" id="cliente-profissao" placeholder="Ex: Advogado">
+                </div>
+                <div class="form-group"><label>Nacionalidade</label><input type="text" id="cliente-nacionalidade"></div>
+                <div class="form-group"><label>Estado Civil</label><input type="text" id="cliente-estado-civil"></div>
+              </div>
+
+              <!-- Seção Endereço Compacta -->
+              <h3 class="section-title">Endereço</h3>
+              
+              <div class="form-grid-endereco">
+                <div class="form-group"><label>CEP</label><input type="text" id="cliente-cep"></div>
+                <div class="form-group"><label>Logradouro</label><input type="text" id="cliente-endereco"></div>
+                <div class="form-group"><label>Número</label><input type="text" id="cliente-numero"></div>
+                <div class="form-group"><label>Bairro</label><input type="text" id="cliente-bairro"></div>
+                <div class="form-group"><label>Cidade</label><input type="text" id="cliente-cidade"></div>
+                <div class="form-group"><label>UF</label><input type="text" id="cliente-estado"></div>
+              </div>
+
+              <!-- Seção Previdenciário Compacta -->
+              <h3 class="section-title">Acesso INSS / GOV.BR</h3>
+              
+              <div class="form-grid-inss">
+                <div class="form-group"><label>Login (CPF)</label><input type="text" id="cliente-inss-cpf" disabled></div>
+                <div class="form-group"><label>Senha Meu INSS</label><input type="text" id="cliente-inss-senha" placeholder="Senha de acesso"></div>
+              </div>
+              <p class="form-note"><i class="fa-solid fa-lock"></i> Dados armazenados para uso exclusivo do escritório.</p>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+              <button type="submit" class="btn-primary">Salvar Cliente</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Tabela (View) -->
+      <div id="view-tabela-container"></div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script><script type="module" src="js/auth.js"></script><script type="module" src="js/guard.js"></script><script type="module" src="js/sidebar.js"></script><script type="module" src="js/clientes.js"></script>
+</body>
+</html>

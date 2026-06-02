@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audiências - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+    
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Gestão de Audiências</h1>
+          <p>Controle de pautas e compromissos judiciais.</p>
+        </div>
+        <button id="btn-nova-audiencia" class="btn-primary">
+          <i class="fa-solid fa-plus"></i> Nova Audiência
+        </button>
+      </div>
+
+      <!-- Modal -->
+      <div id="form-container" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <form id="form-audiencia">
+            <div class="modal-header">
+              <h2>Nova Audiência</h2>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Cliente Vinculado (Opcional)</label>
+                <select id="cliente-select">
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Data</label>
+                  <input type="date" id="audiencia-data">
+                </div>
+                <div class="form-group">
+                  <label>Hora</label>
+                  <input type="time" id="audiencia-hora">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label>Local / Link</label>
+                  <input type="text" id="audiencia-local" placeholder="Ex: Vara do Trabalho">
+                </div>
+                <div class="form-group">
+                  <label>Tipo</label>
+                  <select id="audiencia-tipo">
+                    <option value="Conciliação">Conciliação</option>
+                    <option value="Instrução">Instrução</option>
+                    <option value="Una">Una</option>
+                    <option value="Julgamento">Julgamento</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Observações</label>
+                <textarea id="audiencia-obs" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+              <button type="submit" class="btn-primary">Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Tipo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-audiencias">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script><script type="module" src="js/auth.js"></script><script type="module" src="js/guard.js"></script><script type="module" src="js/sidebar.js"></script><script type="module" src="js/audiencias.js"></script>
+</body>
+</html>

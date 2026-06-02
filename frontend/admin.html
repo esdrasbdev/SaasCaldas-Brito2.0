@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administração - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+    
+    <main class="main-content">
+      <div class="page-header">
+        <h1><i class="fa-solid fa-users-gear"></i> Configurações</h1>
+      </div>
+      
+      <div class="dashboard-content-grid">
+        <div class="card-section">
+          <h2>Convidar Novo Usuário</h2>
+          <form id="form-convite">
+            <div class="form-group">
+              <label for="usuario-nome">Nome</label>
+              <input type="text" id="usuario-nome" required>
+            </div>
+            <div class="form-group">
+              <label for="usuario-email">Email</label>
+              <input type="email" id="usuario-email" required>
+            </div>
+            <div class="form-group">
+              <label for="usuario-role">Permissão</label>
+              <select id="usuario-role" required>
+                <option value="SECRETARIA">Secretária</option>
+                <option value="ESTAGIARIO">Estagiário</option>
+                <option value="ESTAGIARIA">Estagiária</option>
+                <option value="ADVOGADO">Advogado</option>
+                <option value="ADVOGADA">Advogada</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-primary"><i class="fa-solid fa-paper-plane"></i> Enviar Convite</button>
+          </form>
+        </div>
+
+        <div class="card-section wide">
+          <h2>Usuários do Sistema</h2>
+          <div class="table-responsive">
+            <table class="recent-table">
+              <thead>
+                <tr><th>Nome</th><th>Email</th><th>Permissão</th><th>Status</th></tr>
+              </thead>
+              <tbody id="lista-usuarios"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script><script type="module" src="js/auth.js"></script><script type="module" src="js/guard.js"></script><script type="module" src="js/sidebar.js"></script><script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processos - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <script src="js/env.js"></script>
+
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+    
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Processos Jurídicos</h1>
+          <p>Acompanhamento detalhado de CNJ, prazos e andamentos.</p>
+        </div>
+        <button id="btn-novo-processo" class="btn-primary">
+          <i class="fa-solid fa-plus"></i> Novo Processo
+        </button>
+      </div>
+      
+      <!-- Container Principal (Controlado pelo MVC) -->
+      <div id="view-processos-container"></div>
+
+      <!-- Modal Edit/Novo + View Processo (Reutilizado, modo view) -->
+      <div id="modal-container" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <form id="form-processo">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h2 id="modal-titulo">Novo Processo</h2>
+              <button type="button" class="btn-close-modal" onclick="ProcessoView.fecharModal()" style="background:none; border:none; color:var(--cinza-medio); font-size:1.4rem; cursor:pointer;">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="proc-id">
+              <!-- Edit Mode -->
+              <div id="edit-section">
+                <div class="form-group">
+                  <label>Número CNJ *</label>
+                  <input type="text" id="proc-cnj" required placeholder="0000000-00.0000.0.00.0000">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label>Tribunal</label>
+                    <input type="text" id="proc-tribunal" placeholder="TJSP">
+                  </div>
+                  <div class="form-group">
+                    <label>Vara</label>
+                    <input type="text" id="proc-vara" placeholder="1ª Cível">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Cliente *</label>
+                  <select id="proc-cliente" required>
+                    <option value="">Carregando...</option>
+                  </select>
+                </div>
+              </div>
+              <!-- View Mode -->
+              <div id="view-section" style="display: none;">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="label">Nº CNJ</span>
+                    <span id="view-cnj"></span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Cliente</span>
+                    <span id="view-cliente"></span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Status</span>
+                    <span id="view-status" class="status-badge"></span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Tribunal</span>
+                    <span id="view-tribunal"></span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Vara</span>
+                    <span id="view-vara"></span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Criado</span>
+                    <span id="view-criado"></span>
+                  </div>
+                </div>
+                <h3>Audiências</h3>
+                <div id="view-audiencias">Carregando...</div>
+                <h3>Perícias</h3>
+                <div id="view-pericias">Carregando...</div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="btn-cancelar" class="btn-secondary">Fechar</button>
+              <button type="submit" id="btn-salvar" class="btn-primary">Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/processos.js"></script>
+</body>
+</html>
+        </div>
+        
+        <div class="filtros-section">
+          <select id="filtro-status">
+            <option value="">Todos Status</option>
+            <option value="ATIVO">Ativo</option>
+            <option value="ARQUIVADO">Arquivado</option>
+          </select>
+          <input type="text" id="busca-processos" placeholder="Buscar por CNJ ou cliente...">
+        </div>
+        
+        <div id="lista-processos" class="processos-grid"></div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/processos.js"></script>
+
+</body>
+</html>

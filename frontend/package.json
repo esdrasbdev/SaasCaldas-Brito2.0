@@ -1,0 +1,10 @@
+{
+  "name": "juridico-frontend",
+  "version": "1.0.0",
+  "description": "Frontend do Sistema de Gestão Jurídica - servido estaticamente",
+  "scripts": {
+    "serve": "npx serve .",
+"dev":"npx serve . -p 3000","serve":"npx serve . --listen 3000"
+  },
+  "author": "Antonio e Priscila - Escritório de Advocacia"
+}

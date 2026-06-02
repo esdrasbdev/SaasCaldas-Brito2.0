@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jurídico - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+    <!-- Env vars required for supabase -->
+    <script src="js/env.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav id="sidebar" class="sidebar"></nav>
+
+        <!-- Conteúdo Principal -->
+        <main class="main-content" id="dashboard-placeholder">
+        
+        <!-- Novo Banner Premium -->
+        <div class="welcome-banner">
+            <div>
+                <h1 id="saudacao">Bem-vindo(a)</h1>
+                <p><span id="data-atual">Carregando data...</span> | Tenha um excelente dia de trabalho.</p>
+            </div>
+        </div>
+
+        <!-- Grid de KPIs (Indicadores) -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon icon-blue"><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="kpi-info">
+                    <h3>Processos Ativos</h3>
+                    <span id="kpi-processos" class="kpi-value">...</span>
+                    <span class="kpi-sub">Total registrado</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon icon-green"><i class="fa-solid fa-users"></i></div>
+                <div class="kpi-info">
+                    <h3>Clientes</h3>
+                    <span id="kpi-clientes" class="kpi-value">...</span>
+                    <span class="kpi-sub">Base ativa</span>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon icon-orange"><i class="fa-solid fa-gavel"></i></div>
+                <div class="kpi-info">
+                    <h3>Audiências Hoje</h3>
+                    <span id="kpi-audiencias" class="kpi-value">0</span>
+                    <span class="kpi-sub">Agendadas</span>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-icon icon-purple"><i class="fa-solid fa-clock"></i></div>
+                <div class="kpi-info">
+                    <h3>Prazos Próximos</h3>
+                    <span id="kpi-prazos" class="kpi-value">0</span>
+                    <span class="kpi-sub">Próx. 7 dias</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content-grid">
+            <!-- Ações Rápidas -->
+            <div class="card-section">
+                <h2>Acesso Rápido</h2>
+                <div class="quick-actions">
+                    <a href="clientes.html" class="action-card">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Novo Cliente</span>
+                    </a>
+                    <a href="agenda.html" class="action-card">
+                        <i class="fa-solid fa-calendar-plus"></i>
+                        <span>Agendar</span>
+                    </a>
+                    <a href="documentos.html" class="action-card">
+                        <i class="fa-solid fa-file-upload"></i>
+                        <span>Upload Doc</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tabela Recentes -->
+            <div class="card-section wide">
+                <h2>Últimos Processos Atualizados</h2>
+                <div class="table-responsive">
+                    <table class="recent-table">
+                        <thead>
+                            <tr>
+                                <th>Processo / Cliente</th>
+                                <th>Status</th>
+                                <th>Data</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-recentes">
+                            <tr><td colspan="4" class="text-center">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </main>
+    </div>
+
+    <!-- SCRIPTS OBRIGATÓRIOS: O atributo type="module" é essencial para imports funcionarem -->
+    <script type="module" src="js/supabase.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/sidebar.js"></script>
+    <script type="module" src="js/guard.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

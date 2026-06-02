@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processo - ID - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+    
+    <main class="main-content">
+      <div id="loading-screen" class="loading-overlay">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Carregando processo...</p>
+      </div>
+      
+      <div id="processo-detalhe" style="display: none;">
+        <div class="page-header">
+          <h1 id="processo-titulo">Processo <span id="numero-cnj-detalhe"></span></h1>
+          <div class="page-actions">
+            <a href="processos.html" class="btn btn-secondary">
+              <i class="fa-solid fa-list"></i> Lista Processos
+            </a>
+            <button id="btn-editar-processo" class="btn btn-primary">
+              <i class="fa-solid fa-edit"></i> Editar
+            </button>
+          </div>
+        </div>
+        
+        <div class="processo-info-grid">
+          <div class="info-card">
+            <h3>Dados Gerais</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Status</span>
+                <span id="status-detalhe" class="status-badge"></span>
+              </div>
+              <div class="info-item">
+                <span class="label">Tribunal</span>
+                <span id="tribunal-detalhe"></span>
+              </div>
+              <div class="info-item">
+                <span class="label">Vara</span>
+                <span id="vara-detalhe"></span>
+              </div>
+              <div class="info-item">
+                <span class="label">Cliente</span>
+                <span id="cliente-nome"></span>
+              </div>
+              <div class="info-item">
+                <span class="label">Advogado</span>
+                <span id="advogado-nome"></span>
+              </div>
+              <div class="info-item">
+                <span class="label">Criado em</span>
+                <span id="criado-em"></span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <h3>Audiências</h3>
+            <div id="lista-audiencias">Carregando audiências...</div>
+          </div>
+          
+          <div class="info-card">
+            <h3>Perícias</h3>
+            <div id="lista-pericias">Carregando perícias...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/processo-detalhe.js"></script>
+
+</body>
+</html>

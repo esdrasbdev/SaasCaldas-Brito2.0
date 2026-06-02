@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "name": "juridico-caldas-brito",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/publicacoes/sincronizar",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

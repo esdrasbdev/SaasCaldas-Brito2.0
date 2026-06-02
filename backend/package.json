@@ -1,0 +1,22 @@
+{
+  "name": "juridico-backend",
+  "version": "1.0.0",
+  "description": "Backend Node/Express do Sistema de Gestão Jurídica com Supabase e Escavador",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "node-cron": "^3.0.3",
+    "resend": "^3.3.0",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5"
+  },
+  "author": "Antonio e Priscila - Escritório de Advocacia",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
