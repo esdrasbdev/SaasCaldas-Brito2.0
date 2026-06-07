@@ -70,10 +70,11 @@ const Sidebar = {
         <li><a href="pericias.html" class="nav-item"><i class="fa-solid fa-magnifying-glass"></i> Perícias</a></li>
         <li><a href="atendimentos.html" class="nav-item"><i class="fa-solid fa-comments"></i> Atendimentos</a></li>
         
-        <li class="sidebar-header-group">ADMINISTRAÇÃO</li>
+        <li class="sidebar-header-group admin-group-label">ADMINISTRAÇÃO</li>
         <li><a href="publicacoes.html" class="nav-item"><i class="fa-solid fa-newspaper"></i> Publicações</a></li>
         <li><a href="admin.html" class="nav-item"><i class="fa-solid fa-gear"></i> Usuários</a></li>
       </ul>
+
       
       <div class="sidebar-footer">
         <div class="user-profile">
@@ -101,6 +102,7 @@ const Sidebar = {
     if (!role) return;
 
     const permissoes = {
+
       'index.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'dashboard.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'clientes.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
@@ -108,22 +110,35 @@ const Sidebar = {
       'agenda.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'audiencias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA'],
       'pericias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA'],
-      'atendimentos.html': ['ADMIN', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+      'atendimentos.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'publicacoes.html': ['ADMIN'],
       'admin.html': ['ADMIN']
     };
+
+    let adminVisible = false;
 
     this.navLinks.forEach(link => {
       link.classList.add('nav-item');
       const href = link.getAttribute('href').replace(/^(\.\/|\/)/, '').trim();
       const allowedRoles = permissoes[href];
 
-      link.parentElement.style.display = allowedRoles && allowedRoles.includes(role) ? 'block' : 'none';
+      const allowed = allowedRoles && allowedRoles.includes(role);
+      link.parentElement.style.display = allowed ? 'block' : 'none';
+
+      // ADMINISTRAÇÃO: título só deve aparecer se algum item desse grupo estiver visível
+      if (href === 'publicacoes.html' || href === 'admin.html') {
+        if (allowed) adminVisible = true;
+      }
+
 
       if (window.location.pathname.includes(href)) {
         link.classList.add('active');
       }
     });
+
+    const adminLabel = this.sidebar.querySelector('.admin-group-label');
+    if (adminLabel) adminLabel.style.display = adminVisible ? 'block' : 'none';
+
   },
 
   atualizarInfoUsuario() {

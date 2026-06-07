@@ -96,9 +96,8 @@ const AudienciaView = {
       const dataTxt = dataObj
         ? dataObj.toLocaleDateString('pt-BR')
         : '-';
-      const horaTxt = dataObj
-        ? dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        : '';
+const horaTxt = dataObj ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(dataObj) : '';
+
 
       const clienteNome = a.processos?.clientes?.nome || '—';
       const numeroCnj = a.processos?.numero_cnj || 'S/N';

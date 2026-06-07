@@ -71,3 +71,90 @@ export function debounce(fn, delay = 400) {
 // Estado global para evitar race conditions
 export const loadingState = { activeRequests: 0 };
 
+// ----------------------------
+// Confirmação premium (Promise<boolean>)
+// ----------------------------
+export function confirmarExclusao({
+  title = 'Excluir registro?',
+  message = 'Tem certeza que deseja excluir? Esta ação não pode ser desfeita.',
+  confirmText = 'Sim, excluir',
+  cancelText = 'Cancelar',
+  danger = true
+} = {}) {
+  const overlayId = 'confirm-delete-overlay';
+  const existing = document.getElementById(overlayId);
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = overlayId;
+  overlay.className = 'modal-overlay';
+
+  // Modal usa o mesmo design premium já existente.
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 520px; padding: 0;">
+      <div class="modal-header" style="display:flex; gap:12px; align-items:flex-start;">
+        <div style="width: 36px; height: 36px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background: ${danger ? '#fee2e2' : 'rgba(37,99,235,0.08)'};">
+          <i class="fa-solid ${danger ? 'fa-triangle-exclamation' : 'fa-circle-info'}" style="color: ${danger ? '#ef4444' : 'var(--azul-medio)'};"></i>
+        </div>
+        <div>
+          <h2 style="margin:0; font-size:1.1rem;">${title}</h2>
+          <p style="margin:8px 0 0; color: var(--cinza-medio); line-height:1.5;">${message}</p>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-secondary" id="${overlayId}-cancel">${cancelText}</button>
+        <button type="button" class="btn btn-primary" id="${overlayId}-confirm" style="background: ${danger ? '#ef4444' : 'var(--azul-medio)'};">
+          ${confirmText}
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  return new Promise((resolve) => {
+    const btnCancel = overlay.querySelector(`#${overlayId}-cancel`);
+    const btnConfirm = overlay.querySelector(`#${overlayId}-confirm`);
+
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    // Bloqueia fechamentos acidentais.
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        // Fundo clicado = cancelar
+        close(false);
+      }
+    });
+
+    btnCancel?.addEventListener('click', () => close(false));
+    btnConfirm?.addEventListener('click', () => close(true));
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter') close(true);
+    };
+
+    document.addEventListener('keydown', onKeyDown, { once: true });
+  });
+}
+
+// Formata hora sempre em 24h (sem AM/PM)
+
+// Recebe Date ou string ISO
+export function formatarHora24h(dateLike) {
+  const d = (dateLike instanceof Date) ? dateLike : new Date(dateLike);
+  if (!d || isNaN(d.getTime())) return '';
+
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  return formatter.format(d);
+}
+
+

@@ -212,11 +212,22 @@ const ProcessoController = {
       } else if (target.classList.contains('btn-edit')) {
         const processo = this.data.find(p => p.id === id);
         ProcessoView.abrirModal(processo, false);
-      } else if (target.classList.contains('btn-delete') && confirm('Excluir?')) {
+      } else if (target.classList.contains('btn-delete')) {
+        const { confirmarExclusao } = await import('./utils.js');
+        const ok = await confirmarExclusao({
+          title: 'Excluir processo?',
+          message: 'Tem certeza que deseja excluir este processo? Esta ação não pode ser desfeita.',
+          confirmText: 'Sim, excluir',
+          cancelText: 'Cancelar',
+          danger: true
+        });
+        if (!ok) return;
+
         await ProcessoModel.deletar(id);
         showToast('Excluído!', 'success');
         await this.loadAll();
       }
+
     };
   },
 

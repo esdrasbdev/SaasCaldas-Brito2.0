@@ -5,7 +5,8 @@
 
 import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
-import { showToast } from './utils.js';
+import { showToast, formatarHora24h } from './utils.js';
+
 
 // ==========================================
 // 1. MODEL
@@ -305,9 +306,15 @@ const AgendaView = {
       return;
     }
 
+    // Observação: hora em 24h (sem AM/PM) via utils.js
+
 
     tbody.innerHTML = eventos.map(evt => {
-      const dataStr = `<strong>${new Date(evt.data).toLocaleDateString('pt-BR')}</strong><br><span class="text-muted">${new Date(evt.data).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>`;
+      const dataStr = `<strong>${new Date(evt.data).toLocaleDateString('pt-BR')}</strong><br><span class="text-muted">${formatarHora24h(evt.data)}</span>`;
+
+
+
+
       const tituloStr = `<div style="font-weight:600; color: var(--azul-escuro)">${evt.titulo}</div><small class="text-muted">${evt.processo !== 'S/N' && evt.processo !== '-' ? 'Proc: ' + evt.processo : (evt.cliente !== '-' ? 'Cliente: ' + evt.cliente : '')}</small>`;
 
       const clientesChips = (evt.participantes?.clientes || []).map(c => `<span style="display:inline-block; background:#f1f5f9; color:#0f172a; padding:4px 8px; border-radius:12px; margin:2px; font-size:0.8rem; border:1px solid #e2e8f0;"><i class=\"fa-solid fa-user\" style=\"margin-right:6px;color:#475569;font-size:0.8rem;\"></i>${c.nome}</span>`).join('');

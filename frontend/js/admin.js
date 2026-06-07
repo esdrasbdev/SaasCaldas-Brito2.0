@@ -213,9 +213,18 @@ const AdminController = {
       }
       
       if (btnDelete) {
-        if (confirm('Tem certeza? Verifique foreign keys primeiro.')) {
+        const { confirmarExclusao } = await import('./utils.js');
+        const ok = await confirmarExclusao({
+          title: 'Excluir usuário?',
+          message: 'Tem certeza que deseja excluir este usuário? Verifique possíveis dependências (foreign keys). Esta ação não pode ser desfeita.',
+          confirmText: 'Sim, excluir',
+          cancelText: 'Cancelar',
+          danger: true
+        });
+        if (ok) {
           try {
             const { error } = await supabase.from('usuarios').delete().eq('id', btnDelete.dataset.id);
+
             if (error) {
               showToast('Falha: ' + error.message + '. Limpe dependências.', 'error');
             } else {

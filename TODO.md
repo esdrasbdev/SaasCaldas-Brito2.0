@@ -1,8 +1,10 @@
-# TODO - Agenda (duplicação ao editar + centralizar mensagem)
+# TODO - Melhorias de estética (confirmação de exclusão)
 
-- [x] Implementar `AgendaModel.atualizar(id, dados)` para fazer UPDATE no mesmo `atendimento` e recriar participantes.
-- [x] Adicionar estado de edição no controller/view (ex.: `AgendaView.editId`) e trocar `criar` por `atualizar` no submit quando em modo edição.
-- [x] Garantir que abrir modal em modo “novo” limpa `editId`.
-- [x] Centralizar visualmente a mensagem "Nenhum agendamento futuro encontrado" no meio da tabela.
+- [ ] Criar helper de modal premium de confirmação no `frontend/js/utils.js` (Promise<boolean>)
+- [x] Atualizar `frontend/js/atendimentos.js` para usar o helper no delete
+- [x] Atualizar `frontend/js/processos.js` para usar o helper no delete
+- [x] Atualizar `frontend/js/admin.js` para usar o helper no delete
 
+- [ ] Ajustar CSS apenas se necessário para o modal de confirmação
+- [ ] Testar exclusões: atendimentos, processos, admin (confirmar e cancelar)
 

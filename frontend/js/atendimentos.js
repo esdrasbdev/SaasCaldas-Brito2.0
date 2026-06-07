@@ -2,6 +2,33 @@ import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 
 const view = {
+  showToast(type, title, message) {
+    const container = document.getElementById('toast-container');
+    const root = container || (() => {
+      const c = document.createElement('div');
+      c.id = 'toast-container';
+      document.body.appendChild(c);
+      return c;
+    })();
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : type === 'warning' ? 'toast-warning' : 'toast-info'}`;
+    toast.innerHTML = `
+      <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-circle-xmark' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i>
+      <div>
+        <div style="font-weight:700; margin-bottom:2px;">${title || ''}</div>
+        <div style="opacity:0.9; font-weight:500; font-size:0.9rem;">${message || ''}</div>
+      </div>
+    `;
+
+    root.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(10px)';
+      setTimeout(() => toast.remove(), 260);
+    }, 3200);
+  },
   container: document.getElementById('lista-atendimentos-container'),
   modal: document.getElementById('modal-atendimento'),
   form: document.getElementById('form-atendimento'),
@@ -48,7 +75,8 @@ const view = {
   },
 
   renderizar(dados) {
-    const isAdmin = AuthAPI.getRole() === 'ADMIN';
+    const role = AuthAPI.getRole();
+    const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
 
     if (!dados || dados.length === 0) {
       this.container.innerHTML = `<div class="card-section"><p class="text-center text-muted">Nenhum atendimento registrado.</p></div>`;
@@ -101,7 +129,7 @@ const view = {
         <td>
           <small class="status-badge" style="background:#f1f5f9; color:#475569;">${resp}</small>
         </td>
-        ${isAdmin ? `
+        ${canEdit ? `
           <td style="text-align: right;">
             <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
               <button class="btn-sm btn-view" data-id="${d.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
@@ -125,7 +153,7 @@ const view = {
                 <th>Cliente</th>
                 <th>Assunto</th>
                 <th>Responsável</th>
-                ${isAdmin ? '<th style="text-align:right">Ações</th>' : ''}
+                ${canEdit ? '<th style="text-align:right">Ações</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -170,6 +198,12 @@ const controller = {
   },
 
   async salvar(e) {
+    const role = AuthAPI.getRole();
+    const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
+    if (!canEdit) {
+      view.showToast('warning', 'Permissão negada', 'Você não tem permissão para salvar atendimentos.');
+      return;
+    }
     e.preventDefault();
 
     if (view.form.classList.contains('mode-view')) return;
@@ -213,10 +247,11 @@ const controller = {
       ? await supabase.from('atendimentos').update(payload).eq('id', atendId)
       : await supabase.from('atendimentos').insert(payload);
 
-    if (error) {
-      alert('Erro: ' + error.message);
-      return;
-    }
+      if (error) {
+        const msg = error.message || 'Erro ao salvar';
+        view.showToast('error', 'Erro ao salvar', msg);
+        return;
+      }
 
     view.modal.style.display = 'none';
     view.form.reset();
@@ -274,6 +309,12 @@ const controller = {
     }
 
     if (btnEdit) {
+      const role = AuthAPI.getRole();
+      const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
+      if (!canEdit) {
+        view.showToast('warning', 'Permissão negada', 'Você não tem permissão para editar atendimentos.');
+        return;
+      }
       const { data, error } = await supabase
         .from('atendimentos')
         .select('*, clientes(nome), usuarios(nome)')
@@ -321,7 +362,23 @@ const controller = {
     }
 
     if (btnDelete) {
-      if (!confirm('Deseja excluir este registro?')) return;
+      const role = AuthAPI.getRole();
+      const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
+      if (!canEdit) {
+        view.showToast('warning', 'Permissão negada', 'Você não tem permissão para excluir atendimentos.');
+        return;
+      }
+
+      const { confirmarExclusao } = await import('./utils.js');
+      const ok = await confirmarExclusao({
+        title: 'Excluir atendimento?',
+        message: 'Tem certeza que deseja excluir este atendimento? Esta ação não pode ser desfeita.',
+        confirmText: 'Sim, excluir',
+        cancelText: 'Cancelar',
+        danger: true
+      });
+      if (!ok) return;
+
 
       const { error } = await supabase
         .from('atendimentos')
@@ -329,7 +386,8 @@ const controller = {
         .eq('id', btnDelete.dataset.id);
 
       if (error) {
-        alert('Erro ao excluir: ' + error.message);
+        const msg = error.message || 'Erro ao excluir';
+        view.showToast('error', 'Erro ao excluir', msg);
         return;
       }
 
