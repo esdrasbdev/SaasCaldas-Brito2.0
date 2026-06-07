@@ -8,53 +8,133 @@ const view = {
   btnNovo: document.getElementById('btn-novo-atendimento'),
   btnCancelar: document.getElementById('btn-cancelar'),
   selectCliente: document.getElementById('atend-cliente'),
-  
+
   init() {
-    this.btnNovo.onclick = () => this.modal.style.display = 'flex';
-    this.btnCancelar.onclick = () => this.modal.style.display = 'none';
+    this.btnNovo.onclick = () => {
+      this.modal.style.display = 'flex';
+      this.form.classList.remove('mode-view');
+      Array.from(this.form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));
+
+      const submitBtn = this.form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.style.display = 'block';
+
+      const headerEl = this.modal.querySelector('.modal-header h2');
+      if (headerEl) headerEl.textContent = 'Registrar Interação';
+
+      const atendIdEl = document.getElementById('atend-id');
+      if (atendIdEl) atendIdEl.value = '';
+
+      this.form.reset();
+    };
+
+    this.btnCancelar.onclick = () => {
+      this.modal.style.display = 'none';
+    };
+
     this.form.onsubmit = controller.salvar;
-    
     this.container.addEventListener('click', controller.handleClick);
+  },
+
+  getRespNome(d) {
+    // Depende do formato do select no Supabase.
+    // Tentamos algumas formas.
+    const u = d?.usuarios || d?.usuario || null;
+    if (u && typeof u === 'object') {
+      const nome = u.nome || u.full_name || u.name;
+      if (nome) return String(nome).split(' ')[0];
+    }
+    if (d?.usuarios_nome) return String(d.usuarios_nome).split(' ')[0];
+    return 'Sistema';
   },
 
   renderizar(dados) {
     const isAdmin = AuthAPI.getRole() === 'ADMIN';
+
     if (!dados || dados.length === 0) {
       this.container.innerHTML = `<div class="card-section"><p class="text-center text-muted">Nenhum atendimento registrado.</p></div>`;
       return;
     }
-    
-    let html = `<div class="card-section"><div class="table-responsive"><table class="recent-table">
-      <thead><tr><th>Data / Canal</th><th>Cliente / Assunto</th><th>Resumo</th><th>Responsável</th>${isAdmin ? '<th style="text-align:right">Ações</th>' : ''}</tr></thead><tbody>`;
-      
-    html += dados.map(d => {
-      // Define ícone e cor baseado no canal
-      let iconClass = 'fa-comments';
-      let colorStyle = 'color: #64748b';
-      if (d.canal === 'WhatsApp') { iconClass = 'fa-whatsapp'; colorStyle = 'color: #25D366'; }
-      else if (d.canal === 'Telefone') { iconClass = 'fa-phone'; colorStyle = 'color: #3b82f6'; }
-      else if (d.canal === 'E-mail') { iconClass = 'fa-envelope'; colorStyle = 'color: #f59e0b'; }
-      else if (d.canal === 'Presencial') { iconClass = 'fa-handshake'; colorStyle = 'color: #7c3aed'; }
-      else if (d.canal === 'Videoconferência') { iconClass = 'fa-video'; colorStyle = 'color: #0ea5e9'; }
 
-      return `
+    const rows = dados
+      .map((d) => {
+        let iconClass = 'fa-comments';
+        let colorStyle = 'color: #64748b';
+
+        if (d.canal === 'WhatsApp') {
+          iconClass = 'fa-whatsapp';
+          colorStyle = 'color: #25D366';
+        } else if (d.canal === 'Telefone') {
+          iconClass = 'fa-phone';
+          colorStyle = 'color: #3b82f6';
+        } else if (d.canal === 'E-mail') {
+          iconClass = 'fa-envelope';
+          colorStyle = 'color: #f59e0b';
+        } else if (d.canal === 'Presencial') {
+          iconClass = 'fa-handshake';
+          colorStyle = 'color: #7c3aed';
+        } else if (d.canal === 'Videoconferência') {
+          iconClass = 'fa-video';
+          colorStyle = 'color: #0ea5e9';
+        }
+
+        const titulo = d.titulo || 'Sem assunto';
+        const anot = d.anotacoes || '-';
+        const resp = this.getRespNome(d);
+
+        return `
       <tr>
         <td style="width: 140px;">
-          <div style="font-weight: 600;">${new Date(d.data).toLocaleDateString('pt-BR')}</div>
-          <div style="font-size: 0.85rem; margin-top: 4px; ${colorStyle}"><i class="fa-brands ${iconClass} fa-fw"></i> ${d.canal || 'Geral'}</div>
+          <div style="font-weight: 600;">${d.data ? new Date(d.data).toLocaleDateString('pt-BR') : '-'}</div>
+        </td>
+        <td style="width: 160px;">
+          <div style="font-size: 0.85rem; ${colorStyle}">
+            <i class="fa-brands ${iconClass} fa-fw"></i> ${d.canal || 'Geral'}
+          </div>
         </td>
         <td>
           <strong style="color: var(--azul-escuro);">${d.clientes?.nome || 'Cliente N/A'}</strong>
-          <div style="font-size: 0.9rem; color: var(--cinza-escuro); margin-top: 2px; font-weight: 500;">${d.titulo || 'Sem assunto'}</div>
         </td>
-        <td style="max-width: 300px;"><div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--cinza-medio);" title="${d.anotacoes}">${d.anotacoes || '-'}</div></td>
-        <td><small class="status-badge" style="background:#f1f5f9; color:#475569;">${d.usuarios?.nome ? d.usuarios.nome.split(' ')[0] : 'Sistema'}</small></td>
-        ${isAdmin ? `<td style="text-align: right;"><button class="btn-sm btn-delete" data-id="${d.id}" style="color: #ef4444;" title="Excluir"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+        <td style="max-width: 420px;">
+          <div style="font-size: 0.9rem; color: var(--cinza-escuro); margin-top: 2px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${anot}">${titulo}</div>
+          <div style="font-size: 0.8rem; color: var(--cinza-medio); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${anot}">${anot}</div>
+        </td>
+        <td>
+          <small class="status-badge" style="background:#f1f5f9; color:#475569;">${resp}</small>
+        </td>
+        ${isAdmin ? `
+          <td style="text-align: right;">
+            <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+              <button class="btn-sm btn-view" data-id="${d.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+              <button class="btn-sm btn-edit" data-id="${d.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn-sm btn-delete" data-id="${d.id}" style="color: #ef4444;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
+        ` : ''}
       </tr>`;
-    }).join('');
-      
-    html += `</tbody></table></div></div>`;
-    this.container.innerHTML = html;
+      })
+      .join('');
+
+    this.container.innerHTML = `
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Canal</th>
+                <th>Cliente</th>
+                <th>Assunto</th>
+                <th>Responsável</th>
+                ${isAdmin ? '<th style="text-align:right">Ações</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
   }
 };
 
@@ -70,59 +150,193 @@ const controller = {
       .from('atendimentos')
       .select('*, clientes(nome), usuarios(nome)')
       .order('data', { ascending: false });
-      
-    if(!error) view.renderizar(data);
+
+    if (error) {
+      console.error('Carregar atendimentos:', error);
+      view.container.innerHTML = `<div class="card-section"><p class="text-center text-muted">Erro ao carregar atendimentos.</p></div>`;
+      return;
+    }
+
+    view.renderizar(data);
   },
 
   async carregarClientes() {
     const { data } = await supabase.from('clientes').select('id, nome').order('nome');
-    if(data) {
-      view.selectCliente.innerHTML = '<option value="">Selecione...</option>' + 
-        data.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-    }
+    if (!data) return;
+
+    view.selectCliente.innerHTML =
+      '<option value="">Selecione...</option>' +
+      data.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
   },
 
   async salvar(e) {
     e.preventDefault();
+
+    if (view.form.classList.contains('mode-view')) return;
+
     const { data: { user } } = await supabase.auth.getUser();
-    
-    // Busca ID do usuario na tabela usuarios baseado no email auth
-    const { data: usuarioDB } = await supabase.from('usuarios').select('id').eq('email', user.email).single();
-    
+
+    if (!user?.email) {
+      alert('Usuário não autenticado.');
+      return;
+    }
+
+    const { data: usuarioDB, error: usuarioErr } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (usuarioErr || !usuarioDB) {
+      alert('Usuário não encontrado no banco.');
+      return;
+    }
+
+    const atendId = document.getElementById('atend-id')?.value;
+    const isEdit = !!atendId;
+
     const dataInput = document.getElementById('atend-data').value;
     const horaInput = document.getElementById('atend-hora').value;
-    const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}`).toISOString() : dataInput;
+    const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}`).toISOString() : null;
 
-    const novo = {
+    const payload = {
       cliente_id: document.getElementById('atend-cliente').value,
       titulo: document.getElementById('atend-titulo').value,
       data: dataIso,
       canal: document.getElementById('atend-canal').value,
       duracao: document.getElementById('atend-duracao').value,
       anotacoes: document.getElementById('atend-anotacoes').value,
-      usuario_id: usuarioDB?.id
+      usuario_id: usuarioDB.id
     };
 
-    const { error } = await supabase.from('atendimentos').insert(novo);
-    if (!error) {
-      view.modal.style.display = 'none';
-      view.form.reset();
-      controller.carregar();
-    } else { alert('Erro: ' + error.message); }
+    const { error } = isEdit
+      ? await supabase.from('atendimentos').update(payload).eq('id', atendId)
+      : await supabase.from('atendimentos').insert(payload);
+
+    if (error) {
+      alert('Erro: ' + error.message);
+      return;
+    }
+
+    view.modal.style.display = 'none';
+    view.form.reset();
+    const atendIdEl = document.getElementById('atend-id');
+    if (atendIdEl) atendIdEl.value = '';
+    controller.carregar();
   },
 
   async handleClick(e) {
-    const btn = e.target.closest('.btn-delete');
-    if (btn && confirm('Deseja excluir este registro?')) {
+    const btnView = e.target.closest('.btn-view');
+    const btnEdit = e.target.closest('.btn-edit');
+    const btnDelete = e.target.closest('.btn-delete');
+
+    const id = (btnView || btnEdit || btnDelete)?.dataset?.id;
+    if (!id) return;
+
+    if (btnView) {
+      const { data, error } = await supabase
+        .from('atendimentos')
+        .select('*, clientes(nome), usuarios(nome)')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        alert('Erro ao carregar atendimento para visualizar: ' + (error?.message || ''));
+        return;
+      }
+
+      document.getElementById('atend-cliente').value = data.cliente_id || '';
+      document.getElementById('atend-titulo').value = data.titulo || '';
+      document.getElementById('atend-canal').value = data.canal || 'WhatsApp';
+      document.getElementById('atend-duracao').value = data.duracao || '';
+      document.getElementById('atend-anotacoes').value = data.anotacoes || '';
+
+      if (data.data) {
+        const dt = new Date(data.data);
+        document.getElementById('atend-data').value = dt.toISOString().slice(0, 10);
+        document.getElementById('atend-hora').value = dt.toISOString().slice(11, 16);
+      }
+
+      Array.from(view.form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
+      view.form.classList.add('mode-view');
+
+      const submitBtn = view.form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.style.display = 'none';
+
+      const atendIdEl = document.getElementById('atend-id');
+      if (atendIdEl) atendIdEl.value = '';
+
+      const headerEl = view.modal.querySelector('.modal-header h2');
+      if (headerEl) headerEl.textContent = 'Detalhes do Atendimento';
+
+      view.modal.style.display = 'flex';
+      return;
+    }
+
+    if (btnEdit) {
+      const { data, error } = await supabase
+        .from('atendimentos')
+        .select('*, clientes(nome), usuarios(nome)')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        alert('Erro ao carregar atendimento para editar: ' + (error?.message || ''));
+        return;
+      }
+
+      document.getElementById('atend-cliente').value = data.cliente_id || '';
+      document.getElementById('atend-titulo').value = data.titulo || '';
+      document.getElementById('atend-canal').value = data.canal || 'WhatsApp';
+      document.getElementById('atend-duracao').value = data.duracao || '';
+      document.getElementById('atend-anotacoes').value = data.anotacoes || '';
+
+      if (data.data) {
+        const dt = new Date(data.data);
+        document.getElementById('atend-data').value = dt.toISOString().slice(0, 10);
+        document.getElementById('atend-hora').value = dt.toISOString().slice(11, 16);
+      }
+
+      Array.from(view.form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));
+      view.form.classList.remove('mode-view');
+
+      const submitBtn = view.form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.style.display = 'block';
+
+      const headerEl = view.modal.querySelector('.modal-header h2');
+      if (headerEl) headerEl.textContent = 'Editar Atendimento';
+
+      let atendIdEl = document.getElementById('atend-id');
+      if (!atendIdEl) {
+        atendIdEl = document.createElement('input');
+        atendIdEl.type = 'hidden';
+        atendIdEl.id = 'atend-id';
+        atendIdEl.value = '';
+        view.form.insertBefore(atendIdEl, view.form.firstChild);
+      }
+      atendIdEl.value = id;
+
+      view.modal.style.display = 'flex';
+      return;
+    }
+
+    if (btnDelete) {
+      if (!confirm('Deseja excluir este registro?')) return;
+
       const { error } = await supabase
         .from('atendimentos')
         .delete()
-        .eq('id', btn.dataset.id);
-        
-      if (!error) controller.carregar();
-      else alert('Erro ao excluir: ' + error.message);
+        .eq('id', btnDelete.dataset.id);
+
+      if (error) {
+        alert('Erro ao excluir: ' + error.message);
+        return;
+      }
+
+      controller.carregar();
     }
   }
 };
 
 document.addEventListener('DOMContentLoaded', () => controller.init());
+

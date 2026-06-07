@@ -75,9 +75,10 @@ async listarTodos() {
     });
     
     if (res.status === 401) {
-      showToast('Sessão expirada. Por favor, saia e entre novamente.', 'error');
+      // evita poluir UI com aviso; 401 pode ocorrer durante carregamentos assíncronos
       return [];
     }
+
 
     if (!res.ok) throw new Error('Falha ao buscar documentos');
     return await res.json();
@@ -241,9 +242,26 @@ const ClienteView = {
       document.getElementById('cliente-bairro').value = cliente.bairro || '';
       document.getElementById('cliente-cidade').value = cliente.cidade || '';
       document.getElementById('cliente-estado').value = cliente.estado || '';
-      // Set advogado selection\n      if (cliente.advogado_id) {\n        document.getElementById('cliente-advogado').value = cliente.advogado_id;\n      }\n      // Previdenciário\n      document.getElementById('cliente-inss-senha').value = cliente.inss_senha || '';\n      document.getElementById('cliente-inss-cpf').value = cliente.documento || '';\n\n      this.renderizarSessaoDocumentos(cliente.id, visualizacao);
+
+      // Set advogado selection (garante que o value bate com as options, mesmo se vier number/uuid)
+      const advogadoSelect = document.getElementById('cliente-advogado');
+      if (advogadoSelect) {
+        const advId = cliente.advogado_id ?? '';
+        advogadoSelect.value = String(advId);
+
+        // Se o id não existir nas options (ex: advogado não está mais ativo/role), evita ficar em valor inesperado
+        const hasOption = Array.from(advogadoSelect.options)
+          .some(o => String(o.value) === String(advId));
+        if (!hasOption) advogadoSelect.value = '';
+      }
+
+      // Previdenciário
+      document.getElementById('cliente-inss-senha').value = cliente.inss_senha || '';
+      document.getElementById('cliente-inss-cpf').value = cliente.documento || '';
+
+      this.renderizarSessaoDocumentos(cliente.id, visualizacao);
       // Ajuste para garantir que a seção de documentos não quebre o grid dos inputs
-      containerDocs.style.order = "99"; 
+      containerDocs.style.order = "99";
     } else {
       document.getElementById('cliente-inss-cpf').value = '';
       // Chama renderização mesmo sem ID para mostrar o cabeçalho e a mensagem de "Salvar Primeiro"
@@ -524,6 +542,21 @@ const ClienteController = {
       email: getVal('cliente-email'),
       telefone: getVal('cliente-telefone'),
       inss_senha: getVal('cliente-inss-senha'),
+
+      // Endereço
+      cep: getVal('cliente-cep'),
+      endereco: getVal('cliente-endereco'),
+      numero: getVal('cliente-numero'),
+      bairro: getVal('cliente-bairro'),
+      cidade: getVal('cliente-cidade'),
+      estado: getVal('cliente-estado'),
+
+      // Outros dados
+      nacionalidade: getVal('cliente-nacionalidade'),
+      estado_civil: getVal('cliente-estado-civil'),
+      profissao: getVal('cliente-profissao'),
+
+      // Relações
       advogado_id: getVal('cliente-advogado'),
       usuario_id: usuarioIdReferencia
     };
@@ -605,3 +638,4 @@ const ClienteController = {
 document.addEventListener('DOMContentLoaded', () => {
   ClienteController.init();
 });
+

@@ -6,6 +6,12 @@
 
 import { supabase } from './supabase.js'; // Módulo global
 
+// Compat: se por algum motivo o navegador tentar carregar HTML no lugar do JS,
+// o erro comum vira “Unexpected token '<'”. Isso facilita diagnóstico.
+if (typeof window !== 'undefined' && !window._env) {
+  console.warn('Auth: window._env não encontrado. js/env.js pode não ter carregado corretamente.');
+}
+
 // Estado global da autenticação
 let currentUserRole = localStorage.getItem('userRole'); // Inicia com valor em cache se existir
 let isFetching = false; // Previne chamadas duplicadas
@@ -22,6 +28,12 @@ async function fetchUserRole() {
   isFetching = true;
 
   try {
+    if (!supabase) {
+      console.error('Auth: supabase client não inicializado (js/env.js sem chaves).');
+      currentUserRole = null;
+      localStorage.removeItem('userRole');
+      return null;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
@@ -168,3 +180,9 @@ window.AuthAPI = AuthAPI;
 
 // 🚀 Auto-inicialização: Garante que a role seja carregada assim que o script rodar
 fetchUserRole();
+
+// Compatibilidade: garante que sidebar/guard enxerguem role imediatamente via evento
+window.addEventListener('auth:role-ready', () => {
+  // noop - listener já existe onde precisa
+});
+

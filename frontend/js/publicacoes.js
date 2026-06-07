@@ -144,17 +144,45 @@ const PublicacoesView = {
 
 const PublicacoesController = {
   async init() {
-    // Proteção extra
-    if (AuthAPI.getRole() !== 'ADMIN') {
-      window.location.href = 'dashboard.html';
+    // Proteção extra (espera role ficar pronta)
+    const garantirRole = async () => {
+      const role = AuthAPI.getRole();
+      if (role) return role;
+      await new Promise((resolve) => {
+        const onReady = () => {
+          window.removeEventListener('auth:role-ready', onReady);
+          const r = AuthAPI.getRole() || localStorage.getItem('userRole');
+          resolve(r);
+        };
+        window.addEventListener('auth:role-ready', onReady);
+        // fallback: tenta ler cache
+        const cached = localStorage.getItem('userRole');
+        if (cached) {
+          window.removeEventListener('auth:role-ready', onReady);
+          resolve(cached);
+        }
+        // evita ficar travado se evento não acontecer
+        setTimeout(() => {
+          window.removeEventListener('auth:role-ready', onReady);
+          resolve(AuthAPI.getRole() || localStorage.getItem('userRole'));
+        }, 2000);
+      });
+
+    };
+
+    const roleAtual = await garantirRole();
+    if (roleAtual !== 'ADMIN') {
+      window.location.href = 'index.html';
       return;
     }
 
     PublicacoesView.init();
     this.carregarDados();
 
-    document.getElementById('btn-sincronizar').onclick = () => this.sincronizar();
+    const btn = document.getElementById('btn-sincronizar');
+    if (btn) btn.onclick = () => this.sincronizar();
   },
+
 
   async carregarDados() {
     const { data, error } = await supabase

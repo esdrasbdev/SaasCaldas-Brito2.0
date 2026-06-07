@@ -144,15 +144,17 @@ async function carregarClientes() {
         <small class="status-badge ${p.tipo === 'Judicial' ? 'prazo-amarelo' : 'icon-blue'}" style="font-size:0.6rem;">${p.tipo || 'N/A'}</small>
       </td>
       <td>
-        <div>${new Date(p.data).toLocaleString('pt-BR')}</div>
+        <div>${p.data ? new Date(p.data).toLocaleString('pt-BR') : '-'}</div>
         ${p.tipo === 'Judicial' ? `<small class="text-muted">${p.tribunal || ''} - ${p.vara || ''}</small>` : ''}
       </td>
       <td>${p.local}</td>
       <td>${p.perito || 'Não informado'}</td>
       <td>
-        <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-        <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-        ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
+        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+          <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+          <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+          ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
       </td>
     </tr>
   `).join('');
@@ -161,6 +163,10 @@ async function carregarClientes() {
 // Salva uma nova perícia
 formPericia.addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  const periciaId = document.getElementById('pericia-id')?.value || '';
+  const isEdit = !!periciaId;
+
 
   // Busca usuário logado para registrar quem criou/agendou
   const { data: { user } } = await supabase.auth.getUser();
@@ -179,8 +185,10 @@ formPericia.addEventListener('submit', async (e) => {
 
   const dataInput = document.getElementById('pericia-data').value;
   const horaInput = document.getElementById('pericia-hora').value;
-  // Combina data e hora no formato ISO
+  // Combina data e hora e salva como ISO (compatível com campos timestamptz)
+  // Se qualquer um estiver vazio, não salvamos data
   const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}`).toISOString() : null;
+
 
   const novaPericia = {
     cliente_id: getVal('cliente-select'),
@@ -193,7 +201,15 @@ formPericia.addEventListener('submit', async (e) => {
     perito: document.getElementById('pericia-perito').value,
   };
 
-  const { error } = await supabase.from('pericias').insert(novaPericia);
+  let error = null;
+  if (isEdit) {
+    const res = await supabase.from('pericias').update(novaPericia).eq('id', periciaId);
+    error = res.error;
+  } else {
+    const res = await supabase.from('pericias').insert(novaPericia);
+    error = res.error;
+  }
+
 
   if (error) {
     console.error('Erro ao salvar perícia:', error.message, error.details, error);
@@ -228,8 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Populate form
       document.getElementById('cliente-select').value = data.cliente_id || '';
-      const localDate = new Date(data.data).toISOString().slice(0, 16);
-      document.getElementById('pericia-data').value = localDate;
+      // data[type] pode vir como timestamptz/iso string; precisamos preencher input[type=date] com YYYY-MM-DD
+      // Garantimos compatibilidade fazendo parsing e formatando para data local
+      const dt = data.data ? new Date(data.data) : null;
+      document.getElementById('pericia-data').value = dt ? dt.toISOString().slice(0, 10) : '';
+      document.getElementById('pericia-hora').value = dt ? dt.toISOString().slice(11, 16) : '';
+
       document.getElementById('pericia-local').value = data.local || '';
       document.getElementById('pericia-perito').value = data.perito || '';
       document.getElementById('pericia-tipo').value = data.tipo || 'Administrativa';
@@ -238,20 +258,47 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('campos-judiciais').style.display = data.tipo === 'Judicial' ? 'grid' : 'none';
 
       // Mode
-      const isView = btnView;
+      const isView = !!btnView;
       const inputs = formPericia.querySelectorAll('input, select');
       inputs.forEach(el => el.disabled = isView);
       formPericia.classList.toggle('mode-view', isView);
       document.querySelector('#form-pericia button[type="submit"]').style.display = isView ? 'none' : 'block';
       document.querySelector('.modal-header h2').textContent = isView ? 'Detalhes da Perícia' : 'Editar Perícia';
 
+      // Hidden id para edição
+      if (!document.getElementById('pericia-id')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'pericia-id';
+        document.getElementById('form-pericia').insertBefore(hidden, document.getElementById('form-pericia').firstChild);
+      }
+      document.getElementById('pericia-id').value = id;
+
       formContainer.style.display = 'flex';
+
+      // garantir data/hora e demais campos sempre pre-selecionados
+      document.getElementById('pericia-data').dispatchEvent(new Event('change'));
+
+
+
     }
 
-    if (btnDelete && confirm('Tem certeza?')) {
-      const { error } = await supabase.from('pericias').delete().eq('id', btnDelete.dataset.id);
-      showToast(error ? 'Erro ao excluir' : 'Excluída!', error ? 'error' : 'success');
-      carregarPericias();
+    if (btnDelete) {
+      const ok = confirm('Excluir esta perícia?');
+      if (!ok) return;
+
+      const id = btnDelete.dataset.id;
+      try {
+        const { error } = await supabase.from('pericias').delete().eq('id', id);
+        if (error) throw error;
+        showToast('Perícia excluída!', 'success');
+        carregarPericias();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao excluir perícia: ' + (err?.message || err), 'error');
+      }
+      return;
     }
+
   });
 });

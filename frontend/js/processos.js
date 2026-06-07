@@ -13,10 +13,17 @@ const ProcessoModel = {
     try {
       const { data, error } = await supabase
         .from('processos')
-        .select('*, clientes(nome)')
-        .order('criado_em', { ascending: false });
+        .select('*, clientes(nome)');
       if (error) throw error;
-      return data || [];
+
+      // Ordenação: ATIVOS (mais recente primeiro) -> ARQUIVADOS -> SUSPENSOS
+      const statusRank = { ATIVO: 0, ARQUIVADO: 1, SUSPENSO: 2 };
+      return (data || []).sort((a, b) => {
+        const ra = statusRank[(a.status || '').toUpperCase()] ?? 99;
+        const rb = statusRank[(b.status || '').toUpperCase()] ?? 99;
+        if (ra !== rb) return ra - rb;
+        return new Date(b.criado_em) - new Date(a.criado_em);
+      });
     } catch (error) {
       console.error('listarTodos error:', error);
       throw error;
@@ -70,19 +77,33 @@ const ProcessoView = {
       tbody.innerHTML = '<tr><td colspan="5" class="text-center p-5"><i class="fa-solid fa-folder-open fa-2x mb-2"></i><br>Nenhum processo.</td></tr>';
       return;
     }
-    tbody.innerHTML = processos.map(p => `
-      <tr>
-        <td><div style="font-weight:600;">${p.clientes?.nome || 'Sem Cliente'}</div><small>${p.numero_cnj || 'S/N'}</small></td>
-        <td><div>${p.tribunal || '-'}</div><small>${p.vara || '-'}</small></td>
-        <td><span class="status-badge status-${p.status?.toLowerCase()}">${p.status || 'N/A'}</span></td>
-        <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
-        <td style="text-align:right;">
-          <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-          <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-          ${isAdmin ? `<button class="btn-sm btn-delete text-red-500" data-id="${p.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
-        </td>
-      </tr>
-    `).join('');
+
+    const formatSituacao = (status) => {
+      const s = (status || '').toUpperCase();
+      if (s === 'ATIVO') return { label: 'Ativo', badgeClass: 'status-ativo' };
+      if (s === 'ARQUIVADO') return { label: 'Arquivado', badgeClass: 'status-arquivado' };
+      if (s === 'SUSPENSO') return { label: 'Suspenso', badgeClass: 'status-suspenso' };
+      return { label: status || 'N/A', badgeClass: `status-${(status || '').toLowerCase()}` };
+    };
+
+    tbody.innerHTML = processos.map(p => {
+      const sit = formatSituacao(p.status);
+      return `
+        <tr>
+          <td><div style="font-weight:600;">${p.clientes?.nome || 'Sem Cliente'}</div><small>${p.numero_cnj || 'S/N'}</small></td>
+          <td><div>${p.tribunal || '-'}</div><small>${p.vara || '-'}</small></td>
+          <td>
+            <span class="status-badge ${sit.badgeClass}">${sit.label}</span>
+          </td>
+          <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
+          <td style="text-align:right;">
+            <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            ${isAdmin ? `<button class="btn-sm btn-delete text-red-500" data-id="${p.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
 abrirModal(processo = null, isView = false) {
@@ -98,16 +119,17 @@ abrirModal(processo = null, isView = false) {
     inputs.forEach(el => el.disabled = isView);
     btnSalvar.style.display = isView ? 'none' : 'block';
 
-    // Close X
-    let closeBtn = modal.querySelector('.btn-close-modal');
-    if (!closeBtn) {
-      closeBtn = document.createElement('button');
-      closeBtn.className = 'btn-close-modal';
-      closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-      closeBtn.onclick = () => modal.style.display = 'none';
-      closeBtn.style.cssText = 'position:absolute;top:15px;right:20px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#6b7280;';
-      modal.querySelector('.modal-header').appendChild(closeBtn);
+    // Close X (garante que funcione sempre e fecha modal)
+    const closeBtn = modal.querySelector('.btn-close-modal');
+    if (closeBtn) {
+      closeBtn.onclick = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        modal.style.display = 'none';
+      };
     }
+
+
 
     // Populate
     if (processo) {
@@ -116,8 +138,14 @@ abrirModal(processo = null, isView = false) {
       document.getElementById('proc-tribunal').value = processo.tribunal || '';
       document.getElementById('proc-vara').value = processo.vara || '';
       document.getElementById('proc-cliente').value = processo.clientes?.id || processo.cliente_id || '';
+      document.getElementById('proc-status').value = processo.status || 'ATIVO';
+    } else {
+      // default para novo
+      const procStatus = document.getElementById('proc-status');
+      if (procStatus) procStatus.value = 'ATIVO';
     }
 
+    // Troca visual do status em view (mesmo que view esteja escondida)
     modal.style.display = 'flex';
   },
 
@@ -151,7 +179,8 @@ const ProcessoController = {
         numero_cnj: document.getElementById('proc-cnj').value,
         tribunal: document.getElementById('proc-tribunal').value,
         vara: document.getElementById('proc-vara').value,
-        cliente_id: document.getElementById('proc-cliente').value || null
+        cliente_id: document.getElementById('proc-cliente').value || null,
+        status: document.getElementById('proc-status').value
       };
       try {
         if (id) await ProcessoModel.atualizar(id, payload);

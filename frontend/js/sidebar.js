@@ -29,11 +29,20 @@ const Sidebar = {
     });
 
     // Caso a role já esteja em cache, roda imediatamente
+    // IMPORTANTE: após render(), navLinks já existem.
     const currentRole = AuthAPI.getRole();
     if (currentRole) {
       this.atualizarMenu(currentRole);
       this.atualizarInfoUsuario();
+    } else {
+      // Fallback: tenta ler localStorage diretamente (para evitar race condition)
+      const cachedRole = localStorage.getItem('userRole');
+      if (cachedRole) {
+        this.atualizarMenu(cachedRole);
+        this.atualizarInfoUsuario();
+      }
     }
+
 
     this.bindLogout();
   },
@@ -165,5 +174,17 @@ const Sidebar = {
   }
 };
 
-// Inicia assim que o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', () => Sidebar.init());
+function iniciarSidebar() {
+  try {
+    Sidebar.init();
+  } catch (err) {
+    console.error('Erro ao inicializar Sidebar:', err);
+  }
+}
+
+// Inicia assim que o DOM estiver pronto (ou imediatamente se já estiver carregado)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', iniciarSidebar);
+} else {
+  iniciarSidebar();
+}

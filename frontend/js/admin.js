@@ -158,6 +158,11 @@ const AdminController = {
   },
 
   async carregar() {
+    if (!supabase) {
+      AdminView.container.innerHTML = '<div class="text-center" style="padding:16px;">Supabase não inicializado. Verifique js/env.js.</div>';
+      return;
+    }
+
     const { data, error } = await supabase.from('usuarios').select('*').order('nome');
     if (!error) AdminView.renderizarTabela(data);
   },

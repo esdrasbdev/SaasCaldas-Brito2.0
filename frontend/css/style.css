@@ -551,8 +551,38 @@ textarea:focus {
 
 /* Tabela Recentes */
 .recent-table { width: 100%; border-collapse: collapse; }
-.recent-table th { text-align: left; padding: 16px; color: var(--cinza-medio); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid var(--cinza-fundo); }
-.recent-table td { padding: 16px; border-bottom: 1px solid var(--cinza-fundo); font-size: 0.95rem; color: var(--cinza-escuro); vertical-align: middle; }
+.recent-table th {
+  text-align: left;
+  padding: 14px 16px;
+  color: var(--cinza-medio);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--cinza-fundo);
+  vertical-align: middle;
+}
+
+.recent-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.recent-table td:last-child > div {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Garante que o conteúdo “sempre” ocupe a altura da linha no tbody */
+.recent-table tbody td > div,
+.recent-table tbody td > small {
+  display: block;
+}
+
+
+.recent-table td { padding: 14px 16px; border-bottom: 1px solid var(--cinza-fundo); font-size: 0.95rem; color: var(--cinza-escuro); vertical-align: top; }
 .recent-table tr:last-child td { border-bottom: none; }
 .recent-table tr:hover td { background: #f8fafc; }
 

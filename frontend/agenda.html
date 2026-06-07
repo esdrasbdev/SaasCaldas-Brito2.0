@@ -29,78 +29,87 @@
       <!-- Container Principal (Tabela) -->
       <div id="view-agenda-container"></div>
 
-      <!-- Modal Novo Agendamento (Layout Compacto e Espaçado) -->
+      <!-- Modal Novo Agendamento (Layout Melhorado) -->
       <div id="modal-container" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 700px;">
           <form id="form-agenda">
             <div class="modal-header">
               <h2 id="modal-titulo">Novo Agendamento</h2>
             </div>
             <div class="modal-body">
-              <!-- Linha 1: Tipo + Data -->
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <!-- Título/Assunto -->
+              <div class="form-group">
+                <label for="agenda-titulo">Assunto / Título da Reunião *</label>
+                <input type="text" id="agenda-titulo" placeholder="Ex: Reunião Inicial ou Fechamento de Contrato" required>
+              </div>
+
+              <!-- Data e Hora - Lado a Lado -->
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
                 <div class="form-group">
-                  <label>Tipo de Evento *</label>
-                  <select id="agenda-tipo" required>
-                    <option value="reuniao">Reunião / Consulta</option>
-                    <option value="audiencia">Audiência</option>
-                    <option value="pericia">Perícia</option>
-                  </select>
+                  <label for="agenda-data">Data *</label>
+                  <input type="date" id="agenda-data" required>
                 </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Data *</label>
-                    <input type="date" id="agenda-data" required>
-                  </div>
-                  <div class="form-group">
-                    <label>Hora *</label>
-                    <input type="time" id="agenda-hora" required>
-                  </div>
+                <div class="form-group">
+                  <label for="agenda-hora">Hora *</label>
+                  <input type="time" id="agenda-hora" required>
                 </div>
               </div>
 
-              <!-- Vínculo a Participantes (para Reunião) -->
-              <div id="bloco-participantes" style="display: none;">
-                <p style="font-size: 0.8rem; color: var(--cinza-medio); margin-top: -10px; margin-bottom: 10px;">Selecione quem participará da reunião:</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="form-group">
-                      <label>Clientes</label>
-                      <div id="agenda-clientes-list" class="checkbox-list-container"></div>
-                    </div>
-                    <div class="form-group">
-                      <label>Equipe Interna</label>
-                      <div id="agenda-usuarios-list" class="checkbox-list-container"></div>
-                    </div>
-                </div>
+              <!-- Local -->
+              <div class="form-group">
+                <label for="agenda-local">Local / Link *</label>
+                <input type="text" id="agenda-local" placeholder="Ex: Fórum Central, Escritório ou Link Zoom" required>
               </div>
 
-              <!-- Vínculos Gerais (Cliente e Processo) -->
-              <div id="bloco-vinculos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <!-- Cliente e Processo Vinculado -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
                   <label for="agenda-cliente-single">Cliente Vinculado (Opcional)</label>
                   <select id="agenda-cliente-single"></select>
                 </div>
                 <div class="form-group">
-                  <label>Processo Vinculado (Opcional)</label>
+                  <label for="agenda-processo">Processo Vinculado (Opcional)</label>
                   <select id="agenda-processo"></select>
                 </div>
               </div>
 
-              <!-- Linha 3: Local + Complemento -->
-              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
-                <div class="form-group">
-                  <label>Local / Link</label>
-                  <input type="text" id="agenda-local" placeholder="Ex: Fórum Central ou Sala Zoom" required>
+              <!-- Complemento -->
+              <div class="form-group">
+                <label for="agenda-extra">Informação Adicional (Vara/Perito/Link)</label>
+                <input type="text" id="agenda-extra" placeholder="Ex: 5ª Vara Cível ou Dr. Carlos ou https://zoom.us/j/...">
+              </div>
+
+              <!-- Seleção de Participantes - COMPACTO COM BUSCA -->
+              <div id="bloco-participantes" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--cinza-borda);">
+                <h3 style="margin-bottom: 12px; font-size: 1rem; color: var(--azul-escuro);">Participantes da Reunião</h3>
+                
+                <!-- Busca de Clientes -->
+                <div class="form-group" style="margin-bottom: 12px;">
+                  <label style="font-weight: 600; font-size: 0.9rem;"> <i class="fa-solid fa-users" aria-hidden="true" style="margin-right:8px;color:var(--azul-escuro);"></i> Clientes</label>
+                  <div style="position: relative; margin-top: 4px;">
+                    <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 11px; color: #999; pointer-events: none; font-size: 0.9rem;"></i>
+                    <input type="text" id="agenda-clientes-search" placeholder="Buscar cliente..." style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--cinza-borda); border-radius: 6px; font-size: 0.9rem;">
+                    <div id="agenda-clientes-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                  </div>
+                  <div id="agenda-clientes-tags" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
                 </div>
+
+                <!-- Busca de Equipe Interna -->
                 <div class="form-group">
-                  <label>Complemento (Vara/Perito)</label>
-                  <input type="text" id="agenda-extra" placeholder="Ex: 5ª Vara Cível ou Dr. Carlos">
+                  <label style="font-weight: 600; font-size: 0.9rem;"> <i class="fa-solid fa-user-tie" aria-hidden="true" style="margin-right:8px;color:var(--azul-escuro);"></i> Equipe Interna</label>
+                  <div style="position: relative; margin-top: 4px;">
+                    <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 11px; color: #999; pointer-events: none; font-size: 0.9rem;"></i>
+                    <input type="text" id="agenda-usuarios-search" placeholder="Buscar membro..." style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--cinza-borda); border-radius: 6px; font-size: 0.9rem;">
+                    <div id="agenda-usuarios-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                  </div>
+                  <div id="agenda-usuarios-tags" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-bottom: 0;">
-                <label>Observações</label>
-                <textarea id="agenda-obs" rows="2" placeholder="Detalhes adicionais..."></textarea>
+              <!-- Observações -->
+              <div class="form-group" style="margin-top: 16px;">
+                <label for="agenda-obs">Observações (Detalhes adicionais)</label>
+                <textarea id="agenda-obs" rows="2" placeholder="Notas importantes sobre a reunião..."></textarea>
               </div>
             </div>
             <div class="modal-footer">
