@@ -7,7 +7,7 @@
 
 import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
-import { showToast } from './utils.js';
+import { showToast, formatarHora24h, formatarData } from './utils.js';
 
 const formContainer = document.getElementById('form-container');
 const btnNovaPericia = document.getElementById('btn-nova-pericia');
@@ -107,10 +107,12 @@ async function carregarClientes() {
 // Carrega e exibe as perícias na tabela
   async function carregarPericias() {
     const isAdmin = AuthAPI.getRole() === 'ADMIN';
-  
+
     // Force usuarios load (Antonio/Priscila)
     let { data, error } = await supabase
       .from('pericias')
+
+
       .select(`
         *,
         clientes(nome),
@@ -133,32 +135,75 @@ async function carregarClientes() {
   }
 
   if (data.length === 0) {
-    listaPericias.innerHTML = `<tr><td colspan="5" class="text-center">Nenhuma perícia cadastrada.</td></tr>`;
+    window.__listaPericiasCompleta = [];
+    listaPericias.innerHTML = `
+      <tr>
+        <td colspan="5" style="padding:0;">
+          <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
+            <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
+            <span style="font-size:0.9rem;">Nenhuma perícia cadastrada.</span>
+          </div>
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  listaPericias.innerHTML = data.map(p => `
-    <tr>
-      <td>
-        <div style="font-weight: 600;">${p.clientes?.nome || '-'}</div>
-        <small class="status-badge ${p.tipo === 'Judicial' ? 'prazo-amarelo' : 'icon-blue'}" style="font-size:0.6rem;">${p.tipo || 'N/A'}</small>
-      </td>
-      <td>
-        <div>${p.data ? new Date(p.data).toLocaleString('pt-BR') : '-'}</div>
-        ${p.tipo === 'Judicial' ? `<small class="text-muted">${p.tribunal || ''} - ${p.vara || ''}</small>` : ''}
-      </td>
-      <td>${p.local}</td>
-      <td>${p.perito || 'Não informado'}</td>
-      <td>
-        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-          <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-          <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-          ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  window.__listaPericiasCompleta = data;
+
+  const termoBuscaEl = document.getElementById('pericias-busca');
+  const termoBusca = termoBuscaEl ? termoBuscaEl.value.trim().toLowerCase() : '';
+
+  const filtrar = (p) => {
+    if (!termoBusca) return true;
+
+    const cliente = (p.clientes?.nome || '').toLowerCase();
+    const tipo = (p.tipo || '').toLowerCase();
+    const local = (p.local || '').toLowerCase();
+    const perito = (p.perito || '').toLowerCase();
+    const dtTxt = p.data ? formatarData(p.data).toLowerCase() : '';
+
+    return [cliente, tipo, local, perito, dtTxt].some(v => v.includes(termoBusca));
+  };
+
+  const listaFiltrada = data.filter(filtrar);
+
+  listaPericias.innerHTML = listaFiltrada.map(p => {
+
+    const dataTxt = p.data ? formatarData(p.data) : '-';
+    const horaTxt = p.data ? formatarHora24h(p.data) : '';
+
+    const tipoCor = p.tipo === 'Judicial'
+      ? 'background:#fef3c7; color:#92400e;'
+      : 'background:#e0f2fe; color:#0284c7;';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600; font-size:0.9rem;">${p.clientes?.nome || '-'}</div>
+          <span class="status-badge" style="${tipoCor} font-size:0.7rem; padding:2px 8px; border-radius:12px; display:inline-block; white-space:nowrap;">${p.tipo || 'N/A'}</span>
+        </td>
+        <td style="white-space:nowrap;">
+          <div style="font-size:0.9rem; font-weight:600;">${dataTxt}</div>
+          <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
+          ${p.tipo === 'Judicial' && (p.tribunal || p.vara)
+            ? `<div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">${[p.tribunal, p.vara].filter(Boolean).join(' — ')}</div>`
+            : ''}
+        </td>
+        <td style="font-size:0.85rem;">${p.local || '-'}</td>
+        <td style="font-size:0.85rem;">${p.perito || 'Não informado'}</td>
+        <td style="text-align:right; width:90px;">
+          <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+            <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+            <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+            ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
+
 
 // Salva uma nova perícia
 formPericia.addEventListener('submit', async (e) => {
@@ -187,7 +232,7 @@ formPericia.addEventListener('submit', async (e) => {
   const horaInput = document.getElementById('pericia-hora').value;
   // Combina data e hora e salva como ISO (compatível com campos timestamptz)
   // Se qualquer um estiver vazio, não salvamos data
-  const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}`).toISOString() : null;
+  const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}:00-03:00`).toISOString() : null;
 
 
   const novaPericia = {
@@ -226,8 +271,89 @@ document.addEventListener('DOMContentLoaded', () => {
   ajustarCamposFormulario();
   carregarClientes();
   carregarPericias();
-  
+
+  // Busca local na tabela
+  const termoBuscaEl = document.getElementById('pericias-busca');
+  const btnLimpar = document.getElementById('pericias-busca-limpar');
+
+  termoBuscaEl?.addEventListener('input', () => {
+    const termo = termoBuscaEl.value.trim().toLowerCase();
+    const dados = window.__listaPericiasCompleta || [];
+
+    const filtrar = (p) => {
+      if (!termo) return true;
+
+      const cliente = (p.clientes?.nome || '').toLowerCase();
+      const tipo = (p.tipo || '').toLowerCase();
+      const local = (p.local || '').toLowerCase();
+      const perito = (p.perito || '').toLowerCase();
+      const dtTxt = p.data ? formatarData(p.data).toLowerCase() : '';
+
+      return [cliente, tipo, local, perito, dtTxt].some(v => v.includes(termo));
+    };
+
+    const listaFiltrada = dados.filter(filtrar);
+
+    const isAdmin = AuthAPI.getRole() === 'ADMIN';
+
+    if (!listaFiltrada.length) {
+      listaPericias.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding:0;">
+            <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
+              <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
+              <span style="font-size:0.9rem;">Nenhuma perícia encontrada para este filtro.</span>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    listaPericias.innerHTML = listaFiltrada.map(p => {
+      const dataTxt = p.data ? formatarData(p.data) : '-';
+      const horaTxt = p.data ? formatarHora24h(p.data) : '';
+
+      const tipoCor = p.tipo === 'Judicial'
+        ? 'background:#fef3c7; color:#92400e;'
+        : 'background:#e0f2fe; color:#0284c7;';
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:600; font-size:0.9rem;">${p.clientes?.nome || '-'}</div>
+            <span class="status-badge" style="${tipoCor} font-size:0.7rem; padding:2px 8px; border-radius:12px; display:inline-block; white-space:nowrap;">${p.tipo || 'N/A'}</span>
+          </td>
+          <td style="white-space:nowrap;">
+            <div style="font-size:0.9rem; font-weight:600;">${dataTxt}</div>
+            <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
+            ${p.tipo === 'Judicial' && (p.tribunal || p.vara)
+              ? `<div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">${[p.tribunal, p.vara].filter(Boolean).join(' — ')}</div>`
+              : ''}
+          </td>
+          <td style="font-size:0.85rem;">${p.local || '-'}</td>
+          <td style="font-size:0.85rem;">${p.perito || 'Não informado'}</td>
+          <td style="text-align:right; width:90px;">
+            <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+              <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+              <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+              ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  });
+
+  btnLimpar?.addEventListener('click', () => {
+    if (termoBuscaEl) {
+      termoBuscaEl.value = '';
+      termoBuscaEl.dispatchEvent(new Event('input'));
+    }
+  });
+
   // Event listener para ações
+
   listaPericias.addEventListener('click', async (e) => {
     const btnEdit = e.target.closest('.btn-edit');
     const btnView = e.target.closest('.btn-view');
@@ -247,8 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // data[type] pode vir como timestamptz/iso string; precisamos preencher input[type=date] com YYYY-MM-DD
       // Garantimos compatibilidade fazendo parsing e formatando para data local
       const dt = data.data ? new Date(data.data) : null;
-      document.getElementById('pericia-data').value = dt ? dt.toISOString().slice(0, 10) : '';
-      document.getElementById('pericia-hora').value = dt ? dt.toISOString().slice(11, 16) : '';
+      document.getElementById('pericia-data').value = dt ? dt.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Fortaleza'
+      }).split('/').reverse().join('-') : '';
+      document.getElementById('pericia-hora').value = dt ? dt.toLocaleTimeString('pt-BR', {
+        timeZone: 'America/Fortaleza',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }) : '';
 
       document.getElementById('pericia-local').value = data.local || '';
       document.getElementById('pericia-perito').value = data.perito || '';

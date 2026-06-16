@@ -4,8 +4,11 @@
  */
 
 import { AuthAPI } from './auth.js';
+import { iniciarBuscaSidebar } from './navegacao-busca.js';
 
 const Sidebar = {
+
+
   init() {
     // Elementos da sidebar
     this.sidebar = document.querySelector('.sidebar'); // Assumindo que existe no HTML base
@@ -19,6 +22,11 @@ const Sidebar = {
 
     // 1. Injeta a estrutura HTML padrão (Garante que existe em todas as páginas)
     this.render();
+
+    // Garanta que a busca só seja inicializada quando o input existir.
+    // (Algumas páginas podem ter timing diferente entre render e primeiro paint.)
+    queueMicrotask(() => iniciarBuscaSidebar());
+
     
     // 2. Atualiza referências após renderizar
     this.navLinks = document.querySelectorAll('.sidebar-nav a');
@@ -59,6 +67,11 @@ const Sidebar = {
           <small>Advocacia</small>
         </div>
       </div>
+      <div class="sidebar-search">
+        <div class="sidebar-search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+        <input id="nav-busca" type="text" placeholder="Buscar menu..." autocomplete="off" />
+      </div>
+
       <ul class="sidebar-nav">
         <li><a href="index.html" class="nav-item"><i class="fa-solid fa-chart-pie"></i> Dashboard</a></li>
         <li><a href="clientes.html" class="nav-item"><i class="fa-solid fa-users"></i> Clientes</a></li>
@@ -77,6 +90,7 @@ const Sidebar = {
 
       
       <div class="sidebar-footer">
+
         <div class="user-profile">
           <div class="user-avatar">
             <i class="fa-solid fa-user"></i>
@@ -96,7 +110,11 @@ const Sidebar = {
     `;
 
     this.bindThemeToggle();
+
+    // Habilita busca no menu após a criação da sidebar.
+    iniciarBuscaSidebar();
   },
+
 
   atualizarMenu(role) {
     if (!role) return;

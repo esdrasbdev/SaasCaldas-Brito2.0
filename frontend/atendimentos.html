@@ -91,8 +91,20 @@
         </div>
       </div>
 
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="flex: 1; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="atendimentos-busca" type="text" placeholder="Buscar atendimentos (cliente, canal, assunto, data)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+          <button id="atendimentos-busca-limpar" class="btn-secondary" type="button" style="white-space:nowrap;">Limpar</button>
+        </div>
+      </div>
+
       <!-- Container da Lista -->
       <div id="lista-atendimentos-container"></div>
+
     </main>
   </div>
 

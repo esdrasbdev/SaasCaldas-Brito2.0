@@ -141,6 +141,14 @@ export function confirmarExclusao({
   });
 }
 
+// Formata data para exibição no padrão brasileiro DD/MM/AAAA
+// Recebe Date, string ISO ou string de data qualquer
+export function formatarData(dateLike) {
+  const d = (dateLike instanceof Date) ? dateLike : new Date(dateLike);
+  if (!d || isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('pt-BR', { timeZone: 'America/Fortaleza' });
+}
+
 // Formata hora sempre em 24h (sem AM/PM)
 
 // Recebe Date ou string ISO

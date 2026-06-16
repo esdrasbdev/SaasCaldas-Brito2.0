@@ -5,7 +5,7 @@
 
 import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
-import { showToast, formatarHora24h } from './utils.js';
+import { showToast, formatarHora24h, formatarData } from './utils.js';
 
 
 // ==========================================
@@ -91,10 +91,9 @@ const AgendaModel = {
     let participantesStr = [nomesClientes, nomesUsuarios].filter(Boolean).join(' e ');
     if (!participantesStr) participantesStr = 'Sem participantes selecionados';
 
-    // Monta a data e hora corretamente (sem conversão errada de timezone)
-    const dataFormatada = `${dados.data} ${dados.hora}`;
-    const dataObj = new Date(dataFormatada);
-    
+    // Monta a data e hora corretamente (salva horário local como "UTC fake" em -03:00)
+    const dataObj = new Date(`${dados.data}T${dados.hora}:00-03:00`);
+
     if (isNaN(dataObj.getTime())) {
       throw new Error('Data ou hora inválida');
     }
@@ -153,9 +152,8 @@ const AgendaModel = {
   },
 
   async atualizar(id, dados) {
-    // Constrói a data corretamente (mantém comportamento já testado em criar)
-    const dataFormatada = `${dados.data} ${dados.hora}`;
-    const dataObj = new Date(dataFormatada);
+    // Constrói a data corretamente (salva horário local como "UTC fake" em -03:00)
+    const dataObj = new Date(`${dados.data}T${dados.hora}:00-03:00`);
     if (isNaN(dataObj.getTime())) throw new Error('Data ou hora inválida');
 
     // Serializa título/extra/obs dentro de `anotacoes`
@@ -310,7 +308,7 @@ const AgendaView = {
 
 
     tbody.innerHTML = eventos.map(evt => {
-      const dataStr = `<strong>${new Date(evt.data).toLocaleDateString('pt-BR')}</strong><br><span class="text-muted">${formatarHora24h(evt.data)}</span>`;
+const dataStr = `<strong>${formatarData(evt.data)}</strong><br><span class="text-muted">${formatarHora24h(evt.data)}</span>`;
 
 
 
@@ -712,9 +710,16 @@ const AgendaController = {
 
 
             // Separa data e hora do ISO string
-            const dateObj = new Date(data.data);
-            const dataFormatada = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
-            const horaFormatada = dateObj.toISOString().split('T')[1].slice(0, 5); // HH:mm
+const dateObj = new Date(data.data);
+            const dataFormatada = dateObj.toLocaleDateString('pt-BR', {
+              timeZone: 'America/Fortaleza'
+            }).split('/').reverse().join('-');
+            const horaFormatada = dateObj.toLocaleTimeString('pt-BR', {
+              timeZone: 'America/Fortaleza',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            });
             
             document.getElementById('agenda-data').value = dataFormatada;
             document.getElementById('agenda-hora').value = horaFormatada;

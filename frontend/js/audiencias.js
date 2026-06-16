@@ -5,7 +5,7 @@
 
 import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
-import { showToast } from './utils.js';
+import { showToast, formatarHora24h, formatarData } from './utils.js';
 
 // Importando explicitamente o handler de logout para evitar
 // trechos “soltos” e garantir que o arquivo compile sem erros de sintaxe.
@@ -87,45 +87,60 @@ const AudienciaView = {
     if (!tbody) return;
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhuma audiência agendada.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:0;">
+        <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
+          <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
+          <span style="font-size:0.9rem;">Nenhuma audiência agendada.</span>
+        </div>
+      </td></tr>`;
       return;
     }
 
     tbody.innerHTML = lista.map(a => {
       const dataObj = a.data ? new Date(a.data) : null;
-      const dataTxt = dataObj
-        ? dataObj.toLocaleDateString('pt-BR')
-        : '-';
-const horaTxt = dataObj ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(dataObj) : '';
+      const dataTxt = dataObj ? formatarData(dataObj) : '-';
+      const horaTxt = dataObj ? formatarHora24h(dataObj) : '';
 
-
-      const clienteNome = a.processos?.clientes?.nome || '—';
+      const clienteNome = a.processos?.clientes?.nome || a.clientes?.nome || '—';
       const numeroCnj = a.processos?.numero_cnj || 'S/N';
+
+      // Badge de tipo compacto (judicial/administrativo)
+      const tipoBadge = a.tipo
+        ? `<span class="status-badge ${a.tipo === 'Judicial' ? 'badge-tipo-judicial' : 'badge-tipo-administrativo'}">${a.tipo}</span>`
+        : '';
 
       return `
         <tr>
-          <td>
-            <div style="font-weight: 600; color: var(--azul-escuro);">${dataTxt}</div>
-            <div class="text-muted">${horaTxt}</div>
+          <td style="width:110px; white-space:nowrap;">
+            <div style="font-weight:600; color:var(--azul-escuro); font-size:0.9rem;">${dataTxt}</div>
+            <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
           </td>
           <td>
-            <div>${clienteNome}</div>
-            <small class="text-muted">CNJ: ${numeroCnj}</small>
+            <div style="font-weight:600; font-size:0.9rem;">${clienteNome}</div>
+            <div style="font-size:0.75rem; color:var(--cinza-medio);">CNJ: ${numeroCnj}</div>
           </td>
           <td>
-            <div class="text-muted">${a.local || 'Virtual'}</div>
-            <span class="status-badge" style="background: #e0f2fe; color: #0284c7;">${a.tipo || '-'}</span>
+            <div style="font-size:0.85rem;">${a.local || 'Virtual'}</div>
+            ${tipoBadge}
           </td>
-      <td style="text-align: right;">
-        <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-          <button class="btn-sm btn-view" data-id="${a.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-          <button class="btn-sm btn-edit" data-id="${a.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn-sm btn-delete" data-id="${a.id}" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
+          <td style="text-align:right; width:90px;">
+            <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+              <button class="btn-sm btn-view" data-id="${a.id}" title="Visualizar">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+              <button class="btn-sm btn-edit" data-id="${a.id}" title="Editar">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="btn-sm btn-delete" data-id="${a.id}" style="color:#ef4444;" title="Excluir">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
+
+
   },
 
   modalEl() {
@@ -263,8 +278,15 @@ const AudienciaController = {
         // data/hora
         if (audiencia.data) {
           const dt = new Date(audiencia.data);
-          document.getElementById('audiencia-data').value = dt.toISOString().slice(0, 10);
-          document.getElementById('audiencia-hora').value = dt.toISOString().slice(11, 16);
+          document.getElementById('audiencia-data').value = dt.toLocaleDateString('pt-BR', {
+            timeZone: 'America/Fortaleza'
+          }).split('/').reverse().join('-');
+          document.getElementById('audiencia-hora').value = dt.toLocaleTimeString('pt-BR', {
+            timeZone: 'America/Fortaleza',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
         }
 
         document.getElementById('audiencia-tipo').value = audiencia.tipo || 'Conciliação';
@@ -310,8 +332,15 @@ const AudienciaController = {
 
         if (audiencia.data) {
           const dt = new Date(audiencia.data);
-          document.getElementById('audiencia-data').value = dt.toISOString().slice(0, 10);
-          document.getElementById('audiencia-hora').value = dt.toISOString().slice(11, 16);
+          document.getElementById('audiencia-data').value = dt.toLocaleDateString('pt-BR', {
+            timeZone: 'America/Fortaleza'
+          }).split('/').reverse().join('-');
+          document.getElementById('audiencia-hora').value = dt.toLocaleTimeString('pt-BR', {
+            timeZone: 'America/Fortaleza',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
         }
 
         document.getElementById('audiencia-tipo').value = audiencia.tipo || 'Conciliação';
@@ -351,7 +380,7 @@ const AudienciaController = {
       const horaStr = document.getElementById('audiencia-hora')?.value;
 
       // Se data/hora não estiverem preenchidos, não salvamos o campo
-      const dataIso = (dataStr && horaStr) ? new Date(`${dataStr}T${horaStr}`).toISOString() : null;
+      const dataIso = (dataStr && horaStr) ? new Date(`${dataStr}T${horaStr}:00-03:00`).toISOString() : null;
 
       // Recupera ID do usuário atual para ser o "advogado_id"
       const { data: { user } } = await supabase.auth.getUser();

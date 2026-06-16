@@ -431,6 +431,29 @@ textarea:focus {
 .prazo-amarelo { background: #fef3c7; color: var(--status-prazo-amarelo); }
 .prazo-vermelho { background: #fecaca; color: var(--status-prazo-vermelho); }
 
+/* Badge de tipo de evento jurídico: compacto e alinhado */
+.badge-tipo-judicial {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.badge-tipo-administrativo {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+
 /* Responsivo */
 @media (max-width: 768px) {
   .main-content {
@@ -440,6 +463,16 @@ textarea:focus {
   
   h1 { font-size: 1.5rem; }
 }
+
+/* Tabelas compactas: reduz padding interno sem perder legibilidade */
+.recent-table td {
+  padding: 10px 14px;
+}
+
+.recent-table th {
+  padding: 10px 14px;
+}
+
 
 /* Dashboard KPIs */
 .kpi-grid {
@@ -569,9 +602,9 @@ textarea:focus {
 
 /* Tabela Recentes */
 .recent-table { width: 100%; border-collapse: collapse; }
-.recent-table th {
+.recent-table th { 
   text-align: left;
-  padding: 14px 16px;
+  padding: 10px 14px;
   color: var(--cinza-medio);
   font-size: 0.8rem;
   font-weight: 600;
@@ -600,7 +633,7 @@ textarea:focus {
 }
 
 
-.recent-table td { padding: 14px 16px; border-bottom: 1px solid var(--cinza-fundo); font-size: 0.95rem; color: var(--cinza-escuro); vertical-align: top; }
+.recent-table td { padding: 10px 14px; border-bottom: 1px solid var(--cinza-fundo); font-size: 0.95rem; color: var(--cinza-escuro); vertical-align: top; }
 .recent-table tr:last-child td { border-bottom: none; }
 .recent-table tr:hover td { background: #f8fafc; }
 
@@ -1163,9 +1196,38 @@ body.dark-mode .toast {
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* Busca no menu lateral */
+.sidebar-search {
+  padding: 10px 16px 6px 16px;
+}
+
+.sidebar-search-icon {
+  display: inline-flex;
+  margin-right: 8px;
+  color: var(--azul-medio);
+}
+
+.sidebar-search input {
+  width: calc(100% - 36px);
+  display: inline-block;
+  vertical-align: middle;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--cinza-borda);
+  background: var(--branco);
+  color: var(--azul-escuro);
+}
+
+body.dark-mode .sidebar-search input {
+  background: #0f172a;
+  border-color: var(--cinza-borda);
+  color: var(--azul-escuro);
+}
+
 /* ======================
    MEDIA QUERIES RESPONSIVAS
-   ====================== */
+   ======================
+
 
 /* Tablet/Large Mobile */
 @media (max-width: 1200px) {

@@ -42,14 +42,15 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label>Data</label>
-                  <input type="date" id="audiencia-data">
+                  <label>Data *</label>
+                  <input type="date" id="audiencia-data" required>
                 </div>
                 <div class="form-group">
-                  <label>Hora</label>
-                  <input type="time" id="audiencia-hora">
+                  <label>Hora *</label>
+                  <input type="time" id="audiencia-hora" required>
                 </div>
               </div>
+
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
@@ -80,6 +81,17 @@
         </div>
       </div>
 
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="flex: 1; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="audiencias-busca" type="text" placeholder="Buscar audiências (cliente, tipo, local, data)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+          <button id="audiencias-busca-limpar" class="btn-secondary" type="button" style="white-space:nowrap;">Limpar</button>
+        </div>
+      </div>
+
       <!-- Tabela -->
       <div class="card-section">
         <div class="table-responsive">
@@ -99,6 +111,7 @@
           </table>
         </div>
       </div>
+
     </main>
   </div>
 

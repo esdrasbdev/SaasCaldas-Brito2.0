@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
+import { formatarData, formatarHora24h } from './utils.js';
 
 const view = {
   showToast(type, title, message) {
@@ -62,6 +63,39 @@ const view = {
     this.container.addEventListener('click', controller.handleClick);
   },
 
+  // Extrai o título do atendimento de forma segura.
+  // Suporta dois formatos: campo direto ou JSON serializado dentro de anotacoes (criado pela agenda)
+  extrairTitulo(d) {
+    if (d?.titulo && typeof d.titulo === 'string' && !d.titulo.startsWith('{')) return d.titulo;
+
+    if (d?.anotacoes) {
+      try {
+        const parsed = JSON.parse(d.anotacoes);
+        if (parsed && parsed.titulo) return parsed.titulo;
+      } catch (e) {
+        // anotacoes é texto puro
+        return d.anotacoes;
+      }
+    }
+
+    return 'Sem assunto';
+  },
+
+  // Extrai anotações/obs de forma segura (sem vazar o JSON bruto)
+  extrairAnotacoes(d) {
+    if (d?.anotacoes) {
+      try {
+        const parsed = JSON.parse(d.anotacoes);
+        if (parsed && typeof parsed === 'object') {
+          return parsed.obs || parsed.extra || '-';
+        }
+      } catch (e) {
+        return d.anotacoes;
+      }
+    }
+    return d?.anotacoes || '-';
+  },
+
   getRespNome(d) {
     // Depende do formato do select no Supabase.
     // Tentamos algumas formas.
@@ -105,14 +139,15 @@ const view = {
           colorStyle = 'color: #0ea5e9';
         }
 
-        const titulo = d.titulo || 'Sem assunto';
-        const anot = d.anotacoes || '-';
+        // Extrai campos sensíveis de anotacoes
+        const titulo = extrairTitulo(d);
+        const anot = extrairAnotacoes(d);
         const resp = this.getRespNome(d);
 
         return `
       <tr>
         <td style="width: 140px;">
-          <div style="font-weight: 600;">${d.data ? new Date(d.data).toLocaleDateString('pt-BR') : '-'}</div>
+          <div style="font-weight: 600;">${d.data ? formatarData(d.data) : '-'}</div>
         </td>
         <td style="width: 160px;">
           <div style="font-size: 0.85rem; ${colorStyle}">
@@ -129,16 +164,17 @@ const view = {
         <td>
           <small class="status-badge" style="background:#f1f5f9; color:#475569;">${resp}</small>
         </td>
-        ${canEdit ? `
-          <td style="text-align: right;">
-            <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
-              <button class="btn-sm btn-view" data-id="${d.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+        <td style="text-align: right;">
+          <div style="display:flex; gap:8px; justify-content:flex-end; align-items:center;">
+            <button class="btn-sm btn-view" data-id="${d.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
+            ${canEdit ? `
               <button class="btn-sm btn-edit" data-id="${d.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
               <button class="btn-sm btn-delete" data-id="${d.id}" style="color: #ef4444;" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </td>
-        ` : ''}
+            ` : ''}
+          </div>
+        </td>
       </tr>`;
+
       })
       .join('');
 
@@ -153,7 +189,7 @@ const view = {
                 <th>Cliente</th>
                 <th>Assunto</th>
                 <th>Responsável</th>
-                ${canEdit ? '<th style="text-align:right">Ações</th>' : ''}
+                <th style="text-align:right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -166,12 +202,21 @@ const view = {
   }
 };
 
+
 const controller = {
   async init() {
     view.init();
+
+    const role = AuthAPI.getRole();
+    const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
+
+    const btnNovo = document.getElementById('btn-novo-atendimento');
+    if (btnNovo && !canEdit) btnNovo.style.display = 'none';
+
     await this.carregar();
     await this.carregarClientes();
   },
+
 
   async carregar() {
     const { data, error } = await supabase
@@ -231,7 +276,7 @@ const controller = {
 
     const dataInput = document.getElementById('atend-data').value;
     const horaInput = document.getElementById('atend-hora').value;
-    const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}`).toISOString() : null;
+    const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}:00-03:00`).toISOString() : null;
 
     const payload = {
       cliente_id: document.getElementById('atend-cliente').value,
@@ -288,8 +333,15 @@ const controller = {
 
       if (data.data) {
         const dt = new Date(data.data);
-        document.getElementById('atend-data').value = dt.toISOString().slice(0, 10);
-        document.getElementById('atend-hora').value = dt.toISOString().slice(11, 16);
+        document.getElementById('atend-data').value = dt.toLocaleDateString('pt-BR', {
+          timeZone: 'America/Fortaleza'
+        }).split('/').reverse().join('-');
+        document.getElementById('atend-hora').value = dt.toLocaleTimeString('pt-BR', {
+          timeZone: 'America/Fortaleza',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
       }
 
       Array.from(view.form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
@@ -334,8 +386,15 @@ const controller = {
 
       if (data.data) {
         const dt = new Date(data.data);
-        document.getElementById('atend-data').value = dt.toISOString().slice(0, 10);
-        document.getElementById('atend-hora').value = dt.toISOString().slice(11, 16);
+        document.getElementById('atend-data').value = dt.toLocaleDateString('pt-BR', {
+          timeZone: 'America/Fortaleza'
+        }).split('/').reverse().join('-');
+        document.getElementById('atend-hora').value = dt.toLocaleTimeString('pt-BR', {
+          timeZone: 'America/Fortaleza',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
       }
 
       Array.from(view.form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));

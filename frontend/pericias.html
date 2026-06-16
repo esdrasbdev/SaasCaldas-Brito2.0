@@ -42,16 +42,17 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label>Data</label>
-                  <input type="date" id="pericia-data">
+                  <label>Data *</label>
+                  <input type="date" id="pericia-data" required>
                 </div>
                 <div class="form-group">
-                  <label>Hora</label>
-                  <input type="time" id="pericia-hora">
+                  <label>Hora *</label>
+                  <input type="time" id="pericia-hora" required>
                 </div>
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
                 <div class="form-group">
                   <label>Local</label>
                   <input type="text" id="pericia-local" placeholder="Consultório / INSS">
@@ -67,6 +68,17 @@
               <button type="submit" class="btn-primary">Salvar</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="flex: 1; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="pericias-busca" type="text" placeholder="Buscar perícias (cliente, tipo, local, perito, data)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+          <button id="pericias-busca-limpar" class="btn-secondary" type="button" style="white-space:nowrap;">Limpar</button>
         </div>
       </div>
 
@@ -89,6 +101,7 @@
           </table>
         </div>
       </div>
+
     </main>
   </div>
 
