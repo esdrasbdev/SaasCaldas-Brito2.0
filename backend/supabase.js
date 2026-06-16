@@ -12,13 +12,14 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Erro crítico mantido (sem log para não poluir, mas exit necessário)
+if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+  console.error('[FATAL] Variáveis de ambiente Supabase ausentes. Verifique SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY.');
   process.exit(1);
 }
+
 
 // Cliente PÚBLICO (respeita RLS - MAIORIA das rotas)
 const supabasePublic = createClient(supabaseUrl, supabaseAnonKey);

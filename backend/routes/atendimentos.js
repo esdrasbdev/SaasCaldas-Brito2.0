@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../supabase');
+const cache = require('../cache');
 
 // GET /api/atendimentos
 router.get('/', async (req, res) => {
+  const CACHE_KEY = 'atendimentos_list';
+  const cached = cache.get(CACHE_KEY);
+  if (cached) return res.json(cached);
+
   try {
     const { data, error } = await supabase
       .from('atendimentos')
@@ -11,6 +16,8 @@ router.get('/', async (req, res) => {
       .order('data', { ascending: false });
 
     if (error) throw error;
+
+    cache.set(CACHE_KEY, data, 180000); // 3min
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -32,6 +39,8 @@ router.post('/', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    cache.invalidate('atendimentos_list');
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -39,3 +48,4 @@ router.post('/', async (req, res) => {
 });
 
 module.exports = router;
+

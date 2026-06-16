@@ -15,11 +15,13 @@ app.use(cors({
   origin: [
     'http://localhost:8080', 
     'http://127.0.0.1:8080',
-    'http://localhost:3000', // Padrão npx serve
-    'http://localhost:5000'  // Alternativa npx serve
-  ],
+    'http://localhost:3000',
+    'http://localhost:5000',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true
 }));
+
 
 // Parser JSON para bodies das requisições
 app.use(express.json({ limit: '10mb' })); // 10mb para documentos
@@ -35,6 +37,15 @@ app.get('/', (req, res) => {
   res.json({ message: 'Backend Jurídico rodando com sucesso! 🚀', status: 'ONLINE' });
 });
 
+// Endpoint de teste de e-mail (sem depender do Supabase e do fluxo de alertas)
+// Requer ADMIN e só envia para destinatário informado.
+// (Sem Require de middleware aqui; a rota exige ADMIN via handler)
+// Endpoint de teste de e-mail (sem depender de Supabase/alertas)
+// Rota: POST /api/email/testar
+// Arquivo: backend/routes/email-test.js
+app.use('/api/email', require('./routes/email-test.js'));
+
+
 // Seed REMOVIDO do startup (executar manualmente apenas quando necessário)
  // (async () => { try { await require('./seed.js')(); } catch (e) { console.warn('⚠️ Seed executado com warnings:', e.message); } })();
 
@@ -42,7 +53,17 @@ app.get('/', (req, res) => {
 const authMiddleware = require('./middleware/auth.js');
 // Sugestão de implementação futura: const requireRole = require('./middleware/requireRole.js');
 
+// Rota de alertas (cron + teste manual)
+const alertasRouter = require('./routes/alertas.js');
+app.use('/api/alertas', authMiddleware, alertasRouter);
+
+// Rota para teste de envio de email sem depender de Supabase/alertas
+const emailTestRouter = require('./routes/email-test.js');
+app.use('/api/email', emailTestRouter);
+
+
 // Importa rotas
+
 const clientesRouter = require('./routes/clientes.js');
 app.use('/api/clientes', authMiddleware, clientesRouter);
 
@@ -94,7 +115,15 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   } catch (e) {
     // Silenciado
   }
+
+  try {
+    const { iniciarJobAlertas } = require('./services/alertas-job.js');
+    iniciarJobAlertas();
+  } catch (e) {
+    console.warn('[Jobs] alertas-job não inicializado:', e.message);
+  }
 }
+
 // 404 para rotas não encontradas
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });

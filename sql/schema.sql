@@ -129,10 +129,25 @@ create policy "admin_only_publicacoes" on publicacoes
 -- Padrão para demais tabelas: leitura/escrita para autenticados
 -- (simplificado - ajustar por role conforme necessário)
 
+
 alter table usuarios enable row level security;
-create policy "leitura_usuarios" on usuarios for select using (auth.role() = 'authenticated');
-create policy "escrita_usuarios_admin" on usuarios for all 
-  using ((select role from usuarios where email = auth.jwt() ->> 'email') = 'ADMIN');
+-- Usuário vê apenas o próprio registro; ADMIN vê todos
+drop policy if exists "leitura_usuarios" on usuarios;
+
+create policy "leitura_usuarios" on usuarios for select using (
+  auth.jwt() ->> 'email' = email
+  OR (select role from usuarios where email = auth.jwt() ->> 'email') = 'ADMIN'
+);
+
+-- Escrita: apenas ADMIN (ajustar conforme necessário)
+create policy "escrita_usuarios_admin" on usuarios for all
+  using (
+    (select role from usuarios where email = auth.jwt() ->> 'email') = 'ADMIN'
+  )
+  with check (
+    (select role from usuarios where email = auth.jwt() ->> 'email') = 'ADMIN'
+  );
+
 
 -- Aplicar padrão autenticados para demais tabelas
 do $$
