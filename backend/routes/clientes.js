@@ -5,13 +5,11 @@
 
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+
 const { supabasePublic } = require('../supabase');
 const cache = require('../cache');
 const { validarCPF, sanitizarString } = require('../utils/validar');
 
-// Middleware de proteção global para estas rotas
-router.use(auth);
 
 // GET /api/clientes - Lista todos (Exemplo de endpoint server-side)
 router.get('/', async (req, res) => {

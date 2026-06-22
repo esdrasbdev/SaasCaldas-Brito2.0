@@ -47,19 +47,16 @@ app.use('/api/email', require('./routes/email-test.js'));
 
 
 // Seed REMOVIDO do startup (executar manualmente apenas quando necessário)
- // (async () => { try { await require('./seed.js')(); } catch (e) { console.warn('⚠️ Seed executado com warnings:', e.message); } })();
+// (async () => { try { await require('./seed.js')(); } catch (e) { console.warn('⚠️ Seed executado com warnings:', e.message); } })();
 
 // Importa middlewares
 const authMiddleware = require('./middleware/auth.js');
+
 // Sugestão de implementação futura: const requireRole = require('./middleware/requireRole.js');
 
 // Rota de alertas (cron + teste manual)
 const alertasRouter = require('./routes/alertas.js');
 app.use('/api/alertas', authMiddleware, alertasRouter);
-
-// Rota para teste de envio de email sem depender de Supabase/alertas
-const emailTestRouter = require('./routes/email-test.js');
-app.use('/api/email', emailTestRouter);
 
 
 // Importa rotas
@@ -85,13 +82,7 @@ app.use('/api/atendimentos', authMiddleware, atendimentosRouter);
 const usuariosRouter = require('./routes/usuarios.js');
 app.use('/api/usuarios', authMiddleware, usuariosRouter);
 
-const publicacoesRouter = require('./routes/publicacoes.js');
-// Proteção de nível ADMIN para publicações
-app.use('/api/publicacoes', authMiddleware, (req, res, next) => {
-  // Verificação temporária inline até criar o middleware específico
-  if (req.user && req.user.role === 'ADMIN') return next();
-  return res.status(403).json({ error: 'Acesso negado: Requer privilégios de Administrador' });
-}, publicacoesRouter);
+
 
 // Rota de Webhook do Escavador (Sem authMiddleware pois vem da API externa)
 const escavadorRouter = require('./routes/escavador-webhook.js');

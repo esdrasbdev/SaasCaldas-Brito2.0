@@ -102,12 +102,21 @@
       
       console.log(`🔍 Attempting login for: ${email}`); // DEBUG
 
+      if (!client) {
+        errorMsg.textContent = '❌ Supabase não inicializado. O arquivo js/env.js pode não estar disponível no deploy (Vercel).';
+        errorMsg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = originalBtnContent;
+        return;
+      }
+
       try {
         // 1. Autenticação Supabase (now with valid client)
         const { data: authData, error: authError } = await client.auth.signInWithPassword({
           email,
           password
         });
+
 
         if (authError) throw authError;
 

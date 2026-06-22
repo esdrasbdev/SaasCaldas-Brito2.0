@@ -140,9 +140,10 @@ const view = {
         }
 
         // Extrai campos sensíveis de anotacoes
-        const titulo = extrairTitulo(d);
-        const anot = extrairAnotacoes(d);
+        const titulo = this.extrairTitulo(d);
+        const anot = this.extrairAnotacoes(d);
         const resp = this.getRespNome(d);
+
 
         return `
       <tr>

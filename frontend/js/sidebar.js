@@ -84,7 +84,7 @@ const Sidebar = {
         <li><a href="atendimentos.html" class="nav-item"><i class="fa-solid fa-comments"></i> Atendimentos</a></li>
         
         <li class="sidebar-header-group admin-group-label">ADMINISTRAÇÃO</li>
-        <li><a href="publicacoes.html" class="nav-item"><i class="fa-solid fa-newspaper"></i> Publicações</a></li>
+
         <li><a href="admin.html" class="nav-item"><i class="fa-solid fa-gear"></i> Usuários</a></li>
       </ul>
 
@@ -129,7 +129,7 @@ const Sidebar = {
       'audiencias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA'],
       'pericias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA'],
       'atendimentos.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
-      'publicacoes.html': ['ADMIN'],
+
       'admin.html': ['ADMIN']
     };
 
@@ -144,9 +144,10 @@ const Sidebar = {
       link.parentElement.style.display = allowed ? 'block' : 'none';
 
       // ADMINISTRAÇÃO: título só deve aparecer se algum item desse grupo estiver visível
-      if (href === 'publicacoes.html' || href === 'admin.html') {
+      if (href === 'admin.html') {
         if (allowed) adminVisible = true;
       }
+
 
 
       if (window.location.pathname.includes(href)) {

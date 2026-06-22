@@ -135,12 +135,21 @@ const AdminView = {
       document.getElementById('user-nome').value = usuario.nome;
       document.getElementById('user-email').value = usuario.email;
       document.getElementById('user-email').disabled = false;
-      document.getElementById('user-role').value = usuario.role;
+
+      // Impede alteração de cargo (role) em edição: somente leitura.
+      const roleSelect = document.getElementById('user-role');
+      roleSelect.value = usuario.role;
+      roleSelect.disabled = true;
+
       document.getElementById('user-ativo').value = usuario.ativo.toString();
     } else {
       document.getElementById('user-email').disabled = false;
       document.getElementById('user-ativo').value = 'true';
+
+      // Em criação, permite selecionar cargo.
+      document.getElementById('user-role').disabled = false;
     }
+
     
     modal.style.display = 'flex';
   },
@@ -177,9 +186,11 @@ const AdminController = {
       const dados = {
         nome: document.getElementById('user-nome').value,
         email: document.getElementById('user-email').value,
-        role: document.getElementById('user-role').value,
+        // Role não deve ser alterada em edição.
+        ...(id ? {} : { role: document.getElementById('user-role').value }),
         ativo: document.getElementById('user-ativo').value === 'true'
       };
+
 
       if (!id) {
         // Criar (apenas insere na tabela pública por enquanto, auth deve ser tratado à parte ou via convite)
