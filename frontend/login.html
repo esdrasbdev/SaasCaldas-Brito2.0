@@ -70,6 +70,8 @@
     const loginForm = document.getElementById('login-form');
     const errorMsg = document.getElementById('error-msg');
     const btnText = document.getElementById('btn-text');
+    const btn = loginForm.querySelector('button');
+    const originalBtnContent = btn.innerHTML;
     const welcomeOverlay = document.getElementById('welcome-overlay');
     const welcomeName = document.getElementById('welcome-name');
 
@@ -81,6 +83,9 @@
       e.preventDefault();
       
       // Await init before auth
+      const btn = loginForm.querySelector('button');
+      const originalBtnContent = btn.innerHTML;
+
       let client;
       try {
         client = await initSupabase();
@@ -94,8 +99,6 @@
       }
       
       // Feedback visual de carregamento
-      const btn = loginForm.querySelector('button');
-      const originalBtnContent = btn.innerHTML;
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
       errorMsg.style.display = 'none';
