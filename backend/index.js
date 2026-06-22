@@ -40,13 +40,18 @@ app.get('/', (req, res) => {
 // Endpoint de teste de e-mail (sem depender do Supabase e do fluxo de alertas)
 // Requer ADMIN e só envia para destinatário informado.
 // (Sem Require de middleware aqui; a rota exige ADMIN via handler)
+
 // Endpoint de teste de e-mail (sem depender de Supabase/alertas)
 // Rota: POST /api/email/testar
 // Arquivo: backend/routes/email-test.js
 app.use('/api/email', require('./routes/email-test.js'));
 
 // Config do Supabase para o frontend (evita dependência de js/env.js no deploy)
-app.use('/api/env', require('./routes/env.js'));
+// Obs: rotas de backend precisam responder exatamente /api/env
+app.get('/api/env', (req, res) => {
+  return require('./routes/env.js')(req, res);
+});
+
 
 
 

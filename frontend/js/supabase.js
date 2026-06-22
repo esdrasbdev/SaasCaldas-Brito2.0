@@ -46,10 +46,23 @@ export async function initSupabase() {
 
   // fallback: buscar configurações no backend
   const apiUrl = getApiUrl();
-  const resp = await fetch(`${apiUrl}/env`, { headers: { 'accept': 'application/json' } });
+  const resp = await fetch(`${apiUrl}/env`, {
+    headers: { accept: 'application/json' },
+    cache: 'no-store'
+  });
+
+  // Captura corpo mesmo em caso de erro/404 (muitas vezes vem HTML na produção)
+  const contentType = resp.headers.get('content-type') || '';
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
     throw new Error(`Supabase init: falha ao obter /api/env (${resp.status}). ${text}`);
+  }
+
+  if (!contentType.includes('application/json')) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(
+      `Supabase init: /api/env não retornou JSON (content-type: ${contentType || 'unknown'}). Corpo: ${text}`
+    );
   }
 
   const data = await resp.json();
