@@ -85,8 +85,11 @@
       try {
         client = await initSupabase();
       } catch (err) {
-        errorMsg.textContent = '❌ Supabase não inicializado. Verifique js/env.js.';
+        console.error('initSupabase failed:', err);
+        errorMsg.textContent = `❌ Supabase não inicializado. ${err?.message || 'Verifique js/env.js e /api/env no deploy.'}`;
         errorMsg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = originalBtnContent;
         return;
       }
       

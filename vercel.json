@@ -7,6 +7,10 @@
       "destination": "/backend/index.js"
     },
     {
+      "source": "/api/env",
+      "destination": "/backend/index.js"
+    },
+    {
       "source": "/(.*)",
       "destination": "/frontend/$1"
     }
