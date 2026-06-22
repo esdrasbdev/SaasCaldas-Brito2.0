@@ -15,17 +15,18 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-  console.error('[FATAL] Variáveis de ambiente Supabase ausentes. Verifique SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY.');
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('[FATAL] Variáveis de ambiente Supabase ausentes. Verifique SUPABASE_URL e SUPABASE_ANON_KEY.');
   process.exit(1);
 }
-
 
 // Cliente PÚBLICO (respeita RLS - MAIORIA das rotas)
 const supabasePublic = createClient(supabaseUrl, supabaseAnonKey);
 
 // Cliente ADMIN (service role - APENAS rotas críticas/admin)
-const supabaseAdmin = supabaseServiceKey 
+// Em serverless/Vercel, pode ser que SUPABASE_SERVICE_ROLE_KEY não esteja configurada.
+// Nesse caso, mantemos supabaseAdmin como null e as rotas admin falharão/serão negadas via middleware.
+const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 

@@ -45,6 +45,10 @@ app.get('/', (req, res) => {
 // Arquivo: backend/routes/email-test.js
 app.use('/api/email', require('./routes/email-test.js'));
 
+// Config do Supabase para o frontend (evita dependência de js/env.js no deploy)
+app.use('/api/env', require('./routes/env.js'));
+
+
 
 // Seed REMOVIDO do startup (executar manualmente apenas quando necessário)
 // (async () => { try { await require('./seed.js')(); } catch (e) { console.warn('⚠️ Seed executado com warnings:', e.message); } })();
