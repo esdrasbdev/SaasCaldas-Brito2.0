@@ -29,8 +29,15 @@ function createIfPossible({ SUPABASE_URL, SUPABASE_ANON_KEY }) {
 }
 
 // Compat: alguns arquivos antigos importam { supabase }.
-// Por design, o valor fica pronto apenas após initSupabase().
-export const supabase = null;
+// Em ES Modules, export const é read-only; então mantemos um "proxy" via getter
+// e asseguramos que `from './supabase.js'` sempre retorne o client inicializado.
+export const supabase = /** @type {any} */ (new Proxy({}, {
+  get(_target, prop) {
+    if (!_client) throw new Error('Supabase não inicializado. Chame await initSupabase() antes.');
+    return _client[prop];
+  }
+}));
+
 
 export async function initSupabase() {
   if (_initPromise) return _initPromise;
