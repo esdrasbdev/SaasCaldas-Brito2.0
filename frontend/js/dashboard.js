@@ -3,9 +3,11 @@
  * Carrega KPIs e informações gerais
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
 
 async function carregarDashboard() {
+  // Garante inicialização do client antes de qualquer consulta
+  await initSupabase();
   const hoje = new Date();
   const hora = hoje.getHours();
   
