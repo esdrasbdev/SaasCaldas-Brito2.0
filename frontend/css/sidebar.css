@@ -3,6 +3,7 @@
 .sidebar {
   width: 260px;
   height: 100vh;
+  max-width: 260px;
   background: var(--branco);
   border-right: 1px solid var(--cinza-borda);
   display: flex;
@@ -209,5 +210,33 @@ body.dark-mode .user-name {
 }
 
 /* Mobile drawer uses fixed sidebar + transform; styles are appended */
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 8500;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    max-width: 260px;
+  }
+
+  .sidebar.aberta {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+  }
+
+  .btn-hamburger {
+    display: flex;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+}
+
 
 
