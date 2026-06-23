@@ -67,8 +67,13 @@ const authMiddleware = require('./middleware/auth.js');
 const alertasRouter = require('./routes/alertas.js');
 app.use('/api/alertas', authMiddleware, alertasRouter);
 
+// Rota de cron (sem authMiddleware, protegido por CRON_SECRET)
+const alertasCronRouter = require('./routes/alertas-cron.js');
+app.use('/api/alertas', alertasCronRouter);
 
 // Importa rotas
+
+
 
 const clientesRouter = require('./routes/clientes.js');
 app.use('/api/clientes', authMiddleware, clientesRouter);
@@ -107,8 +112,9 @@ app.use((err, req, res, next) => {
 });
 
 // Inicializa Jobs Agendados (Cron)
-// Desativado em ambientes serverless (Vercel) para evitar bloqueios
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+// Evita executar em Vercel serverless; executa sempre no Railway/Node
+if (!process.env.VERCEL) {
+
   try {
     const iniciarJobEscavador = require('./services/escavador-job.js');
     iniciarJobEscavador();

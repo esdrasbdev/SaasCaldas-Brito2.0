@@ -3,7 +3,7 @@
  * Gerenciamento de audiências vinculadas a processos
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast, formatarHora24h, formatarData } from './utils.js';
 
@@ -435,4 +435,8 @@ const AudienciaController = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => AudienciaController.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  AudienciaController.init();
+});
+

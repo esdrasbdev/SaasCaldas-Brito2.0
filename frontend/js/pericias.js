@@ -5,7 +5,8 @@
  * - Salva novas perícias
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
+
 import { AuthAPI } from './auth.js';
 import { showToast, formatarHora24h, formatarData } from './utils.js';
 
@@ -267,10 +268,12 @@ formPericia.addEventListener('submit', async (e) => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   ajustarCamposFormulario();
-  carregarClientes();
-  carregarPericias();
+  await initSupabase();
+  await carregarClientes();
+  await carregarPericias();
+
 
   // Busca local na tabela
   const termoBuscaEl = document.getElementById('pericias-busca');

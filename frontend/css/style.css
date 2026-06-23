@@ -132,7 +132,7 @@ body.dark-mode .welcome-banner {
 /* Main content - flexível ao lado da sidebar */
 .main-content {
   flex: 1;
-  padding: 40px;
+  padding: 28px 32px;
   overflow-y: auto;
   max-width: calc(100% - 280px); /* Considera sidebar de 260px + margem */
   height: 100vh;
@@ -457,7 +457,7 @@ textarea:focus {
 /* Responsivo */
 @media (max-width: 768px) {
   .main-content {
-    padding: var(--espaco-md);
+    padding: 16px;
     max-width: 100%;
   }
   
@@ -567,7 +567,7 @@ textarea:focus {
   color: var(--azul-escuro);
   margin-bottom: var(--espaco-md);
   padding-bottom: var(--espaco-sm);
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cinza-borda);
 }
 
 /* Ações Rápidas */
@@ -591,11 +591,11 @@ textarea:focus {
 }
 
 .action-card:hover { 
-  background: white; 
+  background: var(--branco); 
   border-color: var(--cinza-borda); 
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
   transform: translateY(-2px); 
-  color: #000 !important; /* Fonte preta no hover */
+  color: var(--azul-escuro) !important;
 }
 
 .action-card i { color: var(--azul-medio); font-size: 1.2rem; }

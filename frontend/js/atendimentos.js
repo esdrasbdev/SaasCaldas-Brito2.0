@@ -1,4 +1,5 @@
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
+
 import { AuthAPI } from './auth.js';
 import { formatarData, formatarHora24h } from './utils.js';
 
@@ -456,5 +457,9 @@ const controller = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => controller.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  controller.init();
+});
+
 

@@ -3,7 +3,7 @@
  * Modal view exact cliente style, robust error handling
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js';
 
@@ -256,5 +256,9 @@ const ProcessoController = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => ProcessoController.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  ProcessoController.init();
+});
+
 

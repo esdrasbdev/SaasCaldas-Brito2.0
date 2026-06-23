@@ -3,7 +3,10 @@
  * Lista unificada de Audiências e Perícias em formato de tabela
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
+
+
+
 import { AuthAPI } from './auth.js';
 import { showToast, formatarHora24h, formatarData } from './utils.js';
 
@@ -768,4 +771,8 @@ const dateObj = new Date(data.data);
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => AgendaController.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  AgendaController.init();
+});
+

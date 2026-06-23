@@ -16,6 +16,10 @@
     {
       "path": "/api/publicacoes/sincronizar",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/alertas/cron",
+      "schedule": "0 7 * * *"
     }
   ]
 }

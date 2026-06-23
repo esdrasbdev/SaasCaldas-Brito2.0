@@ -3,7 +3,8 @@
  * Separação clara entre Dados (Supabase), Interface (DOM) e Regras de Negócio
  */
 
-import { supabase, getApiUrl } from './supabase.js';
+import { supabase, initSupabase, getApiUrl } from './supabase.js';
+
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js'; // Novo sistema de avisos
 
@@ -635,7 +636,9 @@ const ClienteController = {
 };
 
 // Inicializa o módulo quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
   ClienteController.init();
 });
+
 

@@ -112,7 +112,7 @@ async function carregarDashboard() {
       `;
     }
     
-    // 4. Renderiza Proximos Eventos (7 dias)
+// 4. Renderiza Proximos Eventos (7 dias)
     let proximosEventosContainer = document.getElementById('proximos-eventos-container');
     if (!proximosEventosContainer) {
       const grid = document.querySelector('.dashboard-content-grid');
@@ -246,3 +246,4 @@ function renderizarCargaTrabalho(container, stats, total) {
 if (document.getElementById('kpi-processos')) {
   document.addEventListener('DOMContentLoaded', carregarDashboard);
 }
+
