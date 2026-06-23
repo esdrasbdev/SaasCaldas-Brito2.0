@@ -211,9 +211,55 @@ body.dark-mode .user-name {
 
 /* Mobile drawer uses fixed sidebar + transform; styles are appended */
 
+.btn-hamburger {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 9000;
+  background: var(--branco);
+  border: 1px solid var(--cinza-borda);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: var(--azul-escuro);
+  font-size: 1.1rem;
+  transition: background 0.2s;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-hamburger:hover {
+  background: var(--azul-claro);
+  color: var(--azul-medio);
+}
+
 @media (max-width: 768px) {
+
+  .btn-hamburger {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .sidebar-overlay.ativo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 8000;
+    backdrop-filter: blur(2px);
+    animation: fadeIn 0.2s ease;
+  }
+
   .sidebar {
     position: fixed;
+
     top: 0;
     left: 0;
     height: 100%;

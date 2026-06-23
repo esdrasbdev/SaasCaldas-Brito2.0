@@ -243,7 +243,13 @@ function renderizarCargaTrabalho(container, stats, total) {
 }
 
 // Carrega apenas se estiver na página de dashboard
+// (DOMContentLoaded pode já ter ocorrido quando o script é carregado no fim do body)
 if (document.getElementById('kpi-processos')) {
-  document.addEventListener('DOMContentLoaded', carregarDashboard);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', carregarDashboard);
+  } else {
+    carregarDashboard();
+  }
 }
+
 

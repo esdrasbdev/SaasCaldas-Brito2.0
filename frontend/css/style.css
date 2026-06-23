@@ -462,8 +462,59 @@ textarea:focus {
     max-width: 100%;
     margin-left: 0; /* garante que não haja deslocamento residual */
   }
-  
+
+  #dashboard-placeholder,
+  .welcome-banner {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .welcome-banner {
+    padding: 1.35rem;
+    border-radius: 16px;
+    margin-bottom: 1.25rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .kpi-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .kpi-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .kpi-value {
+    font-size: 1.35rem;
+  }
+
+  .dashboard-content-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .card-section {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card-section h2 {
+    margin-bottom: 12px;
+  }
+
   h1 { font-size: 1.5rem; }
+
 
   /* iOS: evitar zoom automático ao focar inputs */
   .sidebar-search input,
