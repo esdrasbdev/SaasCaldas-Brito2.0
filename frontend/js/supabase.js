@@ -13,51 +13,72 @@ export const getApiUrl = () => {
     : '/api';
 };
 
-let supabaseClient = null;
+let _client = null;
+let _initPromise = null;
 
 function createIfPossible({ SUPABASE_URL, SUPABASE_ANON_KEY }) {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return null;
-  }
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
 }
 
-export const supabase = supabaseClient;
+// Compat: alguns arquivos antigos importam { supabase }.
+// Por design, o valor fica pronto apenas após initSupabase().
+export const supabase = null;
 
 export async function initSupabase() {
-  if (supabaseClient) return supabaseClient;
+  if (_initPromise) return _initPromise;
 
-  const apiUrl = getApiUrl();
-  const resp = await fetch(`${apiUrl}/env`, {
-    headers: { accept: 'application/json' },
-    cache: 'no-store'
-  });
+  _initPromise = (async () => {
+    if (_client) return _client;
 
-  const contentType = resp.headers.get('content-type') || '';
+    const apiUrl = getApiUrl();
 
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(`Supabase init: falha ao obter /api/env (${resp.status}). ${text}`);
-  }
+    const resp = await fetch(`${apiUrl}/env`, {
+      headers: { accept: 'application/json' },
+      cache: 'no-store'
+    });
 
-  if (!contentType.includes('application/json')) {
-    const text = await resp.text().catch(() => '');
-    throw new Error(
-      `Supabase init: /api/env não retornou JSON (content-type: ${contentType || 'unknown'}). Corpo: ${text}`
-    );
-  }
+    const contentType = resp.headers.get('content-type') || '';
 
-  const data = await resp.json();
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(`Supabase init: falha ao obter /api/env (${resp.status}). ${text}`);
+    }
 
-  supabaseClient = createIfPossible(data);
+    if (!contentType.includes('application/json')) {
+      const text = await resp.text().catch(() => '');
+      throw new Error(
+        `Supabase init: /api/env não retornou JSON (content-type: ${contentType || 'unknown'}). Corpo: ${text}`
+      );
+    }
 
-  if (!supabaseClient) {
-    throw new Error('Supabase init: client não foi criado (chaves inválidas em /api/env).');
-  }
+    const data = await resp.json();
 
-  window.supabase = supabaseClient;
-  return supabaseClient;
+    const created = createIfPossible(data);
+    if (!created) {
+      throw new Error('Supabase init: client não foi criado (chaves inválidas em /api/env).');
+    }
+
+    _client = created;
+    window.supabase = _client;
+    return _client;
+  })();
+
+  return _initPromise;
 }
 
-window.supabase = supabaseClient;
+export function getSupabaseClient() {
+  if (!_client) throw new Error('Supabase não inicializado. Chame await initSupabase() antes.');
+  return _client;
+}
+
+// Mantém compatibilidade com código legado que acessa window.supabase.
+window.supabase = window.supabase || null;
 

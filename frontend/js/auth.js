@@ -4,7 +4,8 @@
  * Role salva no localStorage para uso rápido em guard.js e sidebar.js
  */
 
-import { supabase } from './supabase.js'; // Módulo global
+import { initSupabase, getSupabaseClient } from './supabase.js';
+
 
 // Compat: se por algum motivo o navegador tentar carregar HTML no lugar do JS,
 // o erro comum vira “Unexpected token '<'”. Isso facilita diagnóstico.
@@ -16,14 +17,17 @@ if (typeof window !== 'undefined' && !window._env) {
 let currentUserRole = localStorage.getItem('userRole'); // Inicia com valor em cache se existir
 let isFetching = false; // Previne chamadas duplicadas
 
-// Busca role do usuário na tabela usuarios pelo email da sessão
-async function fetchUserRole() {
-  // Se já tem cache, retorna ele imediatamente para não travar a UI
+// Busca role do usuário na tabela usuarios
+// IMPORTANTE: NÃO depende de supabase.auth.getSession() (evita race no restore de sessão).
+// Se um session/user for fornecido, usa ele; caso contrário, aguarda requireAuth.
+async function fetchUserRole({ session } = {}) {
+  await initSupabase();
+  const supabase = getSupabaseClient();
+
   if (currentUserRole && !isFetching) {
-    // Dispara evento mesmo assim para garantir que ouvintes (sidebar) funcionem
     window.dispatchEvent(new CustomEvent('auth:role-ready', { detail: currentUserRole }));
   }
-  
+
   if (isFetching) return currentUserRole;
   isFetching = true;
 
@@ -34,16 +38,23 @@ async function fetchUserRole() {
       localStorage.removeItem('userRole');
       return null;
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    
+
+    // Resolve user a partir de session fornecida ou espera sessão via requireAuth.
+    let user = session?.user;
+
+    if (!user?.email) {
+      // requireAuth usa onAuthStateChange e aguarda INITIAL_SESSION/SIGNED_IN.
+      // Se não houver sessão, ele vai redirecionar para login.
+      const resolvedSession = await requireAuth({ timeoutMs: 5000 }).catch(() => null);
+      user = resolvedSession?.user;
+    }
+
     if (!user?.email) {
       currentUserRole = null;
       localStorage.removeItem('userRole');
       return null;
     }
-    
-    // Busca role na tabela usuarios (Fonte da verdade)
+
     const { data, error } = await supabase
       .from('usuarios')
       .select('role, nome')
@@ -54,23 +65,29 @@ async function fetchUserRole() {
       currentUserRole = data.role;
       localStorage.setItem('userRole', currentUserRole);
       localStorage.setItem('userName', data.nome);
+    } else {
+      currentUserRole = null;
+      localStorage.removeItem('userRole');
     }
-    
-    // Notifica o sistema que a role está pronta/atualizada
+
     window.dispatchEvent(new CustomEvent('auth:role-ready', { detail: currentUserRole }));
     return currentUserRole;
   } catch (error) {
     console.error('Erro em fetchUserRole:', error);
-    return currentUserRole; // Retorna o que tiver em cache no pior caso
+    return currentUserRole;
   } finally {
     isFetching = false;
   }
 }
 
 
+
 // Login com email/senha via Supabase Auth
 async function login(email, password) {
   try {
+    await initSupabase();
+    const supabase = getSupabaseClient();
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -97,6 +114,12 @@ async function login(email, password) {
 // Logout completo
 async function logout() {
   try {
+    await initSupabase();
+    const supabase = getSupabaseClient();
+
+    window.location.replace('login.html');
+
+
     // Limpa localStorage
     localStorage.removeItem('userRole');
     localStorage.removeItem('supabaseToken');
@@ -108,8 +131,8 @@ async function logout() {
     if (error) throw error;
     
     console.log('✅ Logout realizado');
-    window.location.href = 'login.html'; // Força redirecionamento imediato
     return { success: true };
+
   } catch (error) {
     console.error('Erro no logout:', error);
     return { success: false, error: error.message };
@@ -136,8 +159,10 @@ function hasPermission(requiredRole) {
 // Inicialização automática da sessão
 async function initAuth() {
   try {
+    await initSupabase();
     // Dispara busca inicial
     await fetchUserRole();
+
     console.log('✅ Auth initialized');
   } catch (error) {
     console.error('Erro na initAuth:', error);
@@ -146,25 +171,83 @@ async function initAuth() {
 
 
 // Listener para mudanças de autenticação (race-condition safe)
-const setupAuthListener = () => {
-  if (window.supabase?.auth?.onAuthStateChange) {
-    window.supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN') {
-        await fetchUserRole();
-      } else if (event === 'SIGNED_OUT') {
-        currentUserRole = null;
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('supabaseToken');
-        localStorage.removeItem('userName');
+async function setupAuthListener() {
+  await initSupabase();
+  const supabase = getSupabaseClient();
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      // Evita depender de getSession(): repassa a sessão recebida
+      await fetchUserRole({ session });
+    } else if (event === 'SIGNED_OUT') {
+      currentUserRole = null;
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('supabaseToken');
+      localStorage.removeItem('userName');
+    }
+  });
+}
+
+setupAuthListener().catch((e) => console.error('Auth listener error', e));
+
+
+export async function requireAuth({ timeoutMs = 5000 } = {}) {
+  const supabase = await initSupabase();
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      console.error('Auth timeout: sem resposta do Supabase em', timeoutMs, 'ms.');
+      window.location.replace('login.html');
+      reject(new Error('Auth timeout'));
+    }, timeoutMs);
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (settled) return;
+      // IMPORTANTE: resolve/redirect só no primeiro estado definitivo
+      if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve(session);
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+        settled = true;
+        clearTimeout(timeout);
+        window.location.replace('login.html');
+        reject(new Error('Não autenticado'));
       }
     });
-    console.log('✅ Auth listener attached');
-  } else {
-    console.log('Supabase not ready, waiting...');
-    window.addEventListener('supabase-ready', () => setupAuthListener(), { once: true });
-  }
-};
-setupAuthListener();
+  });
+}
+
+export async function requireGuest({ timeoutMs = 3000 } = {}) {
+  const supabase = await initSupabase();
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve(null);
+    }, timeoutMs);
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (settled) return;
+      if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
+        settled = true;
+        clearTimeout(timeout);
+        window.location.replace('index.html');
+        resolve(session);
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+        settled = true;
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  });
+}
+
 
 // APIs públicas
 export const AuthAPI = {
@@ -179,7 +262,9 @@ export const AuthAPI = {
 window.AuthAPI = AuthAPI;
 
 // 🚀 Auto-inicialização: Garante que a role seja carregada assim que o script rodar
-fetchUserRole();
+fetchUserRole().catch(()=>{});
+
+
 
 // Compatibilidade: garante que sidebar/guard enxerguem role imediatamente via evento
 window.addEventListener('auth:role-ready', () => {

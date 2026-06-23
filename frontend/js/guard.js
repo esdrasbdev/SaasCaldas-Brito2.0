@@ -4,8 +4,9 @@
  * Redireciona automaticamente se sem sessão ou sem permissão
  */
 
-import { supabase } from './supabase.js';
+import { requireAuth } from './auth.js';
 import { AuthAPI } from './auth.js';
+
 
 // Configuração de rotas protegidas
 const ROUTE_CONFIG = {
@@ -44,33 +45,25 @@ async function pageGuard() {
       // showPageContent(); // Comentado para evitar flash de conteúdo se o token for inválido
     }
 
-    // Verifica autenticação
-    // Aguarda o cliente estar pronto se necessário (lazy load no supabase.js)
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Guard: Erro ao obter sessão:', error);
-      redirectToLogin();
+    // Verifica autenticação (espera o Supabase restaurar sessão via onAuthStateChange)
+    let session;
+    try {
+      session = await requireAuth({ timeoutMs: 6000 });
+    } catch (e) {
+      // requireAuth já redireciona
       return;
     }
 
-    if (!session) {
-      console.warn('Guard: Sem sessão ativa. Redirecionando...');
-      redirectToLogin();
-      return;
-    }
-    
     // Verifica role específica
     if (requiredRole && !AuthAPI.hasPermission(requiredRole)) {
       console.warn(`Acesso negado a ${currentPage}. Role necessário: ${requiredRole}`);
       redirectToDashboard();
       return;
     }
-    
-    console.log(`Guard: Acesso permitido a ${currentPage} para ${session.user.email}`);
-    
-    // Tudo OK - mostra conteúdo
+
+    console.log(`Guard: Acesso permitido a ${currentPage} para ${session?.user?.email}`);
     showPageContent();
+
     
   } catch (error) {
     console.error('Erro no pageGuard:', error);
@@ -81,13 +74,14 @@ async function pageGuard() {
 // Redirecionamentos
 function redirectToLogin() {
   if (currentPage !== 'login.html') {
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
   }
 }
 
 function redirectToDashboard() {
-  window.location.href = 'index.html';
+  window.location.replace('index.html');
 }
+
 
 function showPageContent() {
   // Remove loading screen
