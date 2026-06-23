@@ -1,17 +1,9 @@
-# TODO - Implementação conforme `prompt.md`
+# TODO - Responsividade Cards Mobile
 
-- [x] Seção 1: Título do modal com nome real (clientes/audiencias/pericias/atendimentos)
-- [x] Seção 2: Sidebar mobile drawer (CSS + injeção de hamburger/overlay em `frontend/js/sidebar.js`)
-
-- [x] Seção 3: Ajuste `.main-content` padding-top mobile (espaço pro hamburger)
-
-- [x] Seção 4: `.table-responsive` CSS + scroll horizontal (confirmar em todas telas)
-- [x] Seção 5: Converter grids inline (atendimentos.html agora; audiencias/pericias depois com leitura dos HTMLs)
-
-- [x] Seção 6: Modal mobile drawer + iOS overflow (CSS)
-
-- [x] Seção 7: KPI grid responsivo (CSS)
-- [x] Seção 8: Botões `.btn-sm` touch-friendly (CSS)
-- [x] Seção 9: Input font-size 16px em mobile (iOS zoom) (CSS)
-- [x] Seção 10: Dark mode para hamburger/overlay (CSS)
+- [ ] Revisar CSS atual das seções/cards do dashboard (card-section, quick-actions, dashboard-content-grid, tabelas)
+- [ ] Ajustar CSS mobile para: empilhamento, espaçamento, tamanhos de fonte e botões touch-friendly
+- [ ] Melhorar layout de “Acesso Rápido” (quick-actions) em mobile para 1 coluna e altura adequada
+- [ ] Melhorar tabelas dentro de card-section em mobile (cabeçalho, padding, célula final com botão, quebra de texto)
+- [ ] Aplicar ajustes no CSS existente (principalmente em `frontend/css/style.css`) sem quebrar desktop
+- [ ] Rodar uma verificação local (build/servidor se houver) ou abrir `frontend/index.html` no mobile simulator
 

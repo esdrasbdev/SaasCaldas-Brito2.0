@@ -461,7 +461,18 @@ textarea:focus {
     padding-top: 64px; /* espaço para o botão hamburger fixo */
     max-width: 100%;
     margin-left: 0; /* garante que não haja deslocamento residual */
+    width: 100%;
+    overflow-x: hidden; /* evita estourar em telas pequenas */
   }
+
+  /* Evita qualquer elemento “passar” da tela (comuns em grids/cards/tabelas) */
+  .dashboard-content-grid,
+  .card-section,
+  .kpi-grid,
+  .table-responsive {
+    max-width: 100%;
+  }
+
 
   #dashboard-placeholder,
   .welcome-banner {
@@ -500,14 +511,16 @@ textarea:focus {
   }
 
   .quick-actions {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr !important;
     gap: 10px;
   }
 
   .card-section {
-    padding: 16px;
+    padding: 14px;
     border-radius: 16px;
+    overflow-x: hidden;
   }
+
 
   .card-section h2 {
     margin-bottom: 12px;
@@ -541,9 +554,27 @@ textarea:focus {
 /* Em telas pequenas, evitar quebra feia de colunas */
 @media (max-width: 768px) {
   .recent-table {
-    min-width: 560px;
+    min-width: 0;
+  }
+
+  /* Ajusta a tabela para caber e ficar tocável */
+  .recent-table th,
+  .recent-table td {
+    padding: 10px 10px;
+    font-size: 0.9rem;
+  }
+
+  .recent-table td:last-child {
+    width: auto;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .recent-table td:last-child > div {
+    justify-content: flex-end;
   }
 }
+
 
 /* Tabelas compactas: reduz padding interno sem perder legibilidade */
 .recent-table td {
