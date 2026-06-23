@@ -1,42 +1,25 @@
 /*
- * Cliente Supabase Global
- * Inicializa a conexão usando as variáveis injetadas por js/env.js
+ * Cliente Supabase
+ * Inicializa o client SOMENTE via endpoint /api/env
+ * (funciona no Vercel e no localhost sem depender de js/env.js).
  */
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// Carrega configurações ou usa placeholders para evitar crash imediato do JS
-const env = window._env || window.env || {};
-
-// Helper para obter a URL base da API (Backend)
 export const getApiUrl = () => {
+  // Backend local (Express/Railway) usa a mesma origem em produção.
   return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3001/api'
-    : '/api'; // Na Vercel, usamos caminhos relativos para a mesma URL
+    : '/api';
 };
 
-// Supabase client é inicializado de forma lazy e robusta:
-// 1) tenta window._env/window.env (js/env.js)
-// 2) se falhar, busca via backend /api/env (não depende de js/env.js no deploy)
 let supabaseClient = null;
 
-function hasKeys(e) {
-  return !!(e && e.SUPABASE_URL && e.SUPABASE_ANON_KEY);
-}
-
 function createIfPossible({ SUPABASE_URL, SUPABASE_ANON_KEY }) {
-  if (!SUPABASE_ANON_KEY) {
-    console.error('Supabase: SUPABASE_ANON_KEY ausente.');
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return null;
   }
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-// tentativa inicial (pode falhar no deploy)
-if (hasKeys(env)) {
-  supabaseClient = createIfPossible(env);
-} else {
-  console.warn('Supabase: js/env.js não carregado ou chaves ausentes. Fallback para /api/env.');
 }
 
 export const supabase = supabaseClient;
@@ -44,15 +27,14 @@ export const supabase = supabaseClient;
 export async function initSupabase() {
   if (supabaseClient) return supabaseClient;
 
-  // fallback: buscar configurações no backend
   const apiUrl = getApiUrl();
   const resp = await fetch(`${apiUrl}/env`, {
     headers: { accept: 'application/json' },
     cache: 'no-store'
   });
 
-  // Captura corpo mesmo em caso de erro/404 (muitas vezes vem HTML na produção)
   const contentType = resp.headers.get('content-type') || '';
+
   if (!resp.ok) {
     const text = await resp.text().catch(() => '');
     throw new Error(`Supabase init: falha ao obter /api/env (${resp.status}). ${text}`);
@@ -66,15 +48,16 @@ export async function initSupabase() {
   }
 
   const data = await resp.json();
+
   supabaseClient = createIfPossible(data);
 
   if (!supabaseClient) {
-    throw new Error('Supabase init: client não foi criado (chaves inválidas).');
+    throw new Error('Supabase init: client não foi criado (chaves inválidas em /api/env).');
   }
 
-  // Torna global para debug/compat
   window.supabase = supabaseClient;
   return supabaseClient;
 }
 
 window.supabase = supabaseClient;
+
