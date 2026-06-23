@@ -208,3 +208,6 @@ body.dark-mode .user-name {
   color: var(--azul-medio);
 }
 
+/* Mobile drawer uses fixed sidebar + transform; styles are appended */
+
+

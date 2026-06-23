@@ -458,16 +458,47 @@ textarea:focus {
 @media (max-width: 768px) {
   .main-content {
     padding: 16px;
+    padding-top: 64px; /* espaço para o botão hamburger fixo */
     max-width: 100%;
+    margin-left: 0; /* garante que não haja deslocamento residual */
   }
   
   h1 { font-size: 1.5rem; }
+
+  /* iOS: evitar zoom automático ao focar inputs */
+  .sidebar-search input,
+  input[type="text"],
+  input[type="email"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+
+
+/* Wrapper para scroll horizontal em tabelas mobile */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+}
+
+/* Em telas pequenas, evitar quebra feia de colunas */
+@media (max-width: 768px) {
+  .recent-table {
+    min-width: 560px;
+  }
 }
 
 /* Tabelas compactas: reduz padding interno sem perder legibilidade */
 .recent-table td {
   padding: 10px 14px;
 }
+
 
 .recent-table th {
   padding: 10px 14px;
@@ -668,6 +699,9 @@ textarea:focus {
    MODAIS PREMIUNS
    =========================== */
 .modal-overlay {
+  overflow-y: auto; /* necessário para iOS */
+  -webkit-overflow-scrolling: touch;
+
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.6); /* Azul escuro semi-transparente */
@@ -681,6 +715,7 @@ textarea:focus {
 
 .modal-content {
   width: 95%;
+  overflow: hidden; /* iOS: scroll deve ficar no .modal-body */
   max-width: 1000px; /* Ponto de equilíbrio ideal */
   max-height: 90vh;
   overflow-y: auto;
@@ -694,14 +729,31 @@ textarea:focus {
 }
 
 .modal-header {
-  padding: 24px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--cinza-borda);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
 }
-.modal-header h2 { margin: 0; font-size: 1.25rem; color: var(--azul-escuro); }
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--azul-escuro);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0; /* necessário para ellipsis funcionar em flex */
+}
 
 .modal-body {
   padding: 24px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Deixa formulários em modais mais compactos */
@@ -1143,9 +1195,148 @@ body.dark-mode .toast {
   gap: 16px;
 }
 
+/* Grid 3 colunas colapsável (usado no modal de atendimentos) */
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .form-row-3 {
+    grid-template-columns: 1fr;
+    margin-top: 0;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================
+   RESPONSIVIDADE MODAL MOBILE (drawer de baixo)
+   ============================ */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding: 0;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .modal-content::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--cinza-claro);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-header {
+    padding: 12px 16px 12px;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    border-radius: 0;
+  }
+
+  .modal-footer .btn-primary,
+  .modal-footer .btn-secondary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* iOS scroll melhor */
+.modal-body {
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* KPI mobile */
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .kpi-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .kpi-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .kpi-value {
+    font-size: 1.4rem;
+  }
+
+  .dashboard-content-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Botões touch-friendly */
+@media (max-width: 640px) {
+  .btn-sm {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    min-width: 30px;
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-sm i {
+    font-size: 0.9rem;
+  }
+}
+
+
 .form-row .form-group {
   margin-bottom: 0;
 }
+
 
 .section-title {
   font-size: 0.8rem;

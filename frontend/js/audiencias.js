@@ -301,7 +301,11 @@ const AudienciaController = {
 
 
         const headerEl = document.querySelector('#form-audiencia .modal-header h2');
-        if (headerEl) headerEl.textContent = 'Detalhes da Audiência';
+        const clienteNome = audiencia.clientes?.nome || audiencia.processos?.clientes?.nome || audiencia.clientes?.nome || null;
+        if (headerEl) {
+          headerEl.textContent = clienteNome ? clienteNome : 'Detalhes da Audiência';
+          headerEl.title = clienteNome || '';
+        }
         document.querySelector('#form-audiencia button[type="submit"]')?.style &&
           (document.querySelector('#form-audiencia button[type="submit"]').style.display = 'none');
 

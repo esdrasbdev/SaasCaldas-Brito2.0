@@ -356,7 +356,14 @@ const controller = {
       if (atendIdEl) atendIdEl.value = '';
 
       const headerEl = view.modal.querySelector('.modal-header h2');
-      if (headerEl) headerEl.textContent = 'Detalhes do Atendimento';
+      const clienteSelectEl = document.getElementById('atend-cliente');
+      const clienteNome = clienteSelectEl?.options?.[clienteSelectEl.selectedIndex]?.text;
+      if (headerEl) {
+        headerEl.textContent = clienteNome && clienteNome !== 'Selecione o cliente...'
+          ? clienteNome
+          : 'Detalhes do Atendimento';
+        headerEl.title = clienteNome || '';
+      }
 
       view.modal.style.display = 'flex';
       return;

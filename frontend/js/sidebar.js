@@ -31,6 +31,10 @@ const Sidebar = {
     // 2. Atualiza referências após renderizar
     this.navLinks = document.querySelectorAll('.sidebar-nav a');
 
+    // 2.5 Injeta hamburger/overlay para sidebar mobile
+    this.injetarHamburgerOverlay();
+
+
     window.addEventListener('auth:role-ready', (e) => {
       this.atualizarMenu(e.detail);
       this.atualizarInfoUsuario();
@@ -195,6 +199,55 @@ const Sidebar = {
         }
       });
     }
+  },
+
+  injetarHamburgerOverlay() {
+    if (typeof window === 'undefined') return;
+    if (document.getElementById('btn-hamburger')) return;
+
+    const hamburger = document.createElement('button');
+    hamburger.id = 'btn-hamburger';
+    hamburger.className = 'btn-hamburger';
+    hamburger.setAttribute('aria-label', 'Abrir menu');
+    hamburger.type = 'button';
+    hamburger.innerHTML = '<i class="fa-solid fa-bars"></i>';
+    document.body.appendChild(hamburger);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'sidebar-overlay';
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+
+    const sidebar = this.sidebar;
+
+    const abrir = () => {
+      sidebar.classList.add('aberta');
+      overlay.classList.add('ativo');
+      hamburger.setAttribute('aria-label', 'Fechar menu');
+    };
+
+    const fechar = () => {
+      sidebar.classList.remove('aberta');
+      overlay.classList.remove('ativo');
+      hamburger.setAttribute('aria-label', 'Abrir menu');
+    };
+
+    hamburger.addEventListener('click', () => {
+      const isOpen = sidebar.classList.contains('aberta');
+      if (isOpen) fechar();
+      else abrir();
+    });
+
+    overlay.addEventListener('click', fechar);
+
+    sidebar.addEventListener('click', (e) => {
+      const item = e.target.closest('.nav-item');
+      if (item && window.innerWidth <= 768) fechar();
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) fechar();
+    });
   },
 
   bindLogout() {

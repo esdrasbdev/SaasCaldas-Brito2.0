@@ -399,7 +399,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       inputs.forEach(el => el.disabled = isView);
       formPericia.classList.toggle('mode-view', isView);
       document.querySelector('#form-pericia button[type="submit"]').style.display = isView ? 'none' : 'block';
-      document.querySelector('.modal-header h2').textContent = isView ? 'Detalhes da Perícia' : 'Editar Perícia';
+      const headerH2 = document.querySelector('.modal-header h2');
+      const clienteSelectEl = document.getElementById('cliente-select');
+      const clienteNome = clienteSelectEl?.options?.[clienteSelectEl.selectedIndex]?.text;
+      if (headerH2) {
+        headerH2.textContent = isView && clienteNome && clienteNome !== 'Selecione...' && clienteNome !== '(Opcional) Selecione...'
+          ? clienteNome
+          : (isView ? 'Detalhes da Perícia' : 'Editar Perícia');
+        headerH2.title = (isView ? clienteNome : '') || '';
+      }
 
       // Hidden id para edição
       if (!document.getElementById('pericia-id')) {

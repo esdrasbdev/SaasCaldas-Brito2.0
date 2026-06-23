@@ -168,7 +168,23 @@ const ClienteView = {
   },
 
   abrirModal(cliente = null, visualizacao = false) {
-    this.elementos.tituloModal.textContent = visualizacao ? 'Visualizar Cliente' : (cliente ? 'Editar Cliente' : 'Novo Cliente');
+    // Título no modo visualização deve exibir o nome do cliente
+    if (visualizacao && cliente?.nome) {
+      this.elementos.tituloModal.textContent = cliente.nome;
+    } else {
+      this.elementos.tituloModal.textContent = visualizacao ? 'Visualizar Cliente' : (cliente ? 'Editar Cliente' : 'Novo Cliente');
+    }
+
+    // Tooltip e truncamento (ellipses) para títulos longos
+    const tituloEl = this.elementos.tituloModal;
+    tituloEl.title = cliente?.nome || '';
+    tituloEl.style.cssText = `
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: calc(100% - 56px);
+      display: block;
+    `;
     this.elementos.form.reset();
     
     // Adiciona classe de estilo visualização ao container do form
