@@ -222,15 +222,16 @@ const ClienteView = {
       el.classList.remove('input-error');
     });
 
-    // Posicionamento da seção de documentos: deve ficar no final do modal-body, antes do footer
+    // Seção de Documentos Jurídicos (apenas geração de PDF via template; sem anexos/storage)
     let containerDocs = document.getElementById('documentos-lista-container');
     if (!containerDocs) {
       containerDocs = document.createElement('div');
       containerDocs.id = 'documentos-lista-container';
     }
 
-    // Se o modalBody existir, anexamos os documentos nele para que o footer (abaixo dele) fique sempre na base
     if (modalBody) {
+      // Limpa qualquer conteúdo anterior (evita atrasos de carregamento de anexos)
+      containerDocs.innerHTML = '';
       modalBody.appendChild(containerDocs);
     }
 
@@ -292,67 +293,29 @@ const ClienteView = {
   },
 
   async renderizarSessaoDocumentos(clienteId, visualizacao) {
+    // Removido: listagem/ upload de anexos (Storage), para não atrasar o site.
+    // Mantido apenas a geração de PDFs via templates.
+
     const container = document.getElementById('documentos-lista-container');
     if (!container) return;
 
-    // Se não houver clienteId, estamos criando um novo cliente
+    // Limpa e renderiza somente os cards de geração
+    container.innerHTML = '';
+
     if (!clienteId) {
       container.innerHTML = `
         <div style="padding-top: 15px;">
           <h3 style="font-size: 1rem; color: var(--azul-medio); margin-bottom: 10px; border-bottom: 2px solid var(--azul-claro); padding-bottom: 5px;">
-            <i class="fa-solid fa-paperclip"></i> Documentos do Cliente
+            <i class="fa-solid fa-file-lines"></i> Documentos Jurídicos
           </h3>
           <div style="background: var(--azul-claro); color: var(--azul-medio); padding: 15px; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 500;">
-            <i class="fa-solid fa-circle-info"></i> Para anexar documentos, primeiro salve os dados básicos do cliente.
+            <i class="fa-solid fa-circle-info"></i> Para gerar documentos, primeiro salve os dados básicos do cliente.
           </div>
         </div>`;
       return;
     }
 
-    container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--cinza-medio);"><i class="fa-solid fa-spinner fa-spin"></i> Carregando arquivos...</div>';
-
-    try {
-      const docs = await ClienteModel.listarDocumentos(clienteId);
-      
-      let html = `
-        <div style="padding-top: 15px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="font-size: 1rem; color: var(--azul-medio); margin-bottom: 0; border-bottom: 2px solid var(--azul-claro); padding-bottom: 5px; flex: 1;">
-              <i class="fa-solid fa-paperclip"></i> Documentos do Cliente
-            </h3>
-            ${!visualizacao ? `<label class="btn-primary" style="cursor: pointer; padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Anexar Arquivo
-              <input type="file" id="upload-doc-cliente" style="display: none;" data-cliente="${clienteId}">
-            </label>` : ''}
-          </div>
-          <table class="recent-table" style="font-size: 0.85rem; width: 100%; background: #fff; border: 1px solid var(--cinza-borda); border-radius: 8px; overflow: hidden;">
-            <thead><tr><th>Arquivo</th><th style="text-align: right;">Ações</th></tr></thead>
-            <tbody>
-              ${docs.length === 0 ? '<tr><td colspan="2" class="text-center">Nenhum documento.</td></tr>' : 
-                docs.map(d => `
-                <tr>
-                  <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <i class="fa-solid fa-file-pdf" style="margin-right: 8px; color: #ef4444;"></i> ${d.nome}
-                  </td>
-                  <td style="text-align: right;">
-                    <a href="${d.url}" target="_blank" class="btn-sm" title="Ver"><i class="fa-solid fa-eye"></i></a>
-                    <a href="${d.url}" download class="btn-sm" title="Baixar"><i class="fa-solid fa-download"></i></a>
-                    ${!visualizacao ? `<button class="btn-sm btn-del-doc" data-id="${d.id}" data-cliente="${clienteId}" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-      container.innerHTML = html;
-
-      // Acrescenta cards de Documentos Jurídicos (geração via template + print)
-      // mesmo sem remover a listagem de anexos existentes.
-      this.renderizarDocumentosJuridicos(container, clienteId, visualizacao);
-    } catch (err) {
-      container.innerHTML = '<p class="text-danger">Erro ao carregar documentos.</p>';
-    }
+    this.renderizarDocumentosJuridicos(container, clienteId, visualizacao);
   },
 
   fecharModal() {
