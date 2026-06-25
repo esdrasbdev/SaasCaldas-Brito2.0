@@ -247,6 +247,7 @@ const ClienteView = {
       document.getElementById('cliente-nome').value = cliente.nome;
       document.getElementById('cliente-tipo').value = cliente.tipo || 'PF';
       document.getElementById('cliente-documento').value = cliente.documento || '';
+      document.getElementById('cliente-rg').value = cliente.rg || '';
       document.getElementById('cliente-email').value = cliente.email || '';
       document.getElementById('cliente-telefone').value = cliente.telefone || '';
       // Novos campos
@@ -380,6 +381,7 @@ const ClienteView = {
     const dadosCliente = {
       nomeCompleto: getVal('cliente-nome'),
       cpf: getVal('cliente-documento'),
+      rg: getVal('cliente-rg'),
 
       estadoCivil: getVal('cliente-estado-civil'),
       profissao: getVal('cliente-profissao'),
@@ -411,6 +413,12 @@ const ClienteView = {
         icone: 'fa-solid fa-scale-unbalanced',
         titulo: 'Declaração de Hipossuficiência',
         desc: 'Declaração para fins de gratuidade de justiça.'
+      },
+      {
+        chave: 'termo-renuncia',
+        icone: 'fa-solid fa-file-circle-xmark',
+        titulo: 'Termo de Renúncia',
+        desc: 'Renúncia formal de direito ou benefício pelo cliente.'
       },
       {
         chave: 'declaracao-residencia',
@@ -649,6 +657,100 @@ const ClienteView = {
             Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
             Data: _____/_____/_____.
           </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'declaracao-residencia': {
+        titulo: 'DECLARAÇÃO DE RESIDÊNCIA',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">DECLARAÇÃO DE RESIDÊNCIA</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Eu, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>${d.rg ? `, RG <strong>${escapeHtml(d.rg)}</strong>` : ''},
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            declaro, para os devidos fins de direito e sob as penas da lei, que sou residente e domiciliado(a)
+            no seguinte endereço:
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; background: #f8fafc; border-left: 3px solid #2563eb; padding: 10px 14px; border-radius: 4px;">
+            <strong>${escapeHtml(d.endereco)}</strong>${d.cep ? ` — CEP <strong>${escapeHtml(d.cep)}</strong>` : ''}<br>
+            Cidade: <strong>${escapeHtml(d.cidade)}</strong> / Estado: <strong>${escapeHtml(d.estado)}</strong>
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Declaro ainda que as informações acima são verdadeiras e assumo total responsabilidade pela veracidade dos dados prestados.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <br>
+          <p style="font-size: 0.95rem; line-height: 2.5; text-align: center;">
+            _____________________________________________<br>
+            <strong>${escapeHtml(d.nomeCompleto)}</strong><br>
+            CPF: ${escapeHtml(d.cpf)}
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'termo-renuncia': {
+        titulo: 'TERMO DE RENÚNCIA',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">TERMO DE RENÚNCIA</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Eu, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>${d.rg ? `, RG <strong>${escapeHtml(d.rg)}</strong>` : ''},
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado(a) em <strong>${escapeHtml(d.endereco)}</strong>${d.cep ? `, CEP <strong>${escapeHtml(d.cep)}</strong>` : ''},
+            cidade de <strong>${escapeHtml(d.cidade)}</strong> / <strong>${escapeHtml(d.estado)}</strong>,
+            telefone <strong>${escapeHtml(d.telefone)}</strong>, e-mail <strong>${escapeHtml(d.email)}</strong>,
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            DECLARO, de forma livre, voluntária e consciente, que renuncio ao direito/benefício de:
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; background: #f8fafc; border-left: 3px solid #2563eb; padding: 10px 14px; border-radius: 4px;">
+            ___________________________________________________________<br>
+            (descrever o direito ou benefício objeto da renúncia)
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 12px;">
+            Declaro estar ciente de que esta renúncia é irrevogável para os fins a que se destina, salvo disposição legal em contrário, e que fui devidamente orientado(a) pelo escritório de advocacia quanto aos efeitos jurídicos desta decisão.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <br>
+          <div style="display:flex; justify-content:space-between; margin-top: 40px;">
+            <div style="text-align:center; width: 45%;">
+              <div style="border-top: 1px solid #111; padding-top: 6px;">
+                <strong>${escapeHtml(d.nomeCompleto)}</strong><br>
+                <span style="font-size:0.85rem;">CPF: ${escapeHtml(d.cpf)}</span><br>
+                <span style="font-size:0.85rem;">Renunciante</span>
+              </div>
+            </div>
+            <div style="text-align:center; width: 45%;">
+              <div style="border-top: 1px solid #111; padding-top: 6px;">
+                <strong>Advogado(a) Responsável</strong><br>
+                <span style="font-size:0.85rem;">OAB: _______________</span><br>
+                <span style="font-size:0.85rem;">Testemunha</span>
+              </div>
+            </div>
+          </div>
 
           <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
             (Modelo gerado automaticamente com base nos dados cadastrados.)
@@ -975,6 +1077,7 @@ const ClienteController = {
       email: getVal('cliente-email'),
       telefone: getVal('cliente-telefone'),
       inss_senha: getVal('cliente-inss-senha'),
+      rg: getVal('cliente-rg'),
 
       // Endereço
       cep: getVal('cliente-cep'),
