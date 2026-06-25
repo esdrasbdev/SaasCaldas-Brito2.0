@@ -371,8 +371,10 @@ const ClienteView = {
     // Não ocupar espaço quando ainda não existe cliente salvo
     if (!clienteId) return;
 
-    const clienteNome = document.getElementById('cliente-nome')?.value || '';
-    if (!clienteNome) return;
+    // Não impedir renderização quando o modal estiver em modo visualização.
+    // Campos podem ainda não estar preenchidos no momento do primeiro render.
+    // A UI deve sempre aparecer, permitindo ao usuário clicar em Gerar/Visualizar.
+
 
     const getVal = (id) => document.getElementById(id)?.value || '';
 
@@ -742,6 +744,9 @@ const ClienteView = {
     // - Gerar e Baixar => dispara print
     // - Visualizar => abre sem print (apenas visualização)
     const shouldPrint = tipo === 'gerar' || tipo === 'baixar';
+
+    console.log('[Documentos Jurídicos]', { chave, tipo, dadosCliente });
+
 
     if (shouldPrint) {
       // Pequeno delay para renderizar
