@@ -3,7 +3,7 @@
  * Funcionalidades: Listar, Criar (Convidar), Editar, Excluir
  */
 
-import { supabase } from './supabase.js';
+import { supabase, initSupabase } from './supabase.js';
 import { showToast } from './utils.js';
 
 const AdminView = {
@@ -251,4 +251,7 @@ const AdminController = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => AdminController.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+  AdminController.init();
+});

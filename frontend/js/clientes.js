@@ -260,6 +260,10 @@ const ClienteView = {
       document.getElementById('cliente-cidade').value = cliente.cidade || '';
       document.getElementById('cliente-estado').value = cliente.estado || '';
 
+      const rgEl = document.getElementById('cliente-rg');
+      if (rgEl) rgEl.value = cliente.rg || '';
+
+
       // Set advogado selection (garante que o value bate com as options, mesmo se vier number/uuid)
       const advogadoSelect = document.getElementById('cliente-advogado');
       if (advogadoSelect) {
@@ -342,6 +346,10 @@ const ClienteView = {
         </div>
       `;
       container.innerHTML = html;
+
+      // Acrescenta cards de Documentos Jurídicos (geração via template + print)
+      // mesmo sem remover a listagem de anexos existentes.
+      this.renderizarDocumentosJuridicos(container, clienteId, visualizacao);
     } catch (err) {
       container.innerHTML = '<p class="text-danger">Erro ao carregar documentos.</p>';
     }
@@ -354,8 +362,410 @@ const ClienteView = {
 
   mostrarErro(msg) {
     showToast(msg, 'error');
+  },
+
+  // ==========================================
+  // Central de Documentos Jurídicos (template + window.print)
+  // ==========================================
+  renderizarDocumentosJuridicos(container, clienteId, visualizacao) {
+    // Não ocupar espaço quando ainda não existe cliente salvo
+    if (!clienteId) return;
+
+    const clienteNome = document.getElementById('cliente-nome')?.value || '';
+    if (!clienteNome) return;
+
+    const getVal = (id) => document.getElementById(id)?.value || '';
+
+    const dadosCliente = {
+      nomeCompleto: getVal('cliente-nome'),
+      cpf: getVal('cliente-documento'),
+      rg: getVal('cliente-rg'),
+      estadoCivil: getVal('cliente-estado-civil'),
+      profissao: getVal('cliente-profissao'),
+      endereco: [getVal('cliente-endereco'), getVal('cliente-numero'), getVal('cliente-bairro')]
+        .filter(Boolean)
+        .join(', '),
+      telefone: getVal('cliente-telefone'),
+      email: getVal('cliente-email'),
+      cidade: getVal('cliente-cidade'),
+      estado: getVal('cliente-estado'),
+      cep: getVal('cliente-cep')
+    };
+
+    const modelos = [
+      {
+        chave: 'procuracao',
+        icone: 'fa-solid fa-scroll',
+        titulo: 'Procuração',
+        desc: 'Permite representar o cliente judicialmente.'
+      },
+      {
+        chave: 'contrato-honorarios',
+        icone: 'fa-solid fa-file-signature',
+        titulo: 'Contrato de Honorários',
+        desc: 'Acordo de prestação de serviços advocatícios.'
+      },
+      {
+        chave: 'declaracao-hipossuficiencia',
+        icone: 'fa-solid fa-scale-unbalanced',
+        titulo: 'Declaração de Hipossuficiência',
+        desc: 'Declaração para fins de gratuidade de justiça.'
+      },
+      {
+        chave: 'declaracao-residencia',
+        icone: 'fa-solid fa-house',
+        titulo: 'Declaração de Residência',
+        desc: 'Comprovante de endereço do cliente.'
+      },
+      {
+        chave: 'autorizacao-representacao',
+        icone: 'fa-solid fa-user-check',
+        titulo: 'Autorização de Representação',
+        desc: 'Autorização para atos representativos.'
+      },
+      {
+        chave: 'termo-ciencia',
+        icone: 'fa-solid fa-eye',
+        titulo: 'Termo de Ciência',
+        desc: 'Registro formal de ciência do cliente.'
+      },
+      {
+        chave: 'peticao-inicial',
+        icone: 'fa-solid fa-gavel',
+        titulo: 'Petição Inicial (modelo)',
+        desc: 'Modelo base para início de procedimento.'
+      }
+    ];
+
+    const blocoId = 'documentos-juridicos-section';
+    let bloco = document.getElementById(blocoId);
+    if (!bloco) {
+      bloco = document.createElement('div');
+      bloco.id = blocoId;
+      bloco.style.marginTop = '18px';
+      bloco.style.borderTop = '2px solid var(--azul-claro)';
+      container.appendChild(bloco);
+    }
+
+    bloco.innerHTML = `
+      <div style="padding-top: 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+          <h3 style="font-size: 1rem; color: var(--azul-medio); margin-bottom: 0; border-bottom: 2px solid var(--azul-claro); padding-bottom: 5px; flex: 1;">
+            <i class="fa-solid fa-file-lines"></i> Documentos Jurídicos
+          </h3>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          ${modelos.map((m) => `
+            <div class="card-section" style="padding: 14px; margin: 0; border-radius: 14px; box-shadow: none; border: 1px solid var(--cinza-borda);">
+              <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom: 6px;">
+                <div style="width:34px; height:34px; border-radius: 10px; background: var(--azul-claro); display:flex; align-items:center; justify-content:center; color: var(--azul-medio); flex-shrink:0;">
+                  <i class="${m.icone}"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:700; color: var(--azul-escuro);">${m.titulo}</div>
+                  <div style="font-size:0.8rem; color: var(--cinza-medio); margin-top:2px;">${m.desc}</div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top: 10px;">
+                <button class="btn-sm btn-gj-gerar" data-chave="${m.chave}" type="button" ${visualizacao ? 'disabled' : ''}>
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar
+                </button>
+                <button class="btn-sm btn-gj-visualizar" data-chave="${m.chave}" type="button" ${visualizacao ? 'disabled' : ''}>
+                  <i class="fa-solid fa-eye"></i> Visualizar
+                </button>
+                <button class="btn-sm btn-gj-baixar" data-chave="${m.chave}" type="button" ${visualizacao ? 'disabled' : ''}>
+                  <i class="fa-solid fa-download"></i> Baixar PDF
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="font-size:0.8rem; color: var(--cinza-medio); margin-top: 10px;">
+          Os documentos são gerados localmente em uma janela de impressão (Salvar como PDF).
+        </div>
+      </div>
+    `;
+
+    // Delegação (uma vez por render; segura pois substitui innerHTML)
+    bloco.onclick = (ev) => {
+      const btn = ev.target.closest('button[data-chave]');
+      if (!btn) return;
+
+      const chave = btn.dataset.chave;
+      const tipo = btn.classList.contains('btn-gj-gerar')
+        ? 'gerar'
+        : btn.classList.contains('btn-gj-visualizar')
+          ? 'visualizar'
+          : 'baixar';
+
+      this.abrirTemplateDocumento(chave, dadosCliente, tipo);
+    };
+  },
+
+  abrirTemplateDocumento(chave, dadosCliente, tipo) {
+    const templates = {
+      procuracao: {
+        titulo: 'PROCURAÇÃO',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">PROCURAÇÃO</h2>
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Pelo presente instrumento, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
+            e-mail <strong>${escapeHtml(d.email)}</strong>,
+            nomeia e constitui seu/sua procurador(a) para o fim de representá-lo(a) perante os órgãos judiciais.
+          </p>
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Cidade/UF: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong>, CEP <strong>${escapeHtml(d.cep)}</strong>
+            — Data: _____/_____/_____.
+          </p>
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'contrato-honorarios': {
+        titulo: 'CONTRATO DE HONORÁRIOS',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">CONTRATO DE HONORÁRIOS ADVOCATÍCIOS</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Pelo presente instrumento, de um lado, o(a) cliente <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>, residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>,
+            telefone <strong>${escapeHtml(d.telefone)}</strong> e e-mail <strong>${escapeHtml(d.email)}</strong>,
+            doravante denominado(a) CONTRATANTE;
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            E, de outro lado, o(a) advogado(a) responsável (qualificar),
+            doravante denominado(a) CONTRATADO(A);
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 14px;">
+            <strong>OBJETO</strong>: prestação de serviços advocatícios relacionados a demandas judiciais e/ou administrativas.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            <strong>VALOR E FORMA DE PAGAMENTO</strong>: (definir) – honorários a serem ajustados conforme proposta anexa.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            <strong>CIÊNCIA</strong>: o(a) CONTRATANTE declara ciência quanto aos termos ajustados e autoriza o prosseguimento dos atos necessários.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'declaracao-hipossuficiencia': {
+        titulo: 'DECLARAÇÃO DE HIPOSSUFICIÊNCIA',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">DECLARAÇÃO DE HIPOSSUFICIÊNCIA</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Eu, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
+            e-mail <strong>${escapeHtml(d.email)}</strong>, declaro, para os devidos fins, que não possuo condições de arcar com as custas e despesas processuais
+            sem prejuízo do meu sustento e/ou de minha família.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Assim, requeiro os benefícios da gratuidade da justiça, nos termos da lei.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'autorizacao-representacao': {
+        titulo: 'AUTORIZAÇÃO DE REPRESENTAÇÃO',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">AUTORIZAÇÃO DE REPRESENTAÇÃO</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Eu, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
+            e-mail <strong>${escapeHtml(d.email)}</strong>, autorizo o(a) representante/advogado(a) a praticar atos necessários à
+            condução e acompanhamento de meu interesse junto aos órgãos competentes.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Esta autorização abrange a assinatura de documentos, apresentação de peças e acompanhamento do processo, conforme necessário.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'termo-ciencia': {
+        titulo: 'TERMO DE CIÊNCIA',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">TERMO DE CIÊNCIA</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Eu, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
+            e-mail <strong>${escapeHtml(d.email)}</strong>, declaro estar ciente das informações prestadas pelo escritório, incluindo:
+          </p>
+
+          <ul style="font-size:0.95rem; line-height:1.6;">
+            <li>Objetivo e etapas do procedimento;</li>
+            <li>Documentos necessários e responsabilidades do(a) cliente;</li>
+            <li>Possíveis prazos e desdobramentos do caso.</li>
+          </ul>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      },
+
+      'peticao-inicial': {
+        titulo: 'PETIÇÃO INICIAL (MODELO)',
+        conteudo: (d) => `
+          <h2 style="text-align:center; margin: 0 0 18px 0;">PETIÇÃO INICIAL (MODELO)</h2>
+
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
+            residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
+            e-mail <strong>${escapeHtml(d.email)}</strong>,
+            CEP <strong>${escapeHtml(d.cep)}</strong>, vem, por meio de seu(sua) advogado(a), à presença de Vossa Excelência,
+            propor a presente <strong>AÇÃO</strong> em face de <strong>(Réu)</strong>, expondo e requerendo o que segue.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 14px;"><strong>I. DOS FATOS</strong></p>
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            (Descrever os fatos com clareza e cronologia. Informar documentos e datas pertinentes.)
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 14px;"><strong>II. DO DIREITO</strong></p>
+          <p style="font-size: 0.95rem; line-height:1.6;">
+            (Indicar fundamentos legais e jurisprudência pertinente.)
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 14px;"><strong>III. DOS PEDIDOS</strong></p>
+          <ol style="font-size:0.95rem; line-height:1.6;">
+            <li>(Pedido 1)</li>
+            <li>(Pedido 2)</li>
+            <li>(Pedido 3)</li>
+          </ol>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 14px;">
+            Requer, ainda, a juntada de documentos e demais providências.
+          </p>
+
+          <p style="font-size: 0.95rem; line-height:1.6; margin-top: 18px;">
+            Local: <strong>${escapeHtml(d.cidade)} / ${escapeHtml(d.estado)}</strong> — CEP <strong>${escapeHtml(d.cep)}</strong>.
+            Data: _____/_____/_____.
+          </p>
+
+          <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+            (Modelo gerado automaticamente com base nos dados cadastrados.)
+          </p>
+        `
+      }
+    };
+
+    const template = templates[chave] || {
+      titulo: 'DOCUMENTO',
+      conteudo: (d) => `
+        <h2 style="text-align:center; margin: 0 0 18px 0;">${escapeHtml(dadosCliente.nomeCompleto)}</h2>
+        <p style="font-size: 0.95rem; line-height:1.6;">Modelo não configurado para: ${escapeHtml(chave)}.</p>
+        <p style="font-size:0.85rem; color:#555; margin-top: 30px;">
+          (Crie/ajuste modelos quando desejar.)
+        </p>
+      `
+    };
+
+    const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>${template.titulo}</title>
+  <style>
+    body{ font-family: Arial, Helvetica, sans-serif; padding: 34px; color:#111; }
+    h1{ font-size: 20px; }
+    .box{ border:1px solid #e5e7eb; border-radius: 10px; padding: 18px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    ${template.conteudo(dadosCliente)}
+  </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'noopener,noreferrer');
+    if (!win) {
+      alert('Pop-up bloqueado. Permita pop-ups para gerar/visualizar o documento.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    // Gerar/Visualizar/Baixar PDF
+    // - Gerar e Baixar => dispara print
+    // - Visualizar => abre sem print (apenas visualização)
+    const shouldPrint = tipo === 'gerar' || tipo === 'baixar';
+
+    if (shouldPrint) {
+      // Pequeno delay para renderizar
+      setTimeout(() => {
+        try {
+          win.focus();
+          win.print();
+        } catch (_) {}
+      }, 350);
+    }
+
   }
 };
+
+// Helpers locais (fora de componentes) para evitar XSS no template HTML
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '<')
+    .replaceAll('>', '>')
+    .replaceAll('"', '"')
+    .replaceAll("'", '&#039;');
+}
+
 
 // ==========================================
 // 3. CONTROLLER (Regras e Eventos)
@@ -569,6 +979,7 @@ const ClienteController = {
       estado: getVal('cliente-estado'),
 
       // Outros dados
+      rg: getVal('cliente-rg'),
       nacionalidade: getVal('cliente-nacionalidade'),
       estado_civil: getVal('cliente-estado-civil'),
       profissao: getVal('cliente-profissao'),

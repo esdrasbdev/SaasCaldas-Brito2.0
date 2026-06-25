@@ -140,11 +140,9 @@ const view = {
           colorStyle = 'color: #0ea5e9';
         }
 
-        // Extrai campos sensíveis de anotacoes
         const titulo = this.extrairTitulo(d);
         const anot = this.extrairAnotacoes(d);
         const resp = this.getRespNome(d);
-
 
         return `
       <tr>
@@ -176,7 +174,6 @@ const view = {
           </div>
         </td>
       </tr>`;
-
       })
       .join('');
 
@@ -204,10 +201,30 @@ const view = {
   }
 };
 
-
 const controller = {
+  async carregarResponsaveis() {
+    const select = document.getElementById('atend-responsavel');
+    if (!select) return;
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, nome, role')
+      .eq('ativo', true)
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao carregar responsáveis:', error);
+      return;
+    }
+
+    select.innerHTML = '<option value="">Selecione...</option>' +
+      (data || []).map(u => `<option value="${u.id}">${u.nome} (${u.role})</option>`).join('');
+  },
+
   async init() {
     view.init();
+
+    await this.carregarResponsaveis();
 
     const role = AuthAPI.getRole();
     const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
@@ -218,7 +235,6 @@ const controller = {
     await this.carregar();
     await this.carregarClientes();
   },
-
 
   async carregar() {
     const { data, error } = await supabase
@@ -278,7 +294,9 @@ const controller = {
 
     const dataInput = document.getElementById('atend-data').value;
     const horaInput = document.getElementById('atend-hora').value;
-    const dataIso = (dataInput && horaInput) ? new Date(`${dataInput}T${horaInput}:00-03:00`).toISOString() : null;
+    const dataIso = (dataInput && horaInput)
+      ? new Date(`${dataInput}T${horaInput}:00-03:00`).toISOString()
+      : null;
 
     const payload = {
       cliente_id: document.getElementById('atend-cliente').value,
@@ -287,23 +305,25 @@ const controller = {
       canal: document.getElementById('atend-canal').value,
       duracao: document.getElementById('atend-duracao').value,
       anotacoes: document.getElementById('atend-anotacoes').value,
-      usuario_id: usuarioDB.id
+      usuario_id: document.getElementById('atend-responsavel')?.value || usuarioDB.id
     };
 
     const { error } = isEdit
       ? await supabase.from('atendimentos').update(payload).eq('id', atendId)
       : await supabase.from('atendimentos').insert(payload);
 
-      if (error) {
-        const msg = error.message || 'Erro ao salvar';
-        view.showToast('error', 'Erro ao salvar', msg);
-        return;
-      }
+    if (error) {
+      const msg = error.message || 'Erro ao salvar';
+      view.showToast('error', 'Erro ao salvar', msg);
+      return;
+    }
 
     view.modal.style.display = 'none';
     view.form.reset();
+
     const atendIdEl = document.getElementById('atend-id');
     if (atendIdEl) atendIdEl.value = '';
+
     controller.carregar();
   },
 
@@ -332,6 +352,10 @@ const controller = {
       document.getElementById('atend-canal').value = data.canal || 'WhatsApp';
       document.getElementById('atend-duracao').value = data.duracao || '';
       document.getElementById('atend-anotacoes').value = data.anotacoes || '';
+
+      // preencher responsável
+      const selectResp = document.getElementById('atend-responsavel');
+      if (selectResp && data.usuario_id) selectResp.value = data.usuario_id;
 
       if (data.data) {
         const dt = new Date(data.data);
@@ -376,6 +400,7 @@ const controller = {
         view.showToast('warning', 'Permissão negada', 'Você não tem permissão para editar atendimentos.');
         return;
       }
+
       const { data, error } = await supabase
         .from('atendimentos')
         .select('*, clientes(nome), usuarios(nome)')
@@ -392,6 +417,10 @@ const controller = {
       document.getElementById('atend-canal').value = data.canal || 'WhatsApp';
       document.getElementById('atend-duracao').value = data.duracao || '';
       document.getElementById('atend-anotacoes').value = data.anotacoes || '';
+
+      // preencher responsável
+      const selectResp = document.getElementById('atend-responsavel');
+      if (selectResp && data.usuario_id) selectResp.value = data.usuario_id;
 
       if (data.data) {
         const dt = new Date(data.data);
@@ -447,7 +476,6 @@ const controller = {
       });
       if (!ok) return;
 
-
       const { error } = await supabase
         .from('atendimentos')
         .delete()
@@ -468,5 +496,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
   controller.init();
 });
-
 

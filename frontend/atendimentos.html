@@ -42,9 +42,17 @@
               </div>
 
               <div class="form-group">
+                <label>Responsável pelo Atendimento *</label>
+                <select id="atend-responsavel" required>
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+
+
+              <div class="form-group">
                 <label>Assunto / Título *</label>
                 <div class="login-input-group" style="margin-bottom:0">
-                  <input type="text" id="atend-titulo" placeholder="Ex: Dúvidas sobre andamento processual" required>
+                  <input type="text" id="atend-titulo" required>
                   <i class="fa-solid fa-heading"></i>
                 </div>
               </div>
@@ -73,13 +81,13 @@
                 </div>
                 <div class="form-group">
                   <label>Duração (aprox)</label>
-                  <input type="text" id="atend-duracao" placeholder="Ex: 30 min">
+                    <input type="text" id="atend-duracao">
                 </div>
               </div>
 
               <div class="form-group" style="margin-bottom: 0;">
                 <label>Resumo / Anotações</label>
-                <textarea id="atend-anotacoes" rows="4" placeholder="Descreva o que foi tratado, orientações passadas e próximos passos..."></textarea>
+                <textarea id="atend-anotacoes" rows="4"></textarea>
               </div>
             </div>
 

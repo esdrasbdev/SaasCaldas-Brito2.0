@@ -110,34 +110,36 @@ const AudienciaView = {
         : '';
 
       return `
-        <tr>
-          <td style="width:110px; white-space:nowrap;">
-            <div style="font-weight:600; color:var(--azul-escuro); font-size:0.9rem;">${dataTxt}</div>
-            <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
-          </td>
-          <td>
-            <div style="font-weight:600; font-size:0.9rem;">${clienteNome}</div>
-            <div style="font-size:0.75rem; color:var(--cinza-medio);">CNJ: ${numeroCnj}</div>
-          </td>
-          <td>
-            <div style="font-size:0.85rem;">${a.local || 'Virtual'}</div>
-            ${tipoBadge}
-          </td>
-          <td style="text-align:right; width:90px;">
-            <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-              <button class="btn-sm btn-view" data-id="${a.id}" title="Visualizar">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-              <button class="btn-sm btn-edit" data-id="${a.id}" title="Editar">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-              <button class="btn-sm btn-delete" data-id="${a.id}" style="color:#ef4444;" title="Excluir">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
+  <tr>
+    <td style="width:140px; white-space:nowrap;">
+      <div style="font-weight:600; color:var(--azul-escuro); font-size:0.9rem;">${dataTxt}</div>
+      <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
+    </td>
+    <td>
+      <div style="font-weight:600; font-size:0.9rem;">${clienteNome}</div>
+      <div style="font-size:0.75rem; color:var(--cinza-medio);">CNJ: ${numeroCnj}</div>
+    </td>
+    <td>
+      <div style="font-size:0.85rem;">${a.local || 'Virtual'}</div>
+    </td>
+    <td style="width:110px;">
+      ${tipoBadge}
+    </td>
+    <td style="width:110px; text-align: right; vertical-align:middle;">
+      <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+        <button class="btn-sm btn-view" data-id="${a.id}" title="Visualizar">
+          <i class="fa-solid fa-eye"></i>
+        </button>
+        <button class="btn-sm btn-edit" data-id="${a.id}" title="Editar">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+        <button class="btn-sm btn-delete" data-id="${a.id}" style="color:#ef4444;" title="Excluir">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    </td>
+  </tr>
+  `;
     }).join('');
 
 
