@@ -1,4 +1,4 @@
-/*
+ 1/*
  * Módulo Clientes - Arquitetura MVC
  * Separação clara entre Dados (Supabase), Interface (DOM) e Regras de Negócio
  */
@@ -260,8 +260,7 @@ const ClienteView = {
       document.getElementById('cliente-cidade').value = cliente.cidade || '';
       document.getElementById('cliente-estado').value = cliente.estado || '';
 
-      const rgEl = document.getElementById('cliente-rg');
-      if (rgEl) rgEl.value = cliente.rg || '';
+
 
 
       // Set advogado selection (garante que o value bate com as options, mesmo se vier number/uuid)
@@ -381,7 +380,7 @@ const ClienteView = {
     const dadosCliente = {
       nomeCompleto: getVal('cliente-nome'),
       cpf: getVal('cliente-documento'),
-      rg: getVal('cliente-rg'),
+
       estadoCivil: getVal('cliente-estado-civil'),
       profissao: getVal('cliente-profissao'),
       endereco: [getVal('cliente-endereco'), getVal('cliente-numero'), getVal('cliente-bairro')]
@@ -514,7 +513,8 @@ const ClienteView = {
         conteudo: (d) => `
           <h2 style="text-align:center; margin: 0 0 18px 0;">PROCURAÇÃO</h2>
           <p style="font-size: 0.95rem; line-height:1.6;">
-            Pelo presente instrumento, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            Pelo presente instrumento, <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg ?? '')}</strong>,
+
             estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>,
             residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>, telefone <strong>${escapeHtml(d.telefone)}</strong>,
             e-mail <strong>${escapeHtml(d.email)}</strong>,
@@ -536,7 +536,8 @@ const ClienteView = {
           <h2 style="text-align:center; margin: 0 0 18px 0;">CONTRATO DE HONORÁRIOS ADVOCATÍCIOS</h2>
 
           <p style="font-size: 0.95rem; line-height:1.6;">
-            Pelo presente instrumento, de um lado, o(a) cliente <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>, RG <strong>${escapeHtml(d.rg)}</strong>,
+            Pelo presente instrumento, de um lado, o(a) cliente <strong>${escapeHtml(d.nomeCompleto)}</strong>, CPF <strong>${escapeHtml(d.cpf)}</strong>,
+
             estado civil <strong>${escapeHtml(d.estadoCivil)}</strong>, profissão <strong>${escapeHtml(d.profissao)}</strong>, residente e domiciliado em <strong>${escapeHtml(d.endereco)}</strong>,
             telefone <strong>${escapeHtml(d.telefone)}</strong> e e-mail <strong>${escapeHtml(d.email)}</strong>,
             doravante denominado(a) CONTRATANTE;
@@ -984,8 +985,8 @@ const ClienteController = {
       estado: getVal('cliente-estado'),
 
       // Outros dados
-      rg: getVal('cliente-rg'),
       nacionalidade: getVal('cliente-nacionalidade'),
+
       estado_civil: getVal('cliente-estado-civil'),
       profissao: getVal('cliente-profissao'),
 
