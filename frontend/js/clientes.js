@@ -392,7 +392,13 @@ const ClienteView = {
       const btn = ev.target.closest('.btn-gj-baixar');
       if (!btn) return;
       if (visualizacao) return;
-      this.baixarDocumentoPDF(btn.dataset.chave, dadosCliente);
+
+      const chave = btn.getAttribute('data-chave') || btn.dataset.chave;
+      if (!chave) {
+        showToast('Documento inválido para geração de PDF.', 'error');
+        return;
+      }
+      this.baixarDocumentoPDF(chave, dadosCliente);
     };
   },
 
