@@ -267,7 +267,7 @@ const ClienteView = {
       document.getElementById('cliente-inss-cpf').value = cliente.documento || '';
 
       this.renderizarSessaoDocumentos(cliente.id, visualizacao);
-      containerDocs.style.order = "99";
+      containerDocs.style.order = '99';
     } else {
       document.getElementById('cliente-inss-cpf').value = '';
       this.renderizarSessaoDocumentos(null, false);
@@ -328,17 +328,18 @@ const ClienteView = {
         .join(', '),
       cidade: getVal('cliente-cidade'),
       estado: getVal('cliente-estado'),
-      cep: getVal('cliente-cep')
+      cep: getVal('cliente-cep'),
+      numero: getVal('cliente-numero'),
+      bairro: getVal('cliente-bairro')
     };
 
     const modelos = [
-      { chave: 'procuracao', icone: 'fa-solid fa-scroll', titulo: 'Procuração' },
-      { chave: 'contrato-honorarios', icone: 'fa-solid fa-file-signature', titulo: 'Contrato de Honorários' },
-      { chave: 'declaracao-hipossuficiencia', icone: 'fa-solid fa-scale-unbalanced', titulo: 'Decl. de Hipossuficiência' },
-      { chave: 'declaracao-residencia', icone: 'fa-solid fa-house', titulo: 'Declaração de Residência' },
-      { chave: 'autorizacao-representacao', icone: 'fa-solid fa-user-check', titulo: 'Autorização de Representação' },
-      { chave: 'termo-ciencia', icone: 'fa-solid fa-eye', titulo: 'Termo de Ciência' },
-      { chave: 'peticao-inicial', icone: 'fa-solid fa-gavel', titulo: 'Petição Inicial (modelo)' }
+      { chave: 'procuracao',                  icone: 'fa-solid fa-scroll',            titulo: 'Procuração' },
+      { chave: 'contrato-honorarios',         icone: 'fa-solid fa-file-signature',    titulo: 'Contrato de Honorários' },
+      { chave: 'declaracao-hipossuficiencia', icone: 'fa-solid fa-scale-unbalanced',  titulo: 'Decl. de Hipossuficiência' },
+      { chave: 'declaracao-residencia',       icone: 'fa-solid fa-house',             titulo: 'Declaração de Residência' },
+      { chave: 'termo-responsabilidade',      icone: 'fa-solid fa-shield-halved',     titulo: 'Termo de Responsabilidade' },
+      { chave: 'termo-renuncio',              icone: 'fa-solid fa-file-circle-minus', titulo: 'Termo de Renúncia (JEF)' }
     ];
 
     const blocoId = 'documentos-juridicos-section';
@@ -374,7 +375,6 @@ const ClienteView = {
                 data-chave="${m.chave}"
                 type="button"
                 title="Baixar PDF"
-                ${visualizacao ? 'disabled' : ''}
                 style="flex-shrink:0; margin-left:10px; padding:5px 10px;
                        font-size:0.8rem; border:1px solid var(--cinza-borda);
                        border-radius:5px; background:var(--branco); cursor:pointer;
@@ -391,377 +391,527 @@ const ClienteView = {
     bloco.onclick = (ev) => {
       const btn = ev.target.closest('.btn-gj-baixar');
       if (!btn) return;
-      if (visualizacao) return;
 
       const chave = btn.getAttribute('data-chave') || btn.dataset.chave;
       if (!chave) {
         showToast('Documento inválido para geração de PDF.', 'error');
         return;
       }
+
       this.baixarDocumentoPDF(chave, dadosCliente);
     };
   },
 
   baixarDocumentoPDF(chave, d) {
-    const data = new Date().toLocaleDateString('pt-BR');
-    const localData = `${d.cidade || '___________'} / ${d.estado || '__'} — ${data}`;
-    const rodape = 'Documento gerado automaticamente pelo sistema Advocacia Caldas & Brito.';
+  // --- helpers ---
+  const s = (v) => String(v ?? '').trim() || '—';
+  const data = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  });
 
-    const s = (v) => String(v ?? '').trim() || '—';
+  // Dados fixos do escritório
+  const ESCRITORIO = {
+    nome: 'ADVOCACIA CALDAS & BRITO',
+    endereco: 'Rua Antônio Alves de Lima, 563 - Juremal - Edifício Timbaúba, Apt. 04 - V. Alegre/CE, 63540-000',
+    contato: '(88) 99660-0088 / 99471-9865 / 99612-5912 | caldasebrito@gmail.com'
+  };
 
-    const qualificacao = (d0) =>
-      `${s(d0.nomeCompleto)}, CPF ${s(d0.cpf)}${d0.rg ? ', RG ' + s(d0.rg) : ''}, ` +
-      `estado civil ${s(d0.estadoCivil)}, profissão ${s(d0.profissao)}, ` +
-      `residente e domiciliado(a) em ${s(d0.endereco)}, ` +
-      `${d0.cep ? 'CEP ' + s(d0.cep) + ', ' : ''}` +
-      `cidade de ${s(d0.cidade)} / ${s(d0.estado)}, ` +
-      `telefone ${s(d0.telefone)}, e-mail ${s(d0.email)}`;
+  // Advogados fixos conforme documentos reais
+  const ADVOGADOS = [
+    { nome: 'ANTONIO DE CALDAS COSTA SOUSA',   qualif: 'brasileiro, casado, advogado',   cpf: '050.085.533-13', oab: 'OAB/CE nº 34.307', cargo: 'CONTRATADO'  },
+    { nome: 'PRISCILA COSTA DE OLIVEIRA BRITO', qualif: 'brasileira, casada, advogada',   cpf: '053.484.613-00', oab: 'OAB/CE nº 37.087', cargo: 'CONTRATADA'  },
+    { nome: 'ISABEL ERICA SILVA DE OLIVEIRA',   qualif: 'brasileira, solteira, advogada', cpf: null,             oab: 'OAB/CE nº 54.670', cargo: 'CONTRATADA'  },
+    { nome: 'FRANCISCO FILHO COSTA DOS ANJOS',  qualif: 'brasileiro, solteiro, advogado', cpf: '060.761.513-31', oab: 'OAB/CE nº 51.067', cargo: 'CONTRATADO'  }
+  ];
 
-    // Evita depender do carregamento UMD (window.jspdf?.jsPDF pode variar)
-    const jsPdfLib = window.jspdf?.jsPDF || window.jspdf || undefined;
-    const JsPDFCtor = jsPdfLib?.jsPDF ? jsPdfLib.jsPDF : jsPdfLib;
+  // Monta endereço completo do cliente
+  const endCliente = [
+    d.endereco,
+    d.numero  ? `nº ${d.numero}`  : null,
+    d.bairro  || null,
+    d.cidade  ? `${d.cidade}/${d.estado}` : null,
+    d.cep     ? `CEP ${d.cep}` : null
+  ].filter(Boolean).join(', ');
 
-    if (typeof JsPDFCtor !== 'function') {
-      showToast('Biblioteca de PDF não carregada. Verifique sua conexão.', 'error');
-      return;
+  // --- init jsPDF ---
+  const jsPdfLib   = window.jspdf?.jsPDF || window.jspdf || undefined;
+  const JsPDFCtor  = jsPdfLib?.jsPDF ? jsPdfLib.jsPDF : jsPdfLib;
+  if (typeof JsPDFCtor !== 'function') {
+    showToast('Biblioteca de PDF não carregada. Verifique sua conexão.', 'error');
+    return;
+  }
+
+  const pdf    = new JsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const PW     = pdf.internal.pageSize.getWidth();   // 210
+  const PH     = pdf.internal.pageSize.getHeight();  // 297
+  const MAR    = 20;   // margem lateral
+  const LARGURA = PW - MAR * 2;
+  let y        = MAR;
+  const LINHA_H = 6;   // altura de cada linha de texto (11pt ≈ 6mm)
+
+  // ---- primitivas de renderização ----
+
+  const novaLinha = (h = LINHA_H) => { y += h; };
+
+  const checarPagina = (alturaEstimada = LINHA_H) => {
+    if (y + alturaEstimada > PH - MAR) {
+      pdf.addPage();
+      y = MAR;
     }
+  };
 
-    const docMap = {
-      'procuracao': {
-        titulo: 'PROCURAÇÃO',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Pelo presente instrumento particular de procuração, ${qualificacao(d)}, ` +
-            `doravante denominado(a) OUTORGANTE, nomeia e constitui seu(sua) bastante procurador(a) ` +
-            `o(a) advogado(a) infra-assinado(a), doravante denominado(a) OUTORGADO(A), ` +
-            `para o fim de representá-lo(a) perante quaisquer Juízos, Tribunais, repartições públicas ` +
-            `e demais órgãos, podendo praticar todos os atos necessários ao fiel cumprimento do presente mandato, ` +
-            `incluindo receber citação, confessar, desistir, transigir, firmar compromissos e substabelecer.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'esquerdo' },
-            { label: 'Advogado(a) Responsável', sublabel: 'OAB: _______________', lado: 'direito' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
+  // Texto simples — fonte uniforme, quebra automática
+  const addTexto = (texto, opts = {}) => {
+    const {
+      fontSize   = 11,
+      bold       = false,
+      italic     = false,
+      align      = 'left',  // 'left' | 'center' | 'right'
+      cor        = [30, 30, 30],
+      antes      = 0,
+      depois     = 4,
+      indent     = 0        // recuo esquerdo em mm
+    } = opts;
 
-      'contrato-honorarios': {
-        titulo: 'CONTRATO DE HONORÁRIOS ADVOCATÍCIOS',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Pelo presente instrumento particular, de um lado, como CONTRATANTE, ${qualificacao(d)};`
-          },
-          { tipo: 'paragrafo', texto:
-            `E, de outro lado, como CONTRATADO(A), o(a) advogado(a) responsável pelo escritório Advocacia Caldas & Brito, devidamente inscrito(a) na OAB;`
-          },
-          { tipo: 'paragrafo', texto:
-            `Têm entre si justo e acordado o presente contrato de prestação de serviços advocatícios, ` +
-            `pelas cláusulas e condições seguintes:`
-          },
-          { tipo: 'paragrafo', texto:
-            `CLÁUSULA 1ª — OBJETO: Prestação de serviços advocatícios relacionados a demandas judiciais e/ou administrativas de interesse do(a) CONTRATANTE.`
-          },
-          { tipo: 'paragrafo', texto:
-            `CLÁUSULA 2ª — HONORÁRIOS: O valor e a forma de pagamento serão definidos conforme proposta específica, ` +
-            `ficando vedada qualquer alteração sem anuência das partes por escrito.`
-          },
-          { tipo: 'paragrafo', texto:
-            `CLÁUSULA 3ª — CIÊNCIA: O(A) CONTRATANTE declara estar ciente dos termos ajustados ` +
-            `e autoriza o prosseguimento dos atos necessários.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'esquerdo' },
-            { label: 'Advogado(a) Responsável', sublabel: 'OAB: _______________', lado: 'direito' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
+    y += antes;
+    const fontStyle = bold && italic ? 'bolditalic' : bold ? 'bold' : italic ? 'italic' : 'normal';
+    pdf.setFont('helvetica', fontStyle);
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(...cor);
 
-      'declaracao-hipossuficiencia': {
-        titulo: 'DECLARAÇÃO DE HIPOSSUFICIÊNCIA',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Eu, ${qualificacao(d)}, DECLARO, para os devidos fins de direito e sob as penas da lei, que não possuo condições ` +
-            `financeiras de arcar com as custas e despesas processuais sem prejuízo do meu sustento e/ou de minha família.`
-          },
-          { tipo: 'paragrafo', texto:
-            `Assim, requeiro os benefícios da GRATUIDADE DA JUSTIÇA, nos termos do art. 98 e seguintes ` +
-            `do Código de Processo Civil e da Lei nº 1.060/50.`
-          },
-          { tipo: 'paragrafo', texto:
-            `Declaro ainda que as informações acima prestadas são verdadeiras, assumindo integral responsabilidade civil e criminal por qualquer falsidade.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'centro' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
-
-      'declaracao-residencia': {
-        titulo: 'DECLARAÇÃO DE RESIDÊNCIA',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Eu, ${s(d.nomeCompleto)}, CPF ${s(d.cpf)}${d.rg ? ', RG ' + s(d.rg) : ''}, ` +
-            `estado civil ${s(d.estadoCivil)}, profissão ${s(d.profissao)}, ` +
-            `DECLARO, para os devidos fins de direito e sob as penas da lei, que sou residente e domiciliado(a) no seguinte endereço:`
-          },
-          { tipo: 'paragrafo', texto:
-            `${s(d.endereco)}${d.cep ? ' — CEP ' + s(d.cep) : ''}\nCidade: ${s(d.cidade)} / Estado: ${s(d.estado)}`
-          },
-          { tipo: 'paragrafo', texto:
-            `Declaro ainda que as informações acima são verdadeiras e assumo total responsabilidade pela veracidade dos dados prestados.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'centro' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
-
-      'autorizacao-representacao': {
-        titulo: 'AUTORIZAÇÃO DE REPRESENTAÇÃO',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Eu, ${qualificacao(d)}, AUTORIZO o(a) advogado(a) responsável pelo escritório Advocacia Caldas & Brito a praticar ` +
-            `todos os atos necessários à condução e acompanhamento do(s) meu(s) interesse(s) junto aos órgãos judiciais, administrativos e/ou previdenciários competentes.`
-          },
-          { tipo: 'paragrafo', texto:
-            `A presente autorização abrange, de forma não exaustiva: assinatura de documentos, apresentação de petições, requerimentos e recursos, acompanhamento de processos, acesso a informações processuais e previdenciárias, e demais atos correlatos.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'esquerdo' },
-            { label: 'Advogado(a) Responsável', sublabel: 'OAB: _______________', lado: 'direito' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
-
-      'termo-ciencia': {
-        titulo: 'TERMO DE CIÊNCIA',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            `Eu, ${qualificacao(d)}, DECLARO estar plenamente ciente das informações prestadas pelo escritório ` +
-            `Advocacia Caldas & Brito, em especial sobre:`
-          },
-          { tipo: 'lista', itens: [
-            'Os objetivos, estratégias e etapas do procedimento jurídico adotado;',
-            'Os documentos necessários e as responsabilidades a cargo do(a) cliente;',
-            'Os possíveis prazos, riscos, custos e desdobramentos do caso;',
-            'A ausência de garantia de resultado, tendo em vista a natureza litigiosa dos atos jurídicos.'
-          ]},
-          { tipo: 'paragrafo', texto:
-            `Declaro ainda ter recebido orientação adequada e que todas as dúvidas foram esclarecidas antes da assinatura do presente termo.`
-          },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: s(d.nomeCompleto), sublabel: `CPF: ${s(d.cpf)}`, lado: 'esquerdo' },
-            { label: 'Advogado(a) Responsável', sublabel: 'OAB: _______________', lado: 'direito' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
-      },
-
-      'peticao-inicial': {
-        titulo: 'PETIÇÃO INICIAL (MODELO)',
-        secoes: [
-          { tipo: 'paragrafo', texto:
-            'Excelentíssimo(a) Senhor(a) Juiz(a) de Direito da ___ Vara de _________'
-          },
-          { tipo: 'paragrafo', texto:
-            `${s(d.nomeCompleto)}, CPF ${s(d.cpf)}${d.rg ? ', RG ' + s(d.rg) : ''}, ` +
-            `estado civil ${s(d.estadoCivil)}, profissão ${s(d.profissao)}, ` +
-            `residente e domiciliado(a) em ${s(d.endereco)}, CEP ${s(d.cep)}, ` +
-            `cidade de ${s(d.cidade)} / ${s(d.estado)}, ` +
-            `por meio de seu(sua) advogado(a), vem, respeitosamente, à presença de Vossa Excelência ` +
-            `propor a presente AÇÃO em face de (Réu — preencher), pelos fatos e fundamentos a seguir expostos.`
-          },
-          { tipo: 'paragrafo', texto: 'I. DOS FATOS' },
-          { tipo: 'paragrafo', texto: '(Descrever os fatos de forma cronológica e objetiva, indicando datas e documentos pertinentes.)' },
-          { tipo: 'paragrafo', texto: 'II. DO DIREITO' },
-          { tipo: 'paragrafo', texto: '(Indicar os fundamentos legais e jurisprudenciais aplicáveis ao caso.)' },
-          { tipo: 'paragrafo', texto: 'III. DOS PEDIDOS' },
-          { tipo: 'lista', itens: [
-            '(Pedido principal — descrever);',
-            '(Pedido subsidiário ou alternativo, se houver);',
-            'A condenação do réu ao pagamento de custas e honorários advocatícios;',
-            'A produção de todas as provas em direito admitidas.'
-          ]},
-          { tipo: 'paragrafo', texto: `Dá-se à causa o valor de R$ ____________ (___________________________).` },
-          { tipo: 'paragrafo', texto: `Local e data: ${localData}.` },
-          { tipo: 'assinatura', linhas: [
-            { label: 'Advogado(a) Responsável', sublabel: 'OAB: _______________', lado: 'centro' }
-          ]},
-          { tipo: 'rodape', texto: rodape }
-        ]
+    const largDisp = LARGURA - indent;
+    const linhas   = pdf.splitTextToSize(texto, largDisp);
+    linhas.forEach(linha => {
+      checarPagina(LINHA_H);
+      const xBase = MAR + indent;
+      if (align === 'center') {
+        pdf.text(linha, PW / 2, y, { align: 'center' });
+      } else if (align === 'right') {
+        pdf.text(linha, MAR + LARGURA, y, { align: 'right' });
+      } else {
+        pdf.text(linha, xBase, y);
       }
-    };
-
-    const doc = docMap[chave];
-    if (!doc) {
-      showToast('Modelo de documento não encontrado.', 'error');
-      return;
-    }
-
-    // Gera construtor do jsPDF de forma compatível com diferentes bindings
-    const jsPdfLib = window.jspdf?.jsPDF || window.jspdf || undefined;
-    const JsPDFCtor = jsPdfLib?.jsPDF ? jsPdfLib.jsPDF : jsPdfLib;
-
-    const pdf = new JsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-
-    const margem = 20;
-    const largura = pdf.internal.pageSize.getWidth() - margem * 2;
-    let y = margem;
-
-    const addTexto = (texto, opcoes = {}) => {
-      const {
-        fontSize = 11,
-        fontStyle = 'normal',
-        align = 'justify',
-        cor = [30, 30, 30],
-        espacoAntes = 0,
-        espacoDepois = 5
-      } = opcoes;
-
-      y += espacoAntes;
-      pdf.setFontSize(fontSize);
-      pdf.setFont('helvetica', fontStyle);
-      pdf.setTextColor(...cor);
-
-      const linhas = pdf.splitTextToSize(texto, largura);
-      linhas.forEach(linha => {
-        if (y + 6 > pdf.internal.pageSize.getHeight() - margem) {
-          pdf.addPage();
-          y = margem;
-        }
-        pdf.text(linha, margem, y, { align: align === 'justify' ? 'left' : align });
-        y += 6;
-      });
-      y += espacoDepois;
-    };
-
-    const addLinha = () => {
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margem, y, margem + largura, y);
-      y += 4;
-    };
-
-    addTexto('ADVOCACIA CALDAS & BRITO', {
-      fontSize: 10,
-      fontStyle: 'normal',
-      align: 'center',
-      cor: [100, 100, 100],
-      espacoDepois: 2
+      y += LINHA_H;
     });
-    addLinha();
+    y += depois;
+  };
+
+  // Parágrafo misto: array de segmentos { texto, bold?, italic? }
+  const addMisto = (segmentos, opts = {}) => {
+    const {
+      fontSize = 11,
+      cor      = [30, 30, 30],
+      antes    = 0,
+      depois   = 4,
+      indent   = 0
+    } = opts;
+
+    y += antes;
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(...cor);
+
+    let xCursor  = MAR + indent;
+    const xMax   = MAR + LARGURA;
+    const xInicio = MAR + indent;
+
+    const aplicarEstilo = (seg) => {
+      const st = seg.bold && seg.italic ? 'bolditalic'
+               : seg.bold   ? 'bold'
+               : seg.italic ? 'italic'
+               : 'normal';
+      pdf.setFont('helvetica', st);
+    };
+
+    const tokens = [];
+    segmentos.forEach(seg => {
+      const palavras = seg.texto.split(/(\s+)/);
+      palavras.forEach(p => tokens.push({ texto: p, bold: seg.bold, italic: seg.italic }));
+    });
+
+    checarPagina(LINHA_H);
+
+    tokens.forEach(tok => {
+      aplicarEstilo(tok);
+      const w = pdf.getTextWidth(tok.texto);
+
+      if (xCursor + w > xMax && tok.texto.trim() !== '') {
+        y += LINHA_H;
+        checarPagina(LINHA_H);
+        xCursor = xInicio;
+      }
+      pdf.text(tok.texto, xCursor, y);
+      xCursor += w;
+    });
+
+    y += LINHA_H;
+    y += depois;
+  };
+
+  const addLinha = (corLinha = [200, 200, 200]) => {
+    checarPagina(4);
+    pdf.setDrawColor(...corLinha);
+    pdf.line(MAR, y, MAR + LARGURA, y);
     y += 4;
+  };
 
-    addTexto(doc.titulo, {
-      fontSize: 14,
-      fontStyle: 'bold',
-      align: 'center',
-      cor: [15, 23, 42],
-      espacoAntes: 2,
-      espacoDepois: 10
-    });
+  const addAssinaturaCentro = (nome, sublabel) => {
+    checarPagina(30);
+    y += 12;
+    const cx = PW / 2;
+    pdf.setDrawColor(30, 30, 30);
+    pdf.line(cx - 50, y, cx + 50, y);
+    y += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(nome, cx, y, { align: 'center' });
+    y += 5;
+    if (sublabel) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(sublabel, cx, y, { align: 'center' });
+      y += 5;
+    }
+    y += 8;
+  };
 
-    doc.secoes.forEach(secao => {
-      switch (secao.tipo) {
-        case 'paragrafo':
-          addTexto(secao.texto, { espacoAntes: 2, espacoDepois: 4 });
-          break;
+  const addAssinaturaLR = (esq, dir) => {
+    checarPagina(30);
+    y += 12;
+    const xE = MAR + LARGURA * 0.25;
+    const xD = MAR + LARGURA * 0.75;
+    pdf.setDrawColor(30, 30, 30);
+    pdf.line(xE - 42, y, xE + 42, y);
+    pdf.line(xD - 42, y, xD + 42, y);
+    y += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(15, 23, 42);
 
-        case 'lista':
-          secao.itens.forEach((item, i) => {
-            addTexto(`${i + 1}. ${item}`, { espacoAntes: 1, espacoDepois: 2 });
-          });
-          y += 2;
-          break;
+    const lE = pdf.splitTextToSize(esq.nome, 80);
+    const lD = pdf.splitTextToSize(dir.nome, 80);
+    const maxL = Math.max(lE.length, lD.length);
+    for (let i = 0; i < maxL; i++) {
+      if (lE[i]) pdf.text(lE[i], xE, y + i * 5, { align: 'center' });
+      if (lD[i]) pdf.text(lD[i], xD, y + i * 5, { align: 'center' });
+    }
+    y += maxL * 5 + 1;
 
-        case 'assinatura': {
-          y += 14;
-          const linhas = secao.linhas;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 116, 139);
+    if (esq.sub) pdf.text(esq.sub, xE, y, { align: 'center' });
+    if (dir.sub) pdf.text(dir.sub, xD, y, { align: 'center' });
+    y += 5;
 
-          if (linhas.length === 1 && linhas[0].lado === 'centro') {
-            const cx = pdf.internal.pageSize.getWidth() / 2;
-            pdf.setDrawColor(30, 30, 30);
-            pdf.line(cx - 45, y, cx + 45, y);
-            y += 5;
-            pdf.setFontSize(10);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(15, 23, 42);
-            pdf.text(linhas[0].label, cx, y, { align: 'center' });
-            y += 5;
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(9);
-            pdf.setTextColor(100, 116, 139);
-            pdf.text(linhas[0].sublabel, cx, y, { align: 'center' });
-            y += 10;
-          } else if (linhas.length === 2) {
-            const meioPagina = pdf.internal.pageSize.getWidth() / 2;
-            const xEsq = margem + (meioPagina - margem) / 2;
-            const xDir = meioPagina + (pdf.internal.pageSize.getWidth() - margem - meioPagina) / 2;
+    if (esq.cargo || dir.cargo) {
+      pdf.setFont('helvetica', 'italic');
+      if (esq.cargo) pdf.text(esq.cargo, xE, y, { align: 'center' });
+      if (dir.cargo) pdf.text(dir.cargo, xD, y, { align: 'center' });
+      y += 5;
+    }
+    y += 6;
+  };
 
-            [[xEsq, linhas[0]], [xDir, linhas[1]]].forEach(([cx2]) => {
-              pdf.setDrawColor(30, 30, 30);
-              pdf.line(cx2 - 45, y, cx2 + 45, y);
-            });
-            y += 5;
+  const addRodapeEscritorio = () => {
+    y += 6;
+    addLinha([180, 180, 180]);
+    addTexto(ESCRITORIO.endereco, { fontSize: 8, cor: [120, 120, 120], align: 'center', depois: 1 });
+    addTexto(ESCRITORIO.contato,  { fontSize: 8, cor: [120, 120, 120], align: 'center', depois: 0 });
+  };
 
-            [[xEsq, linhas[0]], [xDir, linhas[1]]].forEach(([cx2, l]) => {
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'bold');
-              pdf.setTextColor(15, 23, 42);
-              pdf.text(l.label, cx2, y, { align: 'center' });
-            });
-            y += 5;
+  addTexto(ESCRITORIO.nome, { fontSize: 11, bold: true, align: 'center', cor: [60, 60, 60], depois: 2 });
+  addLinha();
+  novaLinha(4);
 
-            [[xEsq, linhas[0]], [xDir, linhas[1]]].forEach(([cx2, l]) => {
-              pdf.setFont('helvetica', 'normal');
-              pdf.setFontSize(9);
-              pdf.setTextColor(100, 116, 139);
-              pdf.text(l.sublabel, cx2, y, { align: 'center' });
-            });
-            y += 10;
-          }
-          break;
-        }
+  if (chave === 'procuracao') {
+    addTexto('INSTRUMENTO PARTICULAR DE PROCURAÇÃO', { fontSize: 13, bold: true, align: 'center', depois: 1 });
+    addTexto('"Ad-judícia et extra"',                 { fontSize: 10, italic: true, align: 'center', depois: 8 });
 
-        case 'rodape':
-          y += 6;
-          addLinha();
-          addTexto(secao.texto, {
-            fontSize: 8,
-            cor: [148, 163, 184],
-            align: 'center',
-            espacoAntes: 2,
-            espacoDepois: 0
-          });
-          break;
+    addMisto([
+      { texto: 'OUTORGANTE(S): ', bold: true },
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               (d.rg ? ` portador(a) da Cédula de Identidade RG nº ${s(d.rg)},` : '') +
+               ` inscrito(a) no CPF/MF sob o nº ${s(d.cpf)},` +
+               ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'}.` }
+    ], { antes: 0, depois: 6 });
+
+    addMisto([
+      { texto: 'OUTORGADO(S): ', bold: true },
+      { texto: 'ANTONIO DE CALDAS COSTA SOUSA', bold: true },
+      { texto: ', brasileiro, casado, advogado, inscrito na OAB/CE sob o nº 34.307; ' },
+      { texto: 'PRISCILA COSTA DE OLIVEIRA BRITO', bold: true },
+      { texto: ', brasileira, casada, advogada, inscrita na OAB/CE sob o nº 37.087; ' },
+      { texto: 'ISABEL ERICA SILVA DE OLIVEIRA', bold: true },
+      { texto: ', brasileira, solteira, inscrita na OAB/CE nº 54.670; e ' },
+      { texto: 'FRANCISCO FILHO COSTA DOS ANJOS', bold: true },
+      { texto: ', brasileiro, solteiro, advogado, CPF nº 060.761.513-31, OAB/CE nº 51.067,' +
+               ' com escritório profissional na Rua Antonio Alves de Lima, nº 563, Juremal,' +
+               ' Edifício Timbaúba (Apartamento 04), Várzea Alegre/CE.' }
+    ], { antes: 0, depois: 6 });
+
+    addMisto([
+      { texto: 'PODERES: ', bold: true },
+      { texto: 'Por este instrumento particular de procuração, o(a) outorgante acima qualificado(a) e abaixo' +
+               ' assinado(a) nomeia e constitui como seu(s) procurador(es) o(s) outorgado(s) supraqualificado(s),' +
+               ' a quem confere amplos poderes para o foro em geral, com cláusula ' },
+      { texto: 'ad-judícia et extra', italic: true },
+      { texto: ', em qualquer Juízo, Instância ou Tribunal, inclusive repartições públicas estaduais ou municipais' +
+               ' de qualquer natureza, podendo propor contra quem de direito as ações competentes e defendê-lo(a)' +
+               ' nas contrárias, seguindo umas e outras, até final decisão, postular em qualquer esfera' +
+               ' administrativa usando os recursos legais e acompanhando-os, conferindo-lhe, ainda, poderes' +
+               ' especiais para confessar, desistir, transigir, firmar compromisso ou acordos, receber dinheiro' +
+               ' e dar quitação, agindo em conjunto ou separadamente, podendo ainda substabelecer esta a outrem,' +
+               ' com ou sem reservas de iguais poderes, dando tudo por bom, firme e valioso.' }
+    ], { antes: 0, depois: 8 });
+
+    addTexto(`Várzea Alegre, ${data}.`, { depois: 16 });
+    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
+    addRodapeEscritorio();
+  }
+
+  else if (chave === 'contrato-honorarios') {
+    addTexto('CONTRATO DE HONORÁRIOS', { fontSize: 13, bold: true, align: 'center', depois: 8 });
+
+    addTexto(
+      'Pelo presente instrumento particular, ANTONIO DE CALDAS COSTA SOUSA, brasileiro, casado, advogado,' +
+      ' inscrito no CPF sob o nº 050.085.533-13, OAB/CE nº 34.307; PRISCILA COSTA DE OLIVEIRA BRITO,' +
+      ' brasileira, casada, advogada, inscrita no CPF sob o nº 053.484.613-00, OAB/CE nº 37.087; e' +
+      ' FRANCISCO FILHO COSTA DOS ANJOS, brasileiro, solteiro, advogado, CPF nº 060.761.513-31,' +
+      ' OAB/CE nº 51.067, com escritório profissional na Rua Antonio Alves de Lima, nº 563, Juremal,' +
+      ' Edifício Timbaúba (Apartamento 04), Várzea Alegre/CE, denominados CONTRATADOS,' +
+      ' e de outro lado, como CONTRATANTE:',
+      { depois: 4 }
+    );
+
+    addMisto([
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               (d.rg ? ` portador(a) do RG nº ${s(d.rg)},` : '') +
+               ` inscrito(a) no CPF sob o nº ${s(d.cpf)},` +
+               ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'},` }
+    ], { depois: 2 });
+    addTexto('ajustam o seguinte:', { depois: 6 });
+
+    const clausulas = [
+      {
+        num: '1. OBJETO',
+        corpo: 'Os CONTRATADOS obrigam-se a prestar os serviços profissionais advocatícios, mediante mandato,' +
+               ' para atuação em processos administrativos e/ou judiciais previdenciários ou assistenciais,' +
+               ' com zelo e diligência.'
+      },
+      {
+        num: '2. HONORÁRIOS – FASE ADMINISTRATIVA',
+        subitens: [
+          '2.1. Benefícios Previdenciários Permanentes:\nR$ 5.000,00 (cinco mil reais), à vista;\nOU\n30% sobre 12 parcelas vincendas.',
+          '2.2. Benefícios Temporários com DCB (como auxílio-doença):\n30% das parcelas vincendas.',
+          '2.3. Auxílio-Acidente:\n30% sobre 12 parcelas vincendas.',
+          '2.4. Benefícios sem DCB:\n30% sobre 12 parcelas vincendas.',
+          '2.5. Benefício Assistencial (BPC):\nR$ 5.000,00 (cinco mil reais), à vista;\nOU\n30% sobre 12 parcelas vincendas.'
+        ]
+      },
+      {
+        num: '3. HONORÁRIOS – FASE JUDICIAL',
+        subitens: [
+          '3.1. Benefícios Previdenciários Permanentes (inclusive BPC/LOAS):\n30% sobre parcelas vencidas + 30% sobre 12 parcelas vincendas.',
+          '3.2. Benefícios Temporários:\n30% sobre parcelas vencidas + 30% sobre parcelas vincendas.',
+          '3.3. Salário-maternidade:\nR$ 2.000,00 (valor fixo), por não haver parcelas retroativas expressivas.'
+        ]
+      },
+      {
+        num: '4. RECURSOS',
+        corpo: 'Em caso de interposição de recurso, será acrescido 10% sobre as parcelas vencidas,' +
+               ' totalizando 40% sobre o valor obtido.'
+      },
+      {
+        num: '5. DESPESAS',
+        corpo: 'As despesas processuais ou administrativas, tais como custas, diligências, deslocamentos,' +
+               ' cópias, entre outras, correrão por conta da CONTRATANTE, exceto se beneficiária da gratuidade da justiça.'
+      },
+      {
+        num: '6. EXIGIBILIDADE DOS HONORÁRIOS',
+        corpo: 'Os honorários serão exigíveis nas seguintes hipóteses:',
+        subitens: [
+          'a) atraso de mais de uma parcela do pagamento;',
+          'b) revogação imotivada do mandato.'
+        ]
+      },
+      {
+        num: '7. OUTRAS DISPOSIÇÕES',
+        subitens: [
+          '- Este contrato obriga herdeiros e sucessores;',
+          '- A CONTRATANTE deve comunicar qualquer mudança de endereço;',
+          '- Fica eleito o foro de Várzea Alegre/CE para dirimir quaisquer dúvidas decorrentes do presente contrato.'
+        ]
       }
+    ];
+
+    clausulas.forEach(cl => {
+      addTexto(cl.num, { bold: true, depois: 2 });
+      if (cl.corpo) addTexto(cl.corpo, { indent: 4, depois: 2 });
+      if (cl.subitens) cl.subitens.forEach(si => addTexto(si, { indent: 6, depois: 2 }));
+      novaLinha(2);
     });
 
-    const nomeArquivo = `${chave}-${s(d.nomeCompleto)}`
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .toLowerCase()
-      .slice(0, 80) + '.pdf';
+    addTexto('E, por estarem justos e contratados, firmam o presente instrumento em duas vias de igual teor e forma.', { depois: 6 });
+    addTexto(`Várzea Alegre/CE, _____ de ________________ de _________.`, { depois: 14 });
 
-    // Abre o PDF no navegador (evita download automático)
-    const blobUrl = pdf.output('bloburl');
-    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)} — CONTRATANTE`);
+
+    addAssinaturaLR(
+      { nome: 'ANTONIO DE CALDAS COSTA SOUSA', sub: 'OAB/CE 34.307', cargo: 'CONTRATADO' },
+      { nome: 'PRISCILA COSTA DE OLIVEIRA BRITO', sub: 'OAB/CE 37.087', cargo: 'CONTRATADA' }
+    );
+    addAssinaturaCentro('FRANCISCO FILHO COSTA DOS ANJOS', 'OAB/CE 51.067 — CONTRATADO');
+
+    addRodapeEscritorio();
+  }
+
+  else if (chave === 'declaracao-hipossuficiencia') {
+    addTexto('DECLARAÇÃO DE HIPOSSUFICIÊNCIA', { fontSize: 13, bold: true, align: 'center', depois: 10 });
+
+    addMisto([
+      { texto: 'Eu, ' },
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               (d.rg ? ` portador(a) da cédula de identidade de nº ${s(d.rg)},` : '') +
+               ` inscrito(a) no CPF sob o nº ${s(d.cpf)},` +
+               ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'}. ` },
+      { texto: 'DECLARO', bold: true },
+      { texto: ' que, em razão da minha condição financeira não tenho condições de arcar com o pagamento das' +
+               ' custas processuais, sob pena de implicar em prejuízo próprio e de minha família,' +
+               ' nos termos do art. 5º, LXXIV, da Constituição da República e dos artigos 98 e seguintes' +
+               ' da Lei nº 13.105/2015.' }
+    ], { antes: 0, depois: 8 });
+
+    addTexto(
+      'Por ser a expressão da verdade, assumindo inteira responsabilidade pelas declarações acima e sob as penas' +
+      ' da lei, assino a presente declaração para que produza seus devidos efeitos legais.',
+      { depois: 12 }
+    );
+
+    addTexto(`Várzea Alegre/CE, ${data}.`, { depois: 16 });
+    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
+    addRodapeEscritorio();
+  }
+
+  else if (chave === 'declaracao-residencia') {
+    addTexto('DECLARAÇÃO DE RESIDÊNCIA', { fontSize: 13, bold: true, align: 'center', depois: 10 });
+
+    addMisto([
+      { texto: 'Eu, ' },
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               ` inscrito(a) no CPF sob o nº ` },
+      { texto: s(d.cpf), bold: true },
+      { texto: ',' + (d.rg ? ` RG nº ${s(d.rg)},` : '') + ' ' },
+      { texto: 'DECLARO', bold: true },
+      { texto: ', para os devidos fins, que ' },
+      { texto: 'resido no endereço', bold: true },
+      { texto: ' abaixo descrito, sendo que o comprovante de endereço está em meu nome:' }
+    ], { depois: 6 });
+
+    addTexto(endCliente || '—', { bold: true, align: 'center', depois: 8 });
+
+    addTexto(
+      'Declaro que as informações acima são verdadeiras e assumo total responsabilidade pela veracidade' +
+      ' dos dados prestados, sob as penas da lei.',
+      { depois: 12 }
+    );
+
+    addTexto(`Várzea Alegre/CE, ${data}.`, { depois: 16 });
+    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
+    addRodapeEscritorio();
+  }
+
+  else if (chave === 'termo-responsabilidade') {
+    addTexto('TERMO DE RESPONSABILIDADE', { fontSize: 13, bold: true, align: 'center', depois: 10 });
+
+    addMisto([
+      { texto: 'Eu, ' },
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               (d.rg ? ` RG nº ${s(d.rg)},` : '') +
+               ` CPF nº ${s(d.cpf)},` +
+               ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'},` +
+               ' declaro, para todos os fins de direito, que:' }
+    ], { depois: 6 });
+
+    const itens = [
+      'Todas as informações, documentos e declarações apresentadas ao(à) advogado(a) ANTONIO DE CALDAS COSTA SOUSA,' +
+      ' OAB/CE nº 34.307, referentes à ação judicial em curso, são verdadeiras e de minha inteira responsabilidade.',
+
+      'Reconheço que o(a) advogado(a) atua com base nas informações e documentos por mim fornecidos,' +
+      ' não podendo ser responsabilizado(a) por eventuais inexatidões, omissões ou falsidades que venham' +
+      ' a ser verificadas no curso do processo.',
+
+      'Comprometo-me a entregar todos os documentos necessários e a não omitir fatos relevantes que possam' +
+      ' influenciar no resultado da demanda, assumindo total responsabilidade por eventuais prejuízos' +
+      ' decorrentes da falta de veracidade das informações prestadas.',
+
+      'Declaro, ainda, estar ciente de que a prestação de informações falsas em juízo pode caracterizar' +
+      ' crime de falsidade ideológica (art. 299 do Código Penal), ficando sujeito(a) às sanções civis,' +
+      ' penais e processuais cabíveis.'
+    ];
+
+    itens.forEach(item => addTexto(`- ${item}`, { indent: 4, depois: 4 }));
+
+    addTexto(
+      'Por ser expressão da verdade, firmo o presente TERMO DE RESPONSABILIDADE,' +
+      ' para que produza seus jurídicos e legais efeitos.',
+      { depois: 12 }
+    );
+
+    addTexto(`Várzea Alegre, ${data}.`, { depois: 14 });
+
+    addAssinaturaLR(
+      { nome: s(d.nomeCompleto), sub: `CPF nº ${s(d.cpf)}` },
+      { nome: 'ANTONIO DE CALDAS COSTA SOUSA', sub: 'OAB/CE nº 34.307' }
+    );
+    addRodapeEscritorio();
+  }
+
+  else if (chave === 'termo-renuncio') {
+    addTexto('Termo de Renúncia', { fontSize: 13, bold: true, align: 'center', depois: 1 });
+    addTexto('Valor excedente — Juizado Especial Federal', { fontSize: 10, italic: true, align: 'center', depois: 10 });
+
+    addMisto([
+      { texto: 'Eu, ' },
+      { texto: s(d.nomeCompleto), bold: true },
+      { texto: `, ${s(d.estadoCivil)}, ${s(d.profissao)},` +
+               (d.rg ? ` portador(a) da Cédula de Identidade RG nº ${s(d.rg)},` : '') +
+               ` inscrito(a) no CPF/MF sob o nº ${s(d.cpf)},` +
+               ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'}.` +
+               ' Venho por meio desta ' },
+      { texto: 'RENUNCIAR', bold: true },
+      { texto: ' ao valor de meu crédito que exceder a 60 salários mínimos, procedimento necessário' +
+               ' para o devido ajuizamento e prosseguimento de meu pleito perante o Juizado Especial Federal.' }
+    ], { depois: 10 });
+
+    addTexto('Por ser verdade firmo o presente.', { depois: 14 });
+    addTexto(`Várzea Alegre/CE, ${data}.`, { depois: 16 });
+    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
+    addRodapeEscritorio();
+  }
+
+  else {
+    showToast('Modelo de documento não encontrado.', 'error');
+    return;
+  }
+
+  const nomeArquivo = `${chave}-${s(d.nomeCompleto)}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+    .slice(0, 80) + '.pdf';
+
+  pdf.save(nomeArquivo);
   }
 };
-
 
 // ==========================================
 // 3. CONTROLLER (Regras e Eventos)
@@ -788,7 +938,6 @@ const ClienteController = {
       .order('nome');
 
     if (error) {
-
       return;
     }
 
@@ -917,7 +1066,6 @@ const ClienteController = {
       ClienteView.renderizarTabela(this.dadosLocais);
     } catch (error) {
       ClienteView.mostrarErro('Falha ao carregar clientes.');
-
     }
   },
 
