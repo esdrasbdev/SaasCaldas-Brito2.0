@@ -417,7 +417,11 @@ const ClienteView = {
       `cidade de ${s(d0.cidade)} / ${s(d0.estado)}, ` +
       `telefone ${s(d0.telefone)}, e-mail ${s(d0.email)}`;
 
-    if (!window.jspdf?.jsPDF) {
+    // Evita depender do carregamento UMD (window.jspdf?.jsPDF pode variar)
+    const jsPdfLib = window.jspdf?.jsPDF || window.jspdf || undefined;
+    const JsPDFCtor = jsPdfLib?.jsPDF ? jsPdfLib.jsPDF : jsPdfLib;
+
+    if (typeof JsPDFCtor !== 'function') {
       showToast('Biblioteca de PDF não carregada. Verifique sua conexão.', 'error');
       return;
     }
@@ -605,8 +609,12 @@ const ClienteView = {
       return;
     }
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    // Gera construtor do jsPDF de forma compatível com diferentes bindings
+    const jsPdfLib = window.jspdf?.jsPDF || window.jspdf || undefined;
+    const JsPDFCtor = jsPdfLib?.jsPDF ? jsPdfLib.jsPDF : jsPdfLib;
+
+    const pdf = new JsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
+
 
     const margem = 20;
     const largura = pdf.internal.pageSize.getWidth() - margem * 2;
@@ -748,9 +756,12 @@ const ClienteView = {
       .toLowerCase()
       .slice(0, 80) + '.pdf';
 
-    pdf.save(nomeArquivo);
+    // Abre o PDF no navegador (evita download automático)
+    const blobUrl = pdf.output('bloburl');
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
   }
 };
+
 
 // ==========================================
 // 3. CONTROLLER (Regras e Eventos)
@@ -777,7 +788,7 @@ const ClienteController = {
       .order('nome');
 
     if (error) {
-      console.error('Erro ao carregar advogados:', error);
+
       return;
     }
 
@@ -905,8 +916,8 @@ const ClienteController = {
       this.dadosLocais = await ClienteModel.listarTodos();
       ClienteView.renderizarTabela(this.dadosLocais);
     } catch (error) {
-      console.error(error);
       ClienteView.mostrarErro('Falha ao carregar clientes.');
+
     }
   },
 
