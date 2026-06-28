@@ -2,16 +2,35 @@
    Mantém o mesmo design system (variáveis) do style.css.
 */
 
+/* Base dedicada para evitar “vazamentos” de estilos globais no login */
+body.login-page {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body.login-page,
+body.login-page * {
+  box-sizing: inherit;
+}
+
 .login-shell {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
+  min-height: 100svh; /* fallback para iOS/viewport dinâmico */
   min-height: 100vh;
   display: grid;
   grid-template-columns: 1.08fr 0.92fr;
   position: relative;
   z-index: 2;
 }
+
+.login-panel-left,
+.login-panel-right {
+  height: 100%;
+}
+
 
 .login-panel {
   position: relative;
@@ -88,7 +107,9 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden;
 }
+
 
 .login-right-top {
   text-align: left;
@@ -136,8 +157,9 @@
 }
 
 .login-input input {
-  padding-left: 44px;
+  padding: 12px 12px 12px 44px; /* respeita o padding global do style.css sem perder o espaço do ícone */
 }
+
 
 .login-input-password {
   margin-top: 6px;
@@ -299,6 +321,7 @@
   .login-shell {
     grid-template-columns: 1fr;
     max-width: 520px;
+    padding: 0 14px;
   }
 
   .login-panel-left {
@@ -308,5 +331,18 @@
   .login-panel-right {
     padding: 44px 22px;
   }
+
+  .login-toggle {
+    right: 8px;
+  }
+
+  .login-input-icon {
+    left: 12px;
+  }
+
+  .login-input input {
+    padding: 12px 12px 12px 42px;
+  }
 }
+
 
