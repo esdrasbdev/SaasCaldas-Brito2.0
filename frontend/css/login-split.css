@@ -24,18 +24,21 @@ body.login-page * {
   grid-template-columns: 1.08fr 0.92fr;
   position: relative;
   z-index: 2;
+  align-items: stretch; /* garante encaixe 100% alto nas colunas */
 }
 
 .login-panel-left,
 .login-panel-right {
   height: 100%;
+  min-height: 100%;
 }
 
-
 .login-panel {
+  min-height: 100%;
   position: relative;
   overflow: hidden;
 }
+
 
 .login-panel-left {
   background: radial-gradient(circle at 30% 10%, rgba(180, 147, 80, 0.28), transparent 55%),
