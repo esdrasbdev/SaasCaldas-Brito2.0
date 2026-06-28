@@ -5,12 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login | Caldas &amp; Brito Advocacia</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/login-split.css" />
+  <link rel="stylesheet" href="css/login-split-inline-fixes.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
 </head>
 
-<body class="login-page">
+<body>
   <!-- Split Panel Login -->
   <main class="login-shell" aria-label="Tela de login">
+
     <section class="login-panel login-panel-left" aria-hidden="true">
       <div class="login-watermark">
         <!-- watermark em SVG (sem dependência de arquivo externo) -->
@@ -108,6 +112,10 @@
   <script type="module">
     import { initSupabase } from './js/supabase.js';
 
+    // Garante que as classes globais esperadas pelo CSS do split panel existam
+    document.body.classList.add('login-page');
+
+
     const loginForm = document.getElementById('login-form');
     const errorMsg = document.getElementById('error-msg');
     const welcomeOverlay = document.getElementById('welcome-overlay');
@@ -187,8 +195,10 @@
         document.getElementById('welcome-title').textContent = saudacao;
         welcomeName.textContent = primeiroNome;
 
+        // Mantém compatibilidade com o CSS do split panel
         document.querySelector('.login-shell')?.classList.add('login-hidden');
         welcomeOverlay.style.display = 'flex';
+
 
         setTimeout(() => {
           welcomeOverlay.classList.add('slide-out-animation');
