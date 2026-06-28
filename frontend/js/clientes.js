@@ -448,7 +448,10 @@ const ClienteView = {
   }
 
   const carregarImagemBase64 = (url) => fetch(url)
-    .then(r => r.blob())
+    .then(r => {
+      if (!r.ok) throw new Error(`Imagem não encontrada (${r.status}): ${url}`);
+      return r.blob();
+    })
     .then(blob => new Promise((res, rej) => {
       const reader = new FileReader();
       reader.onload  = () => res(reader.result);
