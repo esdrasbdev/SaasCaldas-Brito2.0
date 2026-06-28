@@ -1,3 +1,16 @@
 # Supabase env is local-only (never commit real keys)
 js/env.js
 
+# Artefatos temporários/gerados pelo assistente (não versionar)
+*.bak
+*.bak_blackboxai
+*.bak_blackboxai.*
+
+# Node / dependências (caso algum dia exista no repo root)
+node_modules/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+.env
