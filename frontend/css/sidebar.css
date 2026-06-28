@@ -17,12 +17,26 @@
 
 /* Cabeçalho da Sidebar (Logo) */
 .sidebar-header {
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border-bottom: 1px solid var(--cinza-fundo);
+  border-bottom: 1px solid var(--cinza-borda);
 }
+
+.sidebar-logo-img {
+  width: 140px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+/* Dark mode: leve brilho para o logo não sumir no fundo escuro */
+body.dark-mode .sidebar-logo-img {
+  filter: brightness(0.92) contrast(1.05);
+}
+
 
 .brand-logo-text {
   display: flex;
@@ -90,20 +104,37 @@ body.dark-mode .brand-logo-text small {
 }
 
 .nav-item:hover {
-  background-color: var(--azul-claro);
-  color: var(--azul-medio);
+  background-color: var(--dourado-claro, #f5edd8);
+  color: var(--dourado-escuro, #8a6f38);
   transform: translateX(4px); /* Movimento sutil para a direita */
 }
 
 .nav-item:hover i {
-  color: var(--azul-medio);
+  color: var(--dourado, #b49350);
 }
 
+
 .nav-item.active {
-  background-color: var(--azul-claro);
-  color: var(--azul-medio);
+  background-color: var(--dourado-claro);
+  color: var(--dourado-escuro);
   font-weight: 600;
+  border-left: 3px solid var(--dourado);
+  padding-left: calc(12px - 3px);
 }
+
+.nav-item.active i {
+  color: var(--dourado);
+}
+
+.nav-item:hover {
+  background-color: var(--dourado-claro, #f5edd8);
+  color: var(--dourado-escuro, #8a6f38);
+}
+
+.nav-item:hover i {
+  color: var(--dourado, #b49350);
+}
+
 
 /* Grupos de itens (Título de seção) */
 .sidebar-header-group {

@@ -398,11 +398,12 @@ const ClienteView = {
         return;
       }
 
-      this.baixarDocumentoPDF(chave, dadosCliente);
+      await this.baixarDocumentoPDF(chave, dadosCliente);
+
     };
   },
 
-  baixarDocumentoPDF(chave, d) {
+  async baixarDocumentoPDF(chave, d) {
   // --- helpers ---
   const s = (v) => String(v ?? '').trim() || '—';
   const data = new Date().toLocaleDateString('pt-BR', {
@@ -441,36 +442,128 @@ const ClienteView = {
     return;
   }
 
+  const carregarImagemBase64 = (url) => fetch(url)
+    .then(r => r.blob())
+    .then(blob => new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result);
+      reader.onerror = () => rej(new Error(`Falha ao carregar imagem: ${url}`));
+      reader.readAsDataURL(blob);
+    }));
+
+  let LOGO_B64   = null;
+  let BRASAO_B64 = null;
+
+  try {
+      [LOGO_B64, BRASAO_B64] = await Promise.all([
+      carregarImagemBase64('images/logo-cabecalho.png').catch(async () => {
+        // fallback: usa timbrado_principal como cabeçalho (se PNG específico não existir)
+        return carregarImagemBase64('images/timbrado_principal.png');
+      }),
+      carregarImagemBase64('images/logo-marca-dagua.png').catch(async () => {
+        // fallback: usa timbrado_rodape como marca d'água (se PNG específico não existir)
+        return carregarImagemBase64('images/timbrado_rodape.png');
+      })
+    ]);
+  } catch (err) {
+    try {
+      LOGO_B64 = await carregarImagemBase64('images/logo.jpeg');
+    } catch (_) {
+      console.warn('Timbrado: nenhuma imagem encontrada em images/');
+    }
+  }
+
   const pdf    = new JsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
-  const PW     = pdf.internal.pageSize.getWidth();   // 210
-  const PH     = pdf.internal.pageSize.getHeight();  // 297
-  const MAR    = 20;   // margem lateral
-  const LARGURA = PW - MAR * 2;
-  let y        = MAR;
-  const LINHA_H = 6;   // altura de cada linha de texto (11pt ≈ 6mm)
+  const PW     = pdf.internal.pageSize.getWidth();   // 210mm
+  const PH     = pdf.internal.pageSize.getHeight();  // 297mm
+  const MAR_LADO    = 20;   // margem lateral (igual ao Word)
+  const LARGURA     = PW - MAR_LADO * 2;  // 170mm — área de texto
+  const MAR_TOP     = 38;   // margem superior (igual ao Word)
+  const MAR_BOTTOM  = 28;   // margem inferior (igual ao Word)
+
+  let y        = MAR_TOP;
+  const LINHA_H = 6;    // altura de linha para fonte 11pt
+
 
   // ---- primitivas de renderização ----
+
+  const aplicarTimbrado = () => {
+    // ── BRASÃO (marca d'água de fundo) ───────────────────────────────
+    if (BRASAO_B64) {
+      const brasaoW = 107.2;
+      const brasaoH = 120.0;
+      const brasaoX = (PW - brasaoW) / 2;
+      const brasaoY = MAR_TOP + ((PH - MAR_TOP - MAR_BOTTOM) - brasaoH) / 2;
+      pdf.addImage(BRASAO_B64, 'PNG', brasaoX, brasaoY, brasaoW, brasaoH);
+    }
+
+    // ── LOGO COLORIDO (cabeçalho) ───────────────────────────────────
+    if (LOGO_B64) {
+      const logoW = 37.8;
+      const logoH = 20.0;
+      const logoX = (PW - logoW) / 2;
+      const logoY = 9.5;
+      const formato = LOGO_B64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+      pdf.addImage(LOGO_B64, formato, logoX, logoY, logoW, logoH);
+    }
+
+    // ── LINHA DOURADA separando cabeçalho do corpo ──────────────────
+    pdf.setDrawColor(180, 147, 80); // #b49350
+    pdf.setLineWidth(0.35);
+    pdf.line(MAR_LADO, MAR_TOP - 4, PW - MAR_LADO, MAR_TOP - 4);
+    pdf.setLineWidth(0.2);
+
+    // ── RODAPÉ ──────────────────────────────────────────────────────
+    const sepY = PH - MAR_BOTTOM + 4;
+    const rod1Y = PH - MAR_BOTTOM + 9;
+    const rod2Y = PH - MAR_BOTTOM + 14;
+
+    pdf.setDrawColor(180, 147, 80);
+    pdf.setLineWidth(0.35);
+    pdf.line(MAR_LADO, sepY, PW - MAR_LADO, sepY);
+    pdf.setLineWidth(0.2);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(110, 110, 110);
+    pdf.text(
+      'Rua Antônio Alves de Lima, 563 - Juremal - Edifício Timbaúba, Apt. 04 - V. Alegre/CE, 63540-000',
+      PW / 2,
+      rod1Y,
+      { align: 'center' }
+    );
+    pdf.text(
+      '(88) 99660-0088 / 99471-9865 / 99612-5912 | caldasebrito@gmail.com',
+      PW / 2,
+      rod2Y,
+      { align: 'center' }
+    );
+  };
+
+  // Aplicar na primeira página
+  aplicarTimbrado();
 
   const novaLinha = (h = LINHA_H) => { y += h; };
 
   const checarPagina = (alturaEstimada = LINHA_H) => {
-    if (y + alturaEstimada > PH - MAR) {
+    if (y + alturaEstimada > PH - MAR_BOTTOM - 12) {
       pdf.addPage();
-      y = MAR;
+      aplicarTimbrado();
+      y = MAR_TOP;
     }
   };
 
-  // Texto simples — fonte uniforme, quebra automática
+  // Texto (com justificação manual quando align='justify')
   const addTexto = (texto, opts = {}) => {
     const {
-      fontSize   = 11,
-      bold       = false,
-      italic     = false,
-      align      = 'left',  // 'left' | 'center' | 'right'
-      cor        = [30, 30, 30],
-      antes      = 0,
-      depois     = 4,
-      indent     = 0        // recuo esquerdo em mm
+      fontSize  = 11,
+      bold      = false,
+      italic    = false,
+      align     = 'justify',
+      cor       = [30, 30, 30],
+      antes     = 0,
+      depois    = 4,
+      indent    = 0
     } = opts;
 
     y += antes;
@@ -480,19 +573,37 @@ const ClienteView = {
     pdf.setTextColor(...cor);
 
     const largDisp = LARGURA - indent;
-    const linhas   = pdf.splitTextToSize(texto, largDisp);
-    linhas.forEach(linha => {
+    const xBase = MAR_LADO + indent;
+    const linhas = pdf.splitTextToSize(texto, largDisp);
+
+    linhas.forEach((linha, idx) => {
       checarPagina(LINHA_H);
-      const xBase = MAR + indent;
-      if (align === 'center') {
+      const ehUltima = idx === linhas.length - 1;
+
+      if (align === 'justify' && !ehUltima) {
+        const palavras = linha.trim().split(' ').filter(p => p.length > 0);
+        if (palavras.length > 1) {
+          const largTexto = pdf.getTextWidth(palavras.join(' '));
+          const espacoExtra = (largDisp - largTexto) / (palavras.length - 1);
+          let xPalavra = xBase;
+          palavras.forEach((palavra) => {
+            pdf.text(palavra, xPalavra, y);
+            xPalavra += pdf.getTextWidth(palavra) + pdf.getTextWidth(' ') + espacoExtra;
+          });
+        } else {
+          pdf.text(linha, xBase, y);
+        }
+      } else if (align === 'center') {
         pdf.text(linha, PW / 2, y, { align: 'center' });
       } else if (align === 'right') {
-        pdf.text(linha, MAR + LARGURA, y, { align: 'right' });
+        pdf.text(linha, MAR_LADO + LARGURA, y, { align: 'right' });
       } else {
         pdf.text(linha, xBase, y);
       }
+
       y += LINHA_H;
     });
+
     y += depois;
   };
 
@@ -510,9 +621,9 @@ const ClienteView = {
     pdf.setFontSize(fontSize);
     pdf.setTextColor(...cor);
 
-    let xCursor  = MAR + indent;
-    const xMax   = MAR + LARGURA;
-    const xInicio = MAR + indent;
+    let xCursor  = MAR_LADO + indent;
+    const xMax   = MAR_LADO + LARGURA;
+    const xInicio = MAR_LADO + indent;
 
     const aplicarEstilo = (seg) => {
       const st = seg.bold && seg.italic ? 'bolditalic'
@@ -546,6 +657,10 @@ const ClienteView = {
     y += LINHA_H;
     y += depois;
   };
+
+
+
+
 
   const addLinha = (corLinha = [200, 200, 200]) => {
     checarPagina(4);

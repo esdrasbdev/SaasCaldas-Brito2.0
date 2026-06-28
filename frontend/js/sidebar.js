@@ -66,11 +66,9 @@ const Sidebar = {
 
     this.sidebar.innerHTML = `
       <div class="sidebar-header">
-        <div class="brand-logo-text">
-          <span>Caldas & Brito</span>
-          <small>Advocacia</small>
-        </div>
+        <img src="images/logo.jpeg" alt="Caldas & Brito Advocacia" class="sidebar-logo-img">
       </div>
+
       <div class="sidebar-search">
         <div class="sidebar-search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
         <input id="nav-busca" type="text" placeholder="Buscar menu..." autocomplete="off" />

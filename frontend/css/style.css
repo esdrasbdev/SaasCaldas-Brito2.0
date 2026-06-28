@@ -14,6 +14,13 @@
   --azul-medio: #2563eb; /* Blue 600 - Ação */
   --azul-claro: #eff6ff; /* Blue 50 - Fundo suave */
   --azul-hover: #1d4ed8;
+
+  /* Dourado — identidade visual Caldas & Brito */
+  --dourado: #b49350;
+  --dourado-escuro: #8a6f38;
+  --dourado-claro: #f5edd8;
+  --dourado-borda: rgba(180, 147, 80, 0.25);
+
   
   /* Neutros para textos e fundos */
   --branco: #ffffff;
@@ -192,7 +199,11 @@ p {
    PAGE HEADER (Páginas Internas)
    =========================== */
 .page-header {
+  border-bottom: 2px solid var(--dourado-claro);
+  padding-bottom: 1.25rem;
+
   display: flex;
+
   justify-content: space-between;
   align-items: center; /* Centraliza verticalmente botões e títulos */
   margin-bottom: 2rem;
@@ -204,7 +215,21 @@ p {
 
 .page-header h1 {
   margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+
+.page-header h1::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 28px;
+  background: linear-gradient(to bottom, var(--dourado), var(--dourado-escuro));
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 
 .page-header p {
   font-size: 0.95rem;
@@ -215,8 +240,10 @@ p {
 /* ===========================
    DASHBOARD BANNER (Tela Inicial)
    =========================== */
-.welcome-banner {
-  background: linear-gradient(120deg, #2563eb 0%, #1e40af 100%);
+.welcome-banner { 
+
+  background: linear-gradient(135deg, #1a1410 0%, #2d200e 60%, #3d2b10 100%);
+
   padding: 2.5rem;
   border-radius: 20px;
   color: white;
@@ -235,10 +262,12 @@ p {
   right: -20px;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(180, 147, 80, 0.18) 0%, transparent 70%);
   border-radius: 50%;
   filter: blur(20px);
 }
+
+
 
 /* Segundo elemento decorativo para o banner */
 .welcome-banner::before {
@@ -305,13 +334,15 @@ p {
 }
 
 .btn-primary {
-  background: var(--azul-medio);
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--dourado-escuro) 100%);
+
   color: var(--branco);
   box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
 .btn-primary:hover {
-  background: var(--azul-hover);
+  background: linear-gradient(135deg, var(--dourado-escuro) 0%, #6b5228 100%);
+
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
@@ -401,10 +432,11 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--azul-medio);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); /* Anel de foco suave */
+  border-color: var(--dourado);
+  box-shadow: 0 0 0 4px rgba(180, 147, 80, 0.12); /* Anel de foco dourado */
   transform: translateY(-1px); /* Input "levanta" ao focar */
 }
+
 
 .error-message {
   background: #fef2f2;
@@ -614,9 +646,17 @@ textarea:focus {
 .kpi-card:nth-child(3) { animation: fadeInUp 0.5s ease-out 0.3s backwards; }
 .kpi-card:nth-child(4) { animation: fadeInUp 0.5s ease-out 0.4s backwards; }
 
+.kpi-card {
+  border-top: 3px solid transparent;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
 .kpi-card:hover {
+  border-top-color: var(--dourado);
   transform: translateY(-5px);
+
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+
   transition: all 0.2s ease;
 }
 
@@ -812,7 +852,9 @@ textarea:focus {
 
 .modal-header {
   padding: 16px 24px;
-  border-bottom: 1px solid var(--cinza-borda);
+  border-bottom: 2px solid var(--dourado-claro);
+  background: linear-gradient(to right, var(--dourado-claro), transparent);
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -822,6 +864,29 @@ textarea:focus {
 
 .modal-header h2 {
   margin: 0;
+  position: relative;
+  padding-left: 16px;
+}
+
+.modal-header h2::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 18px;
+  background: var(--dourado);
+
+  border-radius: 2px;
+  margin-right: 10px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.modal-header h2 {
+
   font-size: 1.1rem;
   color: var(--azul-escuro);
   overflow: hidden;
@@ -1588,3 +1653,26 @@ body.dark-mode .section-title {
   color: var(--azul-escuro);
   border-bottom-color: var(--cinza-borda);
 }
+
+/* ==============================
+   SCROLLBAR CUSTOMIZADA (Webkit)
+   ============================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cinza-fundo);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cinza-claro);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dourado);
+}
+
