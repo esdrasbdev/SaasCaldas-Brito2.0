@@ -1,90 +1,139 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | Caldas & Brito Advocacia</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | Caldas &amp; Brito Advocacia</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
+
 <body class="login-page">
-
-  <!-- Elementos de Fundo Animados -->
-  <div class="login-blob blob-1"></div>
-  <div class="login-blob blob-2"></div>
-
-  <!-- Cartão de Login -->
-  <div class="login-card">
-    <div class="brand-area">
-      <div class="brand-logo">
-        <img src="images/logo.jpeg" alt="Caldas & Brito Advocacia">
+  <!-- Split Panel Login -->
+  <main class="login-shell" aria-label="Tela de login">
+    <section class="login-panel login-panel-left" aria-hidden="true">
+      <div class="login-watermark">
+        <!-- watermark em SVG (sem dependência de arquivo externo) -->
+        <svg viewBox="0 0 600 600" role="img" aria-label="Marca">
+          <defs>
+            <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f5edd8" />
+              <stop offset="1" stop-color="#b49350" />
+            </linearGradient>
+          </defs>
+          <circle cx="300" cy="300" r="220" fill="none" stroke="url(#goldGrad)" stroke-width="4" opacity="0.35" />
+          <path d="M120 330c60-150 180-240 310-210" fill="none" stroke="url(#goldGrad)" stroke-width="6" opacity="0.22" />
+          <text x="50%" y="55%" text-anchor="middle" fill="url(#goldGrad)" opacity="0.18" font-size="44" font-family="Inter, system-ui, sans-serif" font-weight="700">
+            CALDAS &amp; BRITO
+          </text>
+          <text x="50%" y="62%" text-anchor="middle" fill="#f5edd8" opacity="0.14" font-size="20" font-family="Inter, system-ui, sans-serif">
+            Advocacia
+          </text>
+        </svg>
       </div>
-    </div>
 
-    <form id="login-form">
-      <div class="form-group" style="margin-bottom: 0;">
-        <label for="email">E-mail Corporativo</label>
-        <div class="login-input-group">
-          <input type="email" id="email" placeholder="E-mail" required>
-          <i class="fa-solid fa-envelope"></i>
+      <div class="login-left-content">
+        <div class="login-quote">
+          <div class="login-quote-mark" aria-hidden="true">“</div>
+          <p>
+            A excelência jurídica nasce do rigor técnico, da clareza e do compromisso com a justiça.
+          </p>
         </div>
+
+        <footer class="login-institutional">
+          <p class="login-inst-title">Caldas &amp; Brito Advocacia</p>
+          <p class="login-inst-sub">Rua Antônio Alves de Lima, 563 - Juremal - Edifício Timbaúba, Apt. 04 - V. Alegre/CE</p>
+        </footer>
       </div>
 
-      <div class="form-group" style="margin-bottom: 24px;">
-        <label for="password">Senha</label>
-        <div class="login-input-group">
-          <input type="password" id="password" placeholder="••••••••" required>
-          <i class="fa-solid fa-lock"></i>
+      <div class="login-brand-sash" aria-hidden="true"></div>
+    </section>
+
+    <section class="login-panel login-panel-right">
+      <div class="login-right-top">
+        <div class="login-logo" aria-hidden="true">
+          <img src="images/logo.jpeg" alt="Caldas &amp; Brito" />
         </div>
+
+        <h1 class="login-title">Acesso ao Sistema</h1>
+        <p class="login-subtitle">Use suas credenciais corporativas para continuar.</p>
       </div>
 
-      <div id="error-msg" class="error-message" style="display: none; margin-bottom: 16px;"></div>
+      <form id="login-form" class="login-form" autocomplete="on" novalidate>
+        <div class="form-group">
+          <label for="email">E-mail corporativo</label>
+          <div class="login-input">
+            <span class="login-input-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></span>
+            <input type="email" id="email" name="email" placeholder="E-mail" required aria-required="true" />
+          </div>
+        </div>
 
-      <button type="submit" class="btn btn-primary btn-login">
-        <span id="btn-text">Acessar Sistema</span>
-        <i class="fa-solid fa-arrow-right"></i>
-      </button>
-    </form>
-    
-    <div style="margin-top: 24px; text-align: center; font-size: 0.85rem; color: var(--cinza-medio);">
-      <p>&copy; 2026 Caldas & Brito Advocacia.</p>
-    </div>
-  </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <div class="login-input login-input-password">
+            <span class="login-input-icon" aria-hidden="true"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="password" name="password" placeholder="••••••••" required aria-required="true" />
+            <button type="button" class="login-toggle" id="toggle-password" aria-label="Mostrar senha" aria-pressed="false">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="login-help">Digite sua senha e clique em <strong>Acessar</strong>.</div>
+        </div>
 
-  <!-- Overlay de Boas-vindas (Oculto inicialmente) -->
+        <div id="error-msg" class="error-message" style="display:none" role="alert" aria-live="polite"></div>
+
+        <button type="submit" class="btn btn-primary login-btn" aria-label="Acessar Sistema">
+          <span id="btn-text">Acessar Sistema</span>
+          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </button>
+
+        <div class="login-copyright" aria-hidden="true">&copy; 2026 Caldas &amp; Brito Advocacia.</div>
+      </form>
+    </section>
+  </main>
+
+  <!-- Overlay moderno -->
   <div id="welcome-overlay" class="welcome-overlay">
     <div class="welcome-content">
-      <i class="fa-solid fa-circle-check" style="font-size: 5rem; color: #4ade80; margin-bottom: 32px;"></i>
-      <h2 id="welcome-title" style="font-size: 3.5rem; margin-bottom: 0; font-weight: 600; letter-spacing: -0.02em;">Bem-vindo,</h2>
-      <h3 id="welcome-name" style="font-size: 4.5rem; font-weight: 800; background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: -10px;">Usuário</h3>
-      <p style="margin-top: 32px; font-size: 1.2rem; color: rgba(255,255,255,0.8);">Preparando seu ambiente...</p>
-      <div class="loading-bar"></div>
+      <div class="welcome-check" aria-hidden="true">
+        <i class="fa-solid fa-circle-check" style="font-size: 5rem; color: #d4af37;"></i>
+      </div>
+      <h2 id="welcome-title" class="welcome-title">Bem-vindo,</h2>
+      <h3 id="welcome-name" class="welcome-name">Usuário</h3>
+      <p class="welcome-desc">Preparando seu ambiente...</p>
+      <div class="loading-bar" aria-hidden="true"></div>
     </div>
   </div>
 
-  <!-- Script Lógico -->
   <script type="module">
     import { initSupabase } from './js/supabase.js';
 
     const loginForm = document.getElementById('login-form');
     const errorMsg = document.getElementById('error-msg');
-    const btnText = document.getElementById('btn-text');
-    const btn = loginForm.querySelector('button');
-    const originalBtnContent = btn.innerHTML;
     const welcomeOverlay = document.getElementById('welcome-overlay');
     const welcomeName = document.getElementById('welcome-name');
+    const togglePassword = document.getElementById('toggle-password');
 
-    // Limpa sessão anterior ao entrar no login
-    localStorage.removeItem('userRole'); // Corrigido de user_role para userRole
+    const btn = loginForm.querySelector('button[type="submit"]');
+    const originalBtnContent = btn.innerHTML;
+
+    // Toggle show/hide password
+    togglePassword?.addEventListener('click', () => {
+      const input = document.getElementById('password');
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+
+      togglePassword.setAttribute('aria-pressed', String(isHidden));
+      togglePassword.innerHTML = isHidden
+        ? '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i>'
+        : '<i class="fa-solid fa-eye" aria-hidden="true"></i>';
+    });
+
+    localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
-    
+
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      // Await init before auth
-      const btn = loginForm.querySelector('button');
-      const originalBtnContent = btn.innerHTML;
 
       let client;
       try {
@@ -97,16 +146,13 @@
         btn.innerHTML = originalBtnContent;
         return;
       }
-      
-      // Feedback visual de carregamento
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
-      errorMsg.style.display = 'none';
 
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      
-      console.log(`🔍 Attempting login for: ${email}`); // DEBUG
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
+      errorMsg.style.display = 'none';
 
       if (!client) {
         errorMsg.textContent = '❌ Supabase não inicializado. O arquivo js/env.js pode não estar disponível no deploy (Vercel).';
@@ -117,16 +163,13 @@
       }
 
       try {
-        // 1. Autenticação Supabase (now with valid client)
-        const { data: authData, error: authError } = await client.auth.signInWithPassword({
+        const { error: authError } = await client.auth.signInWithPassword({
           email,
           password
         });
 
-
         if (authError) throw authError;
 
-        // 2. Buscar dados do usuário (Nome e Role) - use raw client
         const { data: userData, error: userError } = await client
           .from('usuarios')
           .select('nome, role')
@@ -134,41 +177,29 @@
           .single();
 
         if (userError || !userData) throw new Error('Usuário não encontrado no registro interno.');
-        if (!userData.ativo && userData.ativo !== undefined) throw new Error('Usuário inativo. Contate o administrador.'); 
+        if (!userData.ativo && userData.ativo !== undefined) throw new Error('Usuário inativo. Contate o administrador.');
 
-        // 3. Salvar role localmente
-        localStorage.setItem('userRole', userData.role); // Corrigido de user_role para userRole
+        localStorage.setItem('userRole', userData.role);
         localStorage.setItem('userName', userData.nome);
 
-        // 4. Exibir Tela de Boas-vindas
         const primeiroNome = userData.nome.split(' ')[0];
-        
-        // Define gênero baseado na última letra do nome (A = feminino, Outros = masculino)
         const saudacao = primeiroNome.toLowerCase().endsWith('a') ? 'Bem-vinda,' : 'Bem-vindo,';
         document.getElementById('welcome-title').textContent = saudacao;
         welcomeName.textContent = primeiroNome;
 
-        // Oculta o cartão de login suavemente (para não aparecer por baixo depois)
-        document.querySelector('.login-card').classList.add('hidden');
-        
-        // Mostra o overlay sobre o form
+        document.querySelector('.login-shell')?.classList.add('login-hidden');
         welcomeOverlay.style.display = 'flex';
 
-        // Aguarda brevemente para leitura (agilizado)
         setTimeout(() => {
-          // Adiciona classe que desliza o overlay inteiro para a direita
           welcomeOverlay.classList.add('slide-out-animation');
-          
-          // Quando a animação terminar (0.8s), redireciona
           setTimeout(() => {
-            window.location.replace('index.html'); // Redireciona para Dashboard
-
-          }, 600); 
-        }, 1000); // Reduzido de 2s para 1s para agilizar login
+            window.location.replace('index.html');
+          }, 600);
+        }, 1000);
 
       } catch (error) {
         console.error(error);
-        // Identifica erro de chave inválida para avisar o desenvolvedor
+
         if (error.message && (error.message.includes('Invalid API key') || error.code === 401)) {
           errorMsg.textContent = '⚠️ Erro de Sistema: A chave do Supabase em js/env.js é inválida.';
         } else if (error.message === 'Invalid login credentials') {
@@ -176,6 +207,7 @@
         } else {
           errorMsg.textContent = 'Acesso negado: Verifique suas credenciais.';
         }
+
         errorMsg.style.display = 'block';
         btn.disabled = false;
         btn.innerHTML = originalBtnContent;
@@ -184,3 +216,4 @@
   </script>
 </body>
 </html>
+

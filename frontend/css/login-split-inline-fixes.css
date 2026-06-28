@@ -1,0 +1,21 @@
+/* Helpers específicos para o login split */
+
+/* Mantém padrão de foco e acessibilidade */
+.login-toggle:focus-visible,
+.login-shell input:focus-visible {
+  outline: none;
+}
+
+/* Estado escondido após autenticação */
+.login-hidden {
+  opacity: 0;
+  transform: scale(0.985);
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* Ajuste quando carregando overlay */
+.welcome-overlay .loading-bar::after {
+  animation-name: loadBar;
+}
+

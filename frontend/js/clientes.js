@@ -228,6 +228,7 @@ const ClienteView = {
       modalBody.appendChild(containerDocs);
     }
 
+
     containerDocs.style.marginTop = '20px';
     containerDocs.style.borderTop = '2px solid var(--azul-claro)';
 
@@ -388,7 +389,7 @@ const ClienteView = {
       </div>
     `;
 
-    bloco.onclick = (ev) => {
+    bloco.onclick = async (ev) => {
       const btn = ev.target.closest('.btn-gj-baixar');
       if (!btn) return;
 
@@ -398,8 +399,12 @@ const ClienteView = {
         return;
       }
 
-      await this.baixarDocumentoPDF(chave, dadosCliente);
-
+      try {
+        await this.baixarDocumentoPDF(chave, dadosCliente);
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao gerar o PDF.', 'error');
+      }
     };
   },
 
