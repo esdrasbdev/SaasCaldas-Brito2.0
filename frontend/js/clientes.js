@@ -354,20 +354,19 @@ const ClienteView = {
 
     bloco.innerHTML = `
       <div style="padding-top:15px;">
-        <h3 style="font-size:1rem; color:var(--azul-medio); margin-bottom:14px;
-                   border-bottom:2px solid var(--azul-claro); padding-bottom:6px;">
+        <h3 style="font-size:1rem; color:var(--cinza-escuro); margin-bottom:14px;
+                   border-bottom:2px solid var(--cinza-borda); padding-bottom:6px;">
           <i class="fa-solid fa-file-lines"></i> Documentos Jurídicos
         </h3>
 
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:10px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:10px;">
           ${modelos.map(m => `
-            <div style="display:flex; align-items:center; justify-content:space-between;
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;
                         padding:10px 14px; border:1px solid var(--cinza-borda);
                         border-radius:8px; background:var(--branco);">
-              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-                <i class="${m.icone}" style="color:var(--azul-medio); font-size:1rem; flex-shrink:0;"></i>
-                <span style="font-size:0.85rem; font-weight:600; color:var(--azul-escuro);
-                             overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <div style="display:flex; align-items:flex-start; gap:10px; min-width:0;">
+                <i class="${m.icone}" style="color:var(--cinza-medio); font-size:1rem; flex-shrink:0; margin-top:2px;"></i>
+                <span style="font-size:0.85rem; font-weight:600; color:var(--cinza-escuro); word-break:break-word; line-height:1.35;">
                   ${m.titulo}
                 </span>
               </div>
@@ -379,7 +378,7 @@ const ClienteView = {
                 style="flex-shrink:0; margin-left:10px; padding:5px 10px;
                        font-size:0.8rem; border:1px solid var(--cinza-borda);
                        border-radius:5px; background:var(--branco); cursor:pointer;
-                       color:var(--azul-medio); display:flex; align-items:center; gap:5px;"
+                       color:var(--cinza-escuro); display:flex; align-items:center; gap:5px;"
               >
                 <i class="fa-solid fa-download"></i> PDF
               </button>
@@ -660,7 +659,7 @@ const ClienteView = {
   const addLinha = (corLinha = [200, 200, 200]) => {
     checarPagina(4);
     pdf.setDrawColor(...corLinha);
-    pdf.line(MAR, y, MAR + LARGURA, y);
+    pdf.line(MAR_LADO, y, MAR_LADO + LARGURA, y);
     y += 4;
   };
 
@@ -689,8 +688,8 @@ const ClienteView = {
   const addAssinaturaLR = (esq, dir) => {
     checarPagina(30);
     y += 12;
-    const xE = MAR + LARGURA * 0.25;
-    const xD = MAR + LARGURA * 0.75;
+    const xE = MAR_LADO + LARGURA * 0.25;
+    const xD = MAR_LADO + LARGURA * 0.75;
     pdf.setDrawColor(30, 30, 30);
     pdf.line(xE - 42, y, xE + 42, y);
     pdf.line(xD - 42, y, xD + 42, y);

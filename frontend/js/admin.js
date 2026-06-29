@@ -3,8 +3,23 @@
  * Funcionalidades: Listar, Criar (Convidar), Editar, Excluir
  */
 
-import { supabase, initSupabase } from './supabase.js';
+import { supabase, initSupabase, getApiUrl } from './supabase.js';
 import { showToast } from './utils.js';
+
+async function apiFetch(path, options = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  return fetch(`${getApiUrl()}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...(options.headers || {})
+    }
+  });
+}
+
 
 const AdminView = {
   container: document.getElementById('admin-container') || document.body, // Fallback
@@ -85,8 +100,14 @@ const AdminView = {
                     <option value="false">Inativo (Bloqueado)</option>
                   </select>
                 </div>
+
+                <div class="form-group" id="grupo-senha" style="display:none;">
+                  <label for="user-nova-senha">Nova Senha <span style="font-size:0.8rem;color:var(--cinza-medio);">(deixe vazio para não alterar)</span></label>
+                  <input type="password" id="user-nova-senha" minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+                </div>
               </div>
               <div class="modal-footer">
+
                 <button type="button" class="btn btn-secondary" id="btn-cancelar-modal">Cancelar</button>
                 <button type="submit" class="btn btn-primary">Salvar Usuário</button>
               </div>
@@ -127,30 +148,40 @@ const AdminView = {
     const modal = document.getElementById('modal-usuario');
     const form = document.getElementById('form-usuario');
     form.reset();
-    
+
+    const grupSenha = document.getElementById('grupo-senha');
+    const campoSenha = document.getElementById('user-nova-senha');
+
     document.getElementById('modal-titulo').textContent = usuario ? 'Editar Usuário' : 'Novo Usuário';
     document.getElementById('user-id').value = usuario ? usuario.id : '';
-    
+
     if (usuario) {
       document.getElementById('user-nome').value = usuario.nome;
       document.getElementById('user-email').value = usuario.email;
-      document.getElementById('user-email').disabled = false;
+      document.getElementById('user-email').disabled = true; // e-mail imutável em edição
 
-      // Impede alteração de cargo (role) em edição: somente leitura.
       const roleSelect = document.getElementById('user-role');
       roleSelect.value = usuario.role;
-      roleSelect.disabled = true;
+      roleSelect.disabled = false;
 
       document.getElementById('user-ativo').value = usuario.ativo.toString();
+
+      // Mostrar campo nova senha apenas em edição
+      grupSenha.style.display = 'block';
+      campoSenha.required = false;
+      campoSenha.value = '';
     } else {
       document.getElementById('user-email').disabled = false;
       document.getElementById('user-ativo').value = 'true';
 
-      // Em criação, permite selecionar cargo.
       document.getElementById('user-role').disabled = false;
+
+      // Em criação, senha é obrigatória
+      grupSenha.style.display = 'block';
+      campoSenha.required = true;
+      campoSenha.value = '';
     }
 
-    
     modal.style.display = 'flex';
   },
 
@@ -167,13 +198,20 @@ const AdminController = {
   },
 
   async carregar() {
+    const tbody = document.getElementById('lista-usuarios-body');
     if (!supabase) {
-      AdminView.container.innerHTML = '<div class="text-center" style="padding:16px;">Supabase não inicializado. Verifique js/env.js.</div>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center">Supabase não inicializado.</td></tr>';
       return;
     }
 
-    const { data, error } = await supabase.from('usuarios').select('*').order('nome');
-    if (!error) AdminView.renderizarTabela(data);
+    try {
+      const res = await apiFetch('/usuarios');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      AdminView.renderizarTabela(data);
+    } catch (err) {
+      showToast('Erro ao carregar usuários: ' + err.message, 'error');
+    }
   },
 
   bindEvents() {
@@ -182,36 +220,48 @@ const AdminController = {
     
     document.getElementById('form-usuario').onsubmit = async (e) => {
       e.preventDefault();
+
       const id = document.getElementById('user-id').value;
-      const dados = {
-        nome: document.getElementById('user-nome').value,
-        email: document.getElementById('user-email').value,
-        // Role não deve ser alterada em edição.
-        ...(id ? {} : { role: document.getElementById('user-role').value }),
-        ativo: document.getElementById('user-ativo').value === 'true'
-      };
+      const nome = document.getElementById('user-nome').value.trim();
+      const email = document.getElementById('user-email').value.trim();
+      const role = document.getElementById('user-role').value;
+      const ativo = document.getElementById('user-ativo').value === 'true';
+      const novaSenha = document.getElementById('user-nova-senha').value;
 
+      try {
+        if (!id) {
+          if (!novaSenha) {
+            showToast('Informe uma senha para o novo usuário.', 'error');
+            return;
+          }
 
-      if (!id) {
-        // Criar (apenas insere na tabela pública por enquanto, auth deve ser tratado à parte ou via convite)
-        const { error } = await supabase.from('usuarios').insert(dados);
-        if (error) {
-          showToast('Erro ao criar usuário: ' + error.message, 'error');
-        } else {
+          const res = await apiFetch('/usuarios', {
+            method: 'POST',
+            body: JSON.stringify({ nome, email, role, senha: novaSenha })
+          });
+
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || 'Erro ao criar usuário.');
           showToast('Usuário criado com sucesso!', 'success');
-        }
-      } else {
-        // Editar
-        const { error } = await supabase.from('usuarios').update(dados).eq('id', id);
-        if (error) {
-          showToast('Erro ao atualizar: ' + error.message, 'error');
         } else {
-          showToast('Usuário atualizado!', 'success');
+          const body = { nome, role, ativo };
+          if (novaSenha) body.novaSenha = novaSenha;
+
+          const res = await apiFetch(`/usuarios/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body)
+          });
+
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || 'Erro ao atualizar usuário.');
+          showToast('Usuário atualizado com sucesso!', 'success');
         }
+
+        AdminView.fecharModal();
+        await this.carregar();
+      } catch (err) {
+        showToast(err.message, 'error');
       }
-      
-      AdminView.fecharModal();
-      this.carregar();
     };
 
     document.getElementById('lista-usuarios-body').addEventListener('click', async (e) => {

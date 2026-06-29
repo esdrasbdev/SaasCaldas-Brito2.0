@@ -7,6 +7,12 @@ body.login-page {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  min-height: 100svh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
 }
 
 body.login-page,
@@ -21,6 +27,7 @@ body.login-page * {
   min-height: 100svh; /* fallback para iOS/viewport dinâmico */
   min-height: 100vh;
   display: grid;
+  align-items: stretch; /* garante encaixe 100% alto nas colunas */
   grid-template-columns: 1.08fr 0.92fr;
   position: relative;
   z-index: 2;
@@ -44,7 +51,10 @@ body.login-page * {
   background: radial-gradient(circle at 30% 10%, rgba(180, 147, 80, 0.28), transparent 55%),
               linear-gradient(145deg, #0b1220 0%, #121a31 50%, #0b1220 100%);
   color: #fff;
-  padding: 54px 52px;
+  padding: 60px 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .login-watermark {
@@ -106,7 +116,7 @@ body.login-page * {
 
 .login-panel-right {
   background: #ffffff;
-  padding: 52px 44px;
+  padding: 52px 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -120,10 +130,12 @@ body.login-page * {
 }
 
 .login-logo img {
-  width: 150px;
+  width: 130px;
   height: auto;
+  max-height: 70px;
+  object-fit: contain;
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .login-title {
@@ -183,10 +195,11 @@ body.login-page * {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.login-toggle:hover {
+ .login-toggle:hover {
   background: rgba(180,147,80,0.12);
-  color: var(--azul-medio);
+  color: var(--cinza-medio);
 }
+
 
 .login-toggle:focus {
   outline: none;
@@ -321,10 +334,17 @@ body.login-page * {
 
 /* Responsividade */
 @media (max-width: 980px) {
+  body.login-page {
+    background: #ffffff;
+    align-items: flex-start;
+  }
+
   .login-shell {
     grid-template-columns: 1fr;
-    max-width: 520px;
-    padding: 0 14px;
+    max-width: 460px;
+    min-height: 100svh;
+    min-height: 100vh;
+    padding: 0;
   }
 
   .login-panel-left {

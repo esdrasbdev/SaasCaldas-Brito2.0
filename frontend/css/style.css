@@ -622,7 +622,7 @@ textarea:focus {
   color: var(--azul-escuro) !important;
 }
 
-.action-card i { color: var(--azul-medio); font-size: 1.2rem; }
+.action-card i { color: var(--cinza-medio); font-size: 1.2rem; }
 
 /* ===========================
    TABELA RECENTES
@@ -778,8 +778,9 @@ textarea:focus {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--azul-medio);
+  color: var(--cinza-medio);
 }
+
 
 .modal-footer {
   padding: 16px 24px;
@@ -844,7 +845,7 @@ body.dark-mode .toast {
 .toast-warning span { color: #92400e; font-weight: 700; }
 
 .toast-info { border-left-color: var(--azul-medio); }
-.toast-info i { color: var(--azul-medio); font-size: 1.2rem; }
+.toast-info i { color: var(--cinza-medio); font-size: 1.2rem; }
 
 /* ===========================
    MODAL CLIENTE (GRID ESPECÍFICO)
@@ -969,7 +970,7 @@ body.dark-mode .toast {
 .sidebar-search-icon {
   display: inline-flex;
   margin-right: 8px;
-  color: var(--azul-medio);
+  color: var(--cinza-medio);
 }
 
 .sidebar-search input {
