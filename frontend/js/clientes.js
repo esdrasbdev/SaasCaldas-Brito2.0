@@ -462,18 +462,11 @@ const ClienteView = {
   let LOGO_B64   = null;
   let BRASAO_B64 = null;
 
-  try {
-    [LOGO_B64, BRASAO_B64] = await Promise.all([
-      carregarImagemBase64('images/timbrado_principal.png').catch(() => null),
-      carregarImagemBase64('images/timbrado_rodape.png').catch(() => null)
-    ]);
-  } catch (err) {
-    try {
-      LOGO_B64 = await carregarImagemBase64('images/logo.jpeg');
-    } catch (_) {
-      console.warn('Timbrado: nenhuma imagem encontrada em images/');
-    }
-  }
+  [LOGO_B64, BRASAO_B64] = await Promise.all([
+    carregarImagemBase64('images/timbrado_principal.png').catch(() => null),
+    carregarImagemBase64('images/timbrado_rodape.png').catch(() => null)
+  ]);
+
 
   const pdf    = new JsPDFCtor({ orientation: 'p', unit: 'mm', format: 'a4' });
   const PW     = pdf.internal.pageSize.getWidth();   // 210mm
