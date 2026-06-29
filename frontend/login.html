@@ -148,7 +148,7 @@
         client = await initSupabase();
       } catch (err) {
         console.error('initSupabase failed:', err);
-        errorMsg.textContent = `❌ Supabase não inicializado. ${err?.message || 'Verifique js/env.js e /api/env no deploy.'}`;
+        errorMsg.textContent = `Supabase não inicializado. ${err?.message || 'Verifique js/env.js.'}`;
         errorMsg.style.display = 'block';
         btn.disabled = false;
         btn.innerHTML = originalBtnContent;
@@ -163,7 +163,7 @@
       errorMsg.style.display = 'none';
 
       if (!client) {
-        errorMsg.textContent = '❌ Supabase não inicializado. O arquivo js/env.js pode não estar disponível no deploy (Vercel).';
+        errorMsg.textContent = 'Supabase não inicializado. Verifique o endpoint /api/env.';
         errorMsg.style.display = 'block';
         btn.disabled = false;
         btn.innerHTML = originalBtnContent;
@@ -180,7 +180,7 @@
 
         const { data: userData, error: userError } = await client
           .from('usuarios')
-          .select('nome, role')
+          .select('nome, role, ativo')
           .eq('email', email)
           .single();
 
