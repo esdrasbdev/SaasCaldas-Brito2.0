@@ -463,15 +463,9 @@ const ClienteView = {
   let BRASAO_B64 = null;
 
   try {
-      [LOGO_B64, BRASAO_B64] = await Promise.all([
-      carregarImagemBase64('images/logo-cabecalho.png').catch(async () => {
-        // fallback: usa timbrado_principal como cabeçalho (se PNG específico não existir)
-        return carregarImagemBase64('images/timbrado_principal.png');
-      }),
-      carregarImagemBase64('images/logo-marca-dagua.png').catch(async () => {
-        // fallback: usa timbrado_rodape como marca d'água (se PNG específico não existir)
-        return carregarImagemBase64('images/timbrado_rodape.png');
-      })
+    [LOGO_B64, BRASAO_B64] = await Promise.all([
+      carregarImagemBase64('images/timbrado_principal.png').catch(() => null),
+      carregarImagemBase64('images/timbrado_rodape.png').catch(() => null)
     ]);
   } catch (err) {
     try {

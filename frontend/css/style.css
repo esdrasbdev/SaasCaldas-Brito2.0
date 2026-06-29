@@ -296,6 +296,246 @@ p {
   margin: 0;
 }
 
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: radial-gradient(circle at center, #3d342b 0%, #1a1612 100%); /* Gradiente radial profundo e elegante */
+  font-family: var(--fonte-principal);
+  position: relative;
+  overflow: hidden;
+}
 
+/* Elementos de Fundo Animados (Blobs) */
+.login-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: floatBlob 10s infinite alternate ease-in-out;
+  z-index: 1;
+}
 
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: #b8860b; /* Dark Goldenrod - Dourado mais clássico */
+  top: -100px;
+  left: -100px;
+}
 
+.blob-2 {
+  width: 400px;
+  height: 400px;
+  background: #cd853f; /* Peru - Tom terroso dourado */
+  bottom: -50px;
+  right: -50px;
+  animation-delay: -5s;
+}
+
+@keyframes floatBlob {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, 50px) scale(1.1); }
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.95); /* Quase opaco para legibilidade */
+  width: 100%;
+  max-width: 400px; /* Mais compacto */
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Sombra profunda */
+  z-index: 10; /* Acima dos blobs */
+  position: relative;
+  backdrop-filter: blur(10px); /* Efeito vidro se background tiver transparência */
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1), floatCard 6s ease-in-out infinite;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); /* Transição suave ao sumir */
+}
+
+/* Estado oculto do cartão ao logar */
+.login-card.hidden {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+  pointer-events: none;
+}
+
+/* Animação sutil de flutuação no card */
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Garante que nada vaze do card */
+.login-card * {
+  box-sizing: border-box;
+}
+
+.brand-area {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.brand-logo img {
+  max-width: 240px; /* Aumentado para maior destaque */
+  height: auto;
+  margin-bottom: 16px;
+  border-radius: 8px; /* Leve arredondamento se necessário */
+  /* Opcional: Sombra suave para destacar o fundo branco sobre o cartão branco */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); 
+}
+
+/* Ajuste fino para harmonizar com o dourado da logo */
+.btn-login {
+  background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%); /* Gradiente Dourado */
+  color: #fff;
+  border: none;
+}
+
+.brand-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--azul-escuro);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.brand-subtitle {
+  font-size: 0.85rem;
+  color: var(--cinza-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+}
+
+/* Inputs do Login Customizados */
+.login-input-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.login-input-group i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  transition: color 0.3s ease;
+  z-index: 2;
+}
+
+.login-input-group input {
+  width: 100%;
+  padding: 14px 16px 14px 44px; /* Espaço para o ícone */
+  border: 2px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  color: var(--azul-escuro);
+}
+
+.login-input-group input:focus {
+  background: #fff;
+  border-color: var(--azul-medio);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.login-input-group input:focus + i {
+  color: var(--azul-medio); /* Ícone muda de cor no foco */
+}
+
+/* Botão de Login com Gradiente */
+.btn-login {
+  width: 100%;
+  justify-content: center;
+  padding: 14px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(202, 138, 4, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(202, 138, 4, 0.4);
+}
+
+/* Tela de Boas-vindas (Overlay) */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.95); /* Fundo escuro levemente translúcido */
+  backdrop-filter: blur(20px); /* Blur intenso no fundo */
+  z-index: 9999;
+  display: none; /* Controlado via JS */
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+}
+
+/* Animação de Deslize para a Direita */
+@keyframes slideOutRight {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 1; }
+}
+
+.slide-out-animation {
+  animation: slideOutRight 0.8s cubic-bezier(0.8, 0, 0.2, 1) forwards;
+}
+
+/* Animações internas do Overlay */
+.welcome-content i {
+  opacity: 0;
+  transform: scale(0.5);
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.welcome-content h2, 
+.welcome-content h3 {
+  color: #ffffff !important;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.5s ease forwards 0.1s;
+}
+
+.welcome-content p {
+  opacity: 0;
+  animation: fadeIn 0.5s ease forwards 0.2s;
+}
+
+.loading-bar {
+  width: 240px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin: 32px auto 0;
+  overflow: hidden;
+  position: relative;
+  opacity: 0;
+  animation: fadeIn 0.4s ease forwards 0.3s;
+}
+
+.loading-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+  transform: translateX(-100%);
+  animation: loadProgress 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.5s;
+}
+
+@keyframes popIn {
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes loadProgress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0%); }
+}
