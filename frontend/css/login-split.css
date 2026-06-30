@@ -95,7 +95,7 @@ body.login-page p {
   top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  width: 400px;
+  width: 600px;
   pointer-events: none;
   opacity: 1;
 }
