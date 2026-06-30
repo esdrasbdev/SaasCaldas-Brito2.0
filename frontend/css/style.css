@@ -7,9 +7,8 @@
 /* Importar fonte moderna (Inter) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Login Split Panel (separado em arquivo dedicado para reduzir conflitos) */
-@import url('login-split.css');
-@import url('login-split-inline-fixes.css');
+/* Login Split Panel carregado exclusivamente em frontend/login.html */
+
 
 /* Variáveis CSS - nomes descritivos do domínio jurídico */
 :root {

@@ -1,163 +1,243 @@
-/* Split Panel Login (Caldas & Brito)
-   Mantém o mesmo design system (variáveis) do style.css.
-*/
+/* ============================================================
+   LOGIN SPLIT PANEL — Caldas & Brito Advocacia
+   Arquivo standalone: carregado APENAS no login.html
+   Depende de: variáveis definidas em style.css (:root)
+   ============================================================ */
 
-/* Base dedicada para evitar “vazamentos” de estilos globais no login */
+/* Reset cirúrgico para o body no contexto de login */
 body.login-page {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  min-height: 100svh;
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   background: #0b1220;
+  font-family: var(--fonte-principal);
+  overflow: hidden;
 }
 
-body.login-page,
-body.login-page * {
-  box-sizing: inherit;
+body.login-page *,
+body.login-page *::before,
+body.login-page *::after {
+  box-sizing: border-box;
 }
 
+/* Reset de elementos globais que o style.css afeta */
+body.login-page h1,
+body.login-page h2,
+body.login-page h3,
+body.login-page p {
+  margin: 0;
+}
+
+/* ============================================================
+   SHELL — grade principal 50/50
+   ============================================================ */
 .login-shell {
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  min-height: 100svh; /* fallback para iOS/viewport dinâmico */
   min-height: 100vh;
+  min-height: 100svh;
   display: grid;
-  align-items: stretch; /* garante encaixe 100% alto nas colunas */
-  grid-template-columns: 1.08fr 0.92fr;
+  grid-template-columns: 1.1fr 0.9fr;
   position: relative;
   z-index: 2;
-  align-items: stretch; /* garante encaixe 100% alto nas colunas */
 }
 
-.login-panel-left,
-.login-panel-right {
-  height: 100%;
-  min-height: 100%;
-}
-
+/* ============================================================
+   PAINEL GENÉRICO
+   ============================================================ */
 .login-panel {
   min-height: 100%;
   position: relative;
   overflow: hidden;
 }
 
-
+/* ============================================================
+   PAINEL ESQUERDO — identidade visual
+   ============================================================ */
 .login-panel-left {
-  background: radial-gradient(circle at 30% 10%, rgba(180, 147, 80, 0.28), transparent 55%),
-              linear-gradient(145deg, #0b1220 0%, #121a31 50%, #0b1220 100%);
+  background:
+    radial-gradient(ellipse at 25% 15%, rgba(180, 147, 80, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 85%, rgba(180, 147, 80, 0.10) 0%, transparent 45%),
+    linear-gradient(155deg, #0d1626 0%, #121d38 55%, #0b1220 100%);
   color: #fff;
-  padding: 60px 52px;
+  padding: 64px 56px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.login-watermark {
+/* Faixa decorativa lateral direita do painel esquerdo */
+.login-brand-sash {
   position: absolute;
-  inset: -40px -40px auto -40px;
-  opacity: 1;
-  pointer-events: none;
-  filter: saturate(1.05);
+  top: 0;
+  right: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(212, 175, 55, 0.55) 25%,
+    rgba(212, 175, 55, 0.90) 50%,
+    rgba(212, 175, 55, 0.55) 75%,
+    transparent 100%
+  );
 }
 
+/* Watermark SVG absoluto no fundo */
+.login-watermark {
+  position: absolute;
+  inset: -60px -60px auto -60px;
+  pointer-events: none;
+  opacity: 1;
+}
+
+/* Conteúdo textual do painel esquerdo */
 .login-left-content {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  height: 100%;
   justify-content: center;
+  height: 100%;
+  gap: 0;
 }
 
+/* Badge/citação */
 .login-quote {
-  max-width: 380px;
+  max-width: 360px;
 }
 
 .login-quote-mark {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.6rem;
   font-weight: 800;
+  line-height: 1;
   color: #d4af37;
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  margin-bottom: 18px;
+  border: 1.5px solid rgba(212, 175, 55, 0.40);
+  background: rgba(212, 175, 55, 0.07);
+  margin-bottom: 20px;
 }
 
 .login-quote p {
-  font-size: 1.1rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.86);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 400;
+  margin: 0;
 }
 
+/* Rodapé institucional */
 .login-institutional {
-  margin-top: 38px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(180, 147, 80, 0.35);
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(180, 147, 80, 0.30);
 }
 
 .login-inst-title {
   font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: -0.01em;
   margin-bottom: 6px;
 }
 
 .login-inst-sub {
-  color: rgba(255,255,255,0.75);
-  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
+/* ============================================================
+   PAINEL DIREITO — formulário
+   ============================================================ */
 .login-panel-right {
   background: #ffffff;
-  padding: 52px 48px;
+  padding: 56px 52px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
+  position: relative;
 }
 
+/* Detalhe decorativo canto superior direito */
+.login-panel-right::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(180, 147, 80, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
 
+/* Topo do painel direito */
 .login-right-top {
-  text-align: left;
-  margin-bottom: 26px;
+  margin-bottom: 28px;
 }
 
+/* Logo */
 .login-logo img {
-  width: 130px;
+  width: 120px;
   height: auto;
-  max-height: 70px;
+  max-height: 64px;
   object-fit: contain;
   display: block;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+  border-radius: 6px;
 }
 
+/* Título e subtítulo */
 .login-title {
-  font-size: 1.65rem;
-  margin: 0 0 8px;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--azul-escuro);
+  margin: 0 0 8px;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
 }
 
 .login-subtitle {
   color: var(--cinza-medio);
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.93rem;
+  line-height: 1.5;
 }
 
+/* ============================================================
+   FORMULÁRIO
+   ============================================================ */
 .login-form {
   width: 100%;
 }
 
 .login-form .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
+/* Labels no painel de login */
+.login-panel-right label {
+  display: block;
+  font-weight: 500;
+  color: var(--cinza-escuro);
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+
+/* Wrapper de input com ícone */
 .login-input {
   position: relative;
 }
@@ -169,17 +249,42 @@ body.login-page * {
   transform: translateY(-50%);
   color: #94a3b8;
   z-index: 2;
+  font-size: 0.9rem;
+  pointer-events: none;
 }
 
-.login-input input {
-  padding: 12px 12px 12px 44px; /* respeita o padding global do style.css sem perder o espaço do ícone */
+/* Inputs dentro do login */
+.login-panel-right input[type="email"],
+.login-panel-right input[type="password"],
+.login-panel-right input[type="text"] {
+  width: 100%;
+  padding: 12px 14px 12px 44px;
+  border: 1.5px solid var(--cinza-borda);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: var(--azul-escuro);
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  font-family: var(--fonte-principal);
 }
 
+.login-panel-right input::placeholder {
+  color: var(--cinza-placeholder);
+}
 
+.login-panel-right input:focus {
+  border-color: var(--dourado);
+  box-shadow: 0 0 0 4px rgba(180, 147, 80, 0.12);
+  transform: none;
+}
+
+/* Wrapper de senha com botão toggle */
 .login-input-password {
-  margin-top: 6px;
+  position: relative;
 }
 
+/* Botão mostrar/ocultar senha */
 .login-toggle {
   position: absolute;
   right: 10px;
@@ -189,46 +294,101 @@ body.login-page * {
   background: transparent;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 1.05rem;
+  font-size: 1rem;
   padding: 6px 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: background 0.2s ease, color 0.2s ease;
+  line-height: 1;
 }
 
- .login-toggle:hover {
-  background: rgba(180,147,80,0.12);
-  color: var(--cinza-medio);
+.login-toggle:hover {
+  background: rgba(180, 147, 80, 0.10);
+  color: var(--dourado);
 }
-
 
 .login-toggle:focus {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(180, 147, 80, 0.18);
+  box-shadow: 0 0 0 3px rgba(180, 147, 80, 0.20);
 }
 
+/* Hint abaixo do campo de senha */
 .login-help {
-  margin-top: 8px;
-  font-size: 0.85rem;
+  margin-top: 7px;
+  font-size: 0.80rem;
   color: var(--cinza-medio);
+  line-height: 1.4;
 }
 
+/* ============================================================
+   MENSAGEM DE ERRO
+   ============================================================ */
+#error-msg.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* ============================================================
+   BOTÃO PRINCIPAL
+   ============================================================ */
 .login-btn {
   width: 100%;
+  padding: 13px 20px;
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--dourado-escuro) 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  letter-spacing: 0.01em;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(180, 147, 80, 0.25);
+  font-family: var(--fonte-principal);
 }
 
+.login-btn:hover {
+  background: linear-gradient(135deg, var(--dourado-escuro) 0%, #6b5228 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(180, 147, 80, 0.35);
+}
+
+.login-btn:active {
+  transform: scale(0.985);
+  box-shadow: none;
+}
+
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Copyright */
 .login-copyright {
-  margin-top: 18px;
-  font-size: 0.85rem;
+  margin-top: 20px;
+  font-size: 0.80rem;
   color: var(--cinza-medio);
   text-align: center;
 }
 
-/* Overlay */
+/* ============================================================
+   OVERLAY DE BOAS-VINDAS (pós-login)
+   ============================================================ */
 .welcome-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.96);
-  backdrop-filter: blur(18px);
+  background: rgba(11, 18, 32, 0.97);
+  backdrop-filter: blur(20px);
   z-index: 9999;
   display: none;
   align-items: center;
@@ -237,26 +397,26 @@ body.login-page * {
 }
 
 .welcome-content {
-  width: min(680px, 92vw);
+  width: min(560px, 90vw);
   text-align: center;
-  padding: 26px 18px;
+  padding: 32px 20px;
 }
 
 .welcome-check {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   opacity: 0;
-  transform: scale(0.8);
+  transform: scale(0.75);
   animation: welcomePop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .welcome-title {
   margin: 0;
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-size: 2.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.80);
   opacity: 0;
   transform: translateY(16px);
   animation: fadeUp 0.5s ease forwards 0.12s;
@@ -264,9 +424,9 @@ body.login-page * {
 
 .welcome-name {
   margin: 0;
-  font-size: 4.3rem;
+  font-size: 4rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #f5edd8 0%, #d4af37 40%, #b49350 100%);
+  background: linear-gradient(135deg, #f5edd8 0%, #d4af37 45%, #b49350 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -275,24 +435,23 @@ body.login-page * {
   animation: fadeUp 0.55s ease forwards 0.18s;
 }
 
-
 .welcome-desc {
-  margin: 22px 0 0;
-  color: rgba(255,255,255,0.82);
-  font-size: 1.1rem;
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 1rem;
   opacity: 0;
-  animation: fadeIn 0.5s ease forwards 0.25s;
+  animation: fadeIn 0.5s ease forwards 0.26s;
 }
 
 .loading-bar {
-  width: 260px;
-  height: 4px;
+  width: 240px;
+  height: 3px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
-  margin: 30px auto 0;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 28px auto 0;
   overflow: hidden;
   opacity: 0;
-  animation: fadeIn 0.4s ease forwards 0.28s;
+  animation: fadeIn 0.4s ease forwards 0.30s;
 }
 
 .loading-bar::after {
@@ -302,14 +461,22 @@ body.login-page * {
   width: 100%;
   background: linear-gradient(90deg, #d4af37, #b49350);
   transform: translateX(-100%);
-  animation: loadBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.38s;
+  animation: loadBar 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.40s;
 }
 
-@keyframes loadBar {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(0%); }
+/* ============================================================
+   ESTADO OCULTO (transição pós-login)
+   ============================================================ */
+.login-hidden {
+  opacity: 0;
+  transform: scale(0.985);
+  pointer-events: none;
+  transition: opacity 0.30s ease, transform 0.30s ease;
 }
 
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
 @keyframes fadeUp {
   to { opacity: 1; transform: translateY(0); }
 }
@@ -322,29 +489,36 @@ body.login-page * {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Slide out */
+@keyframes loadBar {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(0%); }
+}
+
 @keyframes slideOutRight {
-  0% { transform: translateX(0); opacity: 1; }
-  100% { transform: translateX(100%); opacity: 1; }
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
 }
 
 .slide-out-animation {
-  animation: slideOutRight 0.75s cubic-bezier(0.8, 0, 0.2, 1) forwards;
+  animation: slideOutRight 0.65s cubic-bezier(0.8, 0, 0.2, 1) forwards;
 }
 
-/* Responsividade */
-@media (max-width: 980px) {
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+@media (max-width: 920px) {
   body.login-page {
     background: #ffffff;
     align-items: flex-start;
+    overflow-y: auto;
   }
 
   .login-shell {
     grid-template-columns: 1fr;
-    max-width: 460px;
-    min-height: 100svh;
+    max-width: 480px;
     min-height: 100vh;
-    padding: 0;
+    min-height: 100svh;
+    margin: 0 auto;
   }
 
   .login-panel-left {
@@ -352,20 +526,31 @@ body.login-page * {
   }
 
   .login-panel-right {
-    padding: 44px 22px;
+    padding: 48px 24px 36px;
+    min-height: 100vh;
   }
 
-  .login-toggle {
-    right: 8px;
-  }
-
-  .login-input-icon {
-    left: 12px;
-  }
-
-  .login-input input {
-    padding: 12px 12px 12px 42px;
+  .login-panel-right::before {
+    display: none;
   }
 }
 
+@media (max-width: 400px) {
+  .login-panel-right {
+    padding: 40px 20px 32px;
+  }
+
+  .login-title {
+    font-size: 1.4rem;
+  }
+
+  .welcome-title { font-size: 2.2rem; }
+  .welcome-name  { font-size: 3rem; }
+}
+
+/* Foco acessível — remover outline padrão para elementos do login */
+.login-toggle:focus-visible,
+.login-shell input:focus-visible {
+  outline: none;
+}
 
