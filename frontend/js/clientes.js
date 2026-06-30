@@ -482,38 +482,42 @@ const ClienteView = {
   // ---- primitivas de renderização ----
 
   const aplicarTimbrado = () => {
-    // ── BRASÃO (marca d'água de fundo) ───────────────────────────────
+    // ── MARCA DAGUA (timbrado_rodape.png — imagem landscape 1118x591) ──
+    // Razao real W/H = 1118/591 = 1.8917
+    // Dimensoes corretas para preservar proporcao
     if (BRASAO_B64) {
-      const brasaoW = 107.2;
-      const brasaoH = 120.0;
-      const brasaoX = (PW - brasaoW) / 2;
-      const brasaoY = MAR_TOP + ((PH - MAR_TOP - MAR_BOTTOM) - brasaoH) / 2;
-      pdf.addImage(BRASAO_B64, 'PNG', brasaoX, brasaoY, brasaoW, brasaoH);
+      const marcaW = 95.0;
+      const marcaH = 50.2;   // marcaW / 1.8917 = 50.22mm
+      const marcaX = (PW - marcaW) / 2;  // centralizado
+      const marcaY = MAR_TOP + ((PH - MAR_TOP - MAR_BOTTOM) - marcaH) / 2;
+      pdf.addImage(BRASAO_B64, 'PNG', marcaX, marcaY, marcaW, marcaH);
     }
 
-    // ── LOGO COLORIDO (cabeçalho) ───────────────────────────────────
+    // ── LOGO DO CABEÇALHO (timbrado_principal.png — imagem portrait 1266x1417) ──
+    // Razao real W/H = 1266/1417 = 0.8934
+    // Dimensoes corretas para preservar proporcao
     if (LOGO_B64) {
-      const logoW = 37.8;
-      const logoH = 20.0;
+      const logoH = 28.0;
+      const logoW = 25.0;    // logoH * 0.8934 = 25.01mm
       const logoX = (PW - logoW) / 2;
-      const logoY = 9.5;
+      const logoY = 5.0;
       const formato = LOGO_B64.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
       pdf.addImage(LOGO_B64, formato, logoX, logoY, logoW, logoH);
     }
 
-    // ── LINHA DOURADA separando cabeçalho do corpo ──────────────────
-    pdf.setDrawColor(180, 147, 80); // #b49350
-    pdf.setLineWidth(0.35);
+    // ── LINHA DOURADA separando cabecalho do corpo ──────────────────
+    pdf.setDrawColor(180, 147, 80);
+    pdf.setLineWidth(0.4);
     pdf.line(MAR_LADO, MAR_TOP - 4, PW - MAR_LADO, MAR_TOP - 4);
     pdf.setLineWidth(0.2);
 
     // ── RODAPÉ ──────────────────────────────────────────────────────
-    const sepY = PH - MAR_BOTTOM + 4;
+    const sepY  = PH - MAR_BOTTOM + 4;
     const rod1Y = PH - MAR_BOTTOM + 9;
     const rod2Y = PH - MAR_BOTTOM + 14;
 
     pdf.setDrawColor(180, 147, 80);
-    pdf.setLineWidth(0.35);
+    pdf.setLineWidth(0.4);
     pdf.line(MAR_LADO, sepY, PW - MAR_LADO, sepY);
     pdf.setLineWidth(0.2);
 
