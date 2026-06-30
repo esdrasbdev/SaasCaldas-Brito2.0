@@ -92,9 +92,19 @@ body.login-page p {
 /* Watermark SVG absoluto no fundo */
 .login-watermark {
   position: absolute;
-  inset: -60px -60px auto -60px;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  max-width: 80%;
   pointer-events: none;
   opacity: 1;
+}
+
+.login-watermark svg {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* Conteúdo textual do painel esquerdo */
