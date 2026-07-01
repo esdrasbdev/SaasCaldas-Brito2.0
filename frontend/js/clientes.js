@@ -490,7 +490,16 @@ const ClienteView = {
       const marcaH = 50.2;   // marcaW / 1.8917 = 50.22mm
       const marcaX = (PW - marcaW) / 2;  // centralizado
       const marcaY = MAR_TOP + ((PH - MAR_TOP - MAR_BOTTOM) - marcaH) / 2;
-      pdf.addImage(BRASAO_B64, 'PNG', marcaX, marcaY, marcaW, marcaH);
+      
+      const GState = window.jspdf?.GState;
+      if (GState && typeof pdf.setGState === 'function') {
+        pdf.saveGraphicsState();
+        pdf.setGState(new GState({ opacity: 0.05 }));
+        pdf.addImage(BRASAO_B64, 'PNG', marcaX, marcaY, marcaW, marcaH);
+        pdf.restoreGraphicsState();
+      } else {
+        pdf.addImage(BRASAO_B64, 'PNG', marcaX, marcaY, marcaW, marcaH);
+      }
     }
 
     // ── LOGO DO CABEÇALHO (timbrado_principal.png — imagem portrait 1266x1417) ──
