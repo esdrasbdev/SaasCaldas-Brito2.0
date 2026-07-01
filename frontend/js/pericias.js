@@ -105,57 +105,10 @@ async function carregarClientes() {
   });
 }
 
-// Carrega e exibe as perícias na tabela
-  async function carregarPericias() {
-    const isAdmin = AuthAPI.getRole() === 'ADMIN';
-
-    // Force usuarios load (Antonio/Priscila)
-    let { data, error } = await supabase
-      .from('pericias')
-
-
-      .select(`
-        *,
-        clientes(nome),
-        usuarios(nome)
-      `)
-      .order('data', { ascending: true });
-
-  // Fallback: Se falhar por relacionamento inexistente (PGRST200) ou Bad Request (400), tenta carregar sem usuário
-  if (error && (error.code === 'PGRST200' || error.code === 'PGRST204' || error.message?.includes('FetchError') || !data)) {
-    // console.warn('Aviso: Relação com usuários não encontrada. Carregando modo simplificado.'); // Comentado para limpar console
-    const res = await supabase.from('pericias').select('*, clientes(nome)').order('data', { ascending: true });
-    data = res.data;
-    error = res.error;
-  }
-
-  if (error) {
-    console.error('Erro ao carregar perícias:', error.message);
-    listaPericias.innerHTML = `<tr><td colspan="5" class="text-center">Erro ao carregar dados.</td></tr>`;
-    return;
-  }
-
-  if (data.length === 0) {
-    window.__listaPericiasCompleta = [];
-    listaPericias.innerHTML = `
-      <tr>
-        <td colspan="5" style="padding:0;">
-          <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
-            <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
-            <span style="font-size:0.9rem;">Nenhuma perícia cadastrada.</span>
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  window.__listaPericiasCompleta = data;
-
-  const termoBuscaEl = document.getElementById('pericias-busca');
-  const termoBusca = termoBuscaEl ? termoBuscaEl.value.trim().toLowerCase() : '';
-
-  const filtrar = (p) => {
+// Funções de filtro e renderização unificadas
+function filtrarPericias(lista, termoBusca, tipoFiltro) {
+  return lista.filter((p) => {
+    if (tipoFiltro && p.tipo !== tipoFiltro) return false;
     if (!termoBusca) return true;
 
     const cliente = (p.clientes?.nome || '').toLowerCase();
@@ -164,13 +117,28 @@ async function carregarClientes() {
     const perito = (p.perito || '').toLowerCase();
     const dtTxt = p.data ? formatarData(p.data).toLowerCase() : '';
 
-    return [cliente, tipo, local, perito, dtTxt].some(v => v.includes(termoBusca));
-  };
+    return [cliente, tipo, local, perito, dtTxt].some((v) => v.includes(termoBusca));
+  });
+}
 
-  const listaFiltrada = data.filter(filtrar);
+function renderizarTabela(lista) {
+  const isAdmin = AuthAPI.getRole() === 'ADMIN';
 
-  listaPericias.innerHTML = listaFiltrada.map(p => {
+  if (lista.length === 0) {
+    listaPericias.innerHTML = `
+      <tr>
+        <td colspan="5" style="padding:0;">
+          <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
+            <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
+            <span style="font-size:0.9rem;">Nenhuma perícia encontrada.</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
 
+  listaPericias.innerHTML = lista.map(p => {
     const dataTxt = p.data ? formatarData(p.data) : '-';
     const horaTxt = p.data ? formatarHora24h(p.data) : '';
 
@@ -203,6 +171,49 @@ async function carregarClientes() {
       </tr>
     `;
   }).join('');
+}
+
+const aplicarFiltros = () => {
+  const termoBuscaEl = document.getElementById('pericias-busca');
+  const filtroTipoEl = document.getElementById('pericias-filtro-tipo');
+  
+  const termo = termoBuscaEl ? termoBuscaEl.value.trim().toLowerCase() : '';
+  const tipo = filtroTipoEl ? filtroTipoEl.value : '';
+  
+  const base = window.__listaPericiasCompleta || [];
+  renderizarTabela(filtrarPericias(base, termo, tipo));
+};
+
+// Carrega e exibe as perícias na tabela
+  async function carregarPericias() {
+    // Force usuarios load (Antonio/Priscila)
+    let { data, error } = await supabase
+      .from('pericias')
+
+
+      .select(`
+        *,
+        clientes(nome),
+        usuarios(nome)
+      `)
+      .order('data', { ascending: true });
+
+  // Fallback: Se falhar por relacionamento inexistente (PGRST200) ou Bad Request (400), tenta carregar sem usuário
+  if (error && (error.code === 'PGRST200' || error.code === 'PGRST204' || error.message?.includes('FetchError') || !data)) {
+    // console.warn('Aviso: Relação com usuários não encontrada. Carregando modo simplificado.'); // Comentado para limpar console
+    const res = await supabase.from('pericias').select('*, clientes(nome)').order('data', { ascending: true });
+    data = res.data;
+    error = res.error;
+  }
+
+  if (error) {
+    console.error('Erro ao carregar perícias:', error.message);
+    listaPericias.innerHTML = `<tr><td colspan="5" class="text-center">Erro ao carregar dados.</td></tr>`;
+    return;
+  }
+
+  window.__listaPericiasCompleta = data || [];
+  aplicarFiltros();
 }
 
 
@@ -277,83 +288,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Busca local na tabela
   const termoBuscaEl = document.getElementById('pericias-busca');
-  const btnLimpar = document.getElementById('pericias-busca-limpar');
+  const filtroTipoEl = document.getElementById('pericias-filtro-tipo');
 
-  termoBuscaEl?.addEventListener('input', () => {
-    const termo = termoBuscaEl.value.trim().toLowerCase();
-    const dados = window.__listaPericiasCompleta || [];
-
-    const filtrar = (p) => {
-      if (!termo) return true;
-
-      const cliente = (p.clientes?.nome || '').toLowerCase();
-      const tipo = (p.tipo || '').toLowerCase();
-      const local = (p.local || '').toLowerCase();
-      const perito = (p.perito || '').toLowerCase();
-      const dtTxt = p.data ? formatarData(p.data).toLowerCase() : '';
-
-      return [cliente, tipo, local, perito, dtTxt].some(v => v.includes(termo));
-    };
-
-    const listaFiltrada = dados.filter(filtrar);
-
-    const isAdmin = AuthAPI.getRole() === 'ADMIN';
-
-    if (!listaFiltrada.length) {
-      listaPericias.innerHTML = `
-        <tr>
-          <td colspan="5" style="padding:0;">
-            <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
-              <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
-              <span style="font-size:0.9rem;">Nenhuma perícia encontrada para este filtro.</span>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    listaPericias.innerHTML = listaFiltrada.map(p => {
-      const dataTxt = p.data ? formatarData(p.data) : '-';
-      const horaTxt = p.data ? formatarHora24h(p.data) : '';
-
-      const tipoCor = p.tipo === 'Judicial'
-        ? 'background:#fef3c7; color:#92400e;'
-        : 'background:#e0f2fe; color:#0284c7;';
-
-      return `
-        <tr>
-          <td>
-            <div style="font-weight:600; font-size:0.9rem;">${p.clientes?.nome || '-'}</div>
-            <span class="status-badge" style="${tipoCor} font-size:0.7rem; padding:2px 8px; border-radius:12px; display:inline-block; white-space:nowrap;">${p.tipo || 'N/A'}</span>
-          </td>
-          <td style="white-space:nowrap;">
-            <div style="font-size:0.9rem; font-weight:600;">${dataTxt}</div>
-            <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
-            ${p.tipo === 'Judicial' && (p.tribunal || p.vara)
-              ? `<div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">${[p.tribunal, p.vara].filter(Boolean).join(' — ')}</div>`
-              : ''}
-          </td>
-          <td style="font-size:0.85rem;">${p.local || '-'}</td>
-          <td style="font-size:0.85rem;">${p.perito || 'Não informado'}</td>
-          <td style="text-align:right; width:90px;">
-            <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
-              <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
-              <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-              ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  });
-
-  btnLimpar?.addEventListener('click', () => {
-    if (termoBuscaEl) {
-      termoBuscaEl.value = '';
-      termoBuscaEl.dispatchEvent(new Event('input'));
-    }
-  });
+  termoBuscaEl?.addEventListener('input', aplicarFiltros);
+  filtroTipoEl?.addEventListener('change', aplicarFiltros);
 
   // Event listener para ações
 

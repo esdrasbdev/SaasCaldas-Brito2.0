@@ -73,12 +73,16 @@
 
       <!-- Busca -->
       <div class="card-section" style="margin-bottom: 16px;">
-        <div style="display:flex; gap:12px; align-items:center;">
-          <div style="flex: 1; position: relative;">
+        <div class="busca-filtros-row">
+          <div style="flex: 1; min-width: 220px; position: relative;">
             <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
             <input id="pericias-busca" type="text" placeholder="Buscar perícias (cliente, tipo, local, perito, data)..." autocomplete="off" style="padding-left: 40px;" />
           </div>
-          <button id="pericias-busca-limpar" class="btn-secondary" type="button" style="white-space:nowrap;">Limpar</button>
+          <select id="pericias-filtro-tipo" style="min-width:180px;">
+            <option value="">Todos os tipos</option>
+            <option value="Judicial">Judicial</option>
+            <option value="Administrativa">Administrativa</option>
+          </select>
         </div>
       </div>
 

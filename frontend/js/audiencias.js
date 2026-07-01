@@ -170,6 +170,22 @@ const AudienciaView = {
 // ==========================================
 // 3. CONTROLLER
 // ==========================================
+function filtrarAudiencias(lista, termoBusca, tipoFiltro) {
+  return lista.filter((a) => {
+    if (tipoFiltro && a.tipo !== tipoFiltro) return false;
+    if (!termoBusca) return true;
+
+    const cliente = (a.processos?.clientes?.nome || a.clientes?.nome || '').toLowerCase();
+    const numeroCnj = (a.processos?.numero_cnj || '').toLowerCase();
+    const tipo = (a.tipo || '').toLowerCase();
+    const local = (a.local || '').toLowerCase();
+    const dataObj = a.data ? new Date(a.data) : null;
+    const dtTxt = dataObj ? formatarData(dataObj).toLowerCase() : '';
+
+    return [cliente, numeroCnj, tipo, local, dtTxt].some((v) => v.includes(termoBusca));
+  });
+}
+
 const AudienciaController = {
   async init() {
     AudienciaView.init();
@@ -220,13 +236,34 @@ const AudienciaController = {
   async carregarDados() {
     try {
       const dados = await AudienciaModel.listarTodas();
-      AudienciaView.renderizarTabela(dados);
+      window.__listaAudienciasCompleta = dados;
+      
+      const buscaEl = document.getElementById('audiencias-busca');
+      const filtroTipoEl = document.getElementById('audiencias-filtro-tipo');
+      
+      const termo = (buscaEl?.value || '').trim().toLowerCase();
+      const tipo = filtroTipoEl?.value || '';
+      
+      AudienciaView.renderizarTabela(filtrarAudiencias(window.__listaAudienciasCompleta, termo, tipo));
     } catch (error) {
       showToast('Erro ao listar audiências', 'error');
     }
   },
 
   bindEvents() {
+    const buscaEl = document.getElementById('audiencias-busca');
+    const filtroTipoEl = document.getElementById('audiencias-filtro-tipo');
+
+    const aplicarFiltros = () => {
+      const termo = (buscaEl?.value || '').trim().toLowerCase();
+      const tipo = filtroTipoEl?.value || '';
+      const base = window.__listaAudienciasCompleta || [];
+      AudienciaView.renderizarTabela(filtrarAudiencias(base, termo, tipo));
+    };
+
+    buscaEl?.addEventListener('input', aplicarFiltros);
+    filtroTipoEl?.addEventListener('change', aplicarFiltros);
+
     document.getElementById('btn-nova-audiencia').onclick = () => {
       AudienciaView.modal(true);
       document.getElementById('form-audiencia').reset();

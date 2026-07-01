@@ -1143,9 +1143,37 @@ body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: 
   .kpi-grid { grid-template-columns: 1fr; }
 }
 
+/* Busca e Filtros Layout */
+.busca-filtros-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filtros-section {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.filtros-section #busca-processos {
+  flex: 1;
+  min-width: 200px;
+}
+
 /* Mobile Portrait Pequeno */
 @media (max-width: 480px) {
   .btn-close-modal { font-size: 1.75rem; padding: 0.75rem; }
   .section-title { font-size: 0.9rem; }
+
+  .busca-filtros-row > select,
+  .busca-filtros-row > input,
+  .filtros-section #filtro-status,
+  .filtros-section #busca-processos {
+    width: 100%;
+  }
 }
 
