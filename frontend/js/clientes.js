@@ -502,26 +502,6 @@ const ClienteView = {
       }
     }
 
-    // Contract clauses - updated subitems with consistent formatting and address info
-    const clausulas = [
-      {
-        num: '1. OBJETO',
-        corpo: 'Os CONTRATADOS obrigam-se a prestar os serviços profissionais advocatícios, mediante mandato,' +
-               ' para atuação em processos administrativos e/ou judiciais previdenciários ou assistenciais,' +
-               ' com zelo e diligência.'
-      },
-      {
-        num: '2. HONORÁRIOS – FASE ADMINISTRATIVA',
-        subitens: [
-          '2.1. Benefícios Previdenciários Permanentes:\nR$ 5.000,00 (cinco mil reais), à vista;\nOU\n30% sobre 12 parcelas vincendas.',
-          '2.2. Benefícios Temporários com DCB (como auxílio-doença):\n30% das parcelas vincendas.',
-          '2.3. Auxílio-Acidente:\n30% sobre 12 parcelas vincendas.',
-          '2.4. Benefícios sem DCB:\n30% sobre 12 parcelas vincendas.\nRua Antônio Alves de Lima, 563 - Juremal - Edifício Timbaúba, Apt. 04 - V. Alegre/CE, 63540-000\n(88) 99660-0088 / 99471-9865 / 99612-5912 | caldasebrito@gmail.com',
-          '2.5. Benefício Assistencial (BPC):\nR$ 5.000,00 (cinco mil reais), à vista;\nOU\n30% sobre 12 parcelas vincendas.\nRua Antônio Alves de Lima, 563 - Juremal - Edifício Timbaúba, Apt. 04 - V. Alegre/CE, 63540-000\n(88) 99660-0088 / 99471-9865 / 99612-5912 | caldasebrito@gmail.com'
-        ]
-      }
-    ];
-
     // ── LOGO DO CABEÇALHO (timbrado_principal.png — imagem portrait 1266x1417) ──
     // Razao real W/H = 1266/1417 = 0.8934
     // Dimensoes corretas para preservar proporcao
@@ -893,7 +873,15 @@ const ClienteView = {
     clausulas.forEach(cl => {
       addTexto(cl.num, { bold: true, depois: 2 });
       if (cl.corpo) addTexto(cl.corpo, { indent: 4, depois: 2 });
-      if (cl.subitens) cl.subitens.forEach(si => addTexto(si, { indent: 6, depois: 2 }));
+      if (cl.subitens) {
+        cl.subitens.forEach(si => {
+          // Divide o subitem em linhas no \n e renderiza cada uma com a mesma fonte
+          const linhasSub = si.split('\n');
+          linhasSub.forEach((linha, idx) => {
+            addTexto(linha, { indent: 6, depois: idx === linhasSub.length - 1 ? 2 : 1 });
+          });
+        });
+      }
       novaLinha(2);
     });
 
