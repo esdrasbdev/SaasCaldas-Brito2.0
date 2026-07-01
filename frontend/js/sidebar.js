@@ -66,7 +66,7 @@ const Sidebar = {
 
     this.sidebar.innerHTML = `
       <div class="sidebar-header">
-        <img src="images/logo.png" alt="Caldas & Brito Advocacia" class="sidebar-logo-img">
+        <img src="images/logo.jpeg" alt="Caldas & Brito Advocacia" class="sidebar-logo-img">
       </div>
 
       <div class="sidebar-search">
