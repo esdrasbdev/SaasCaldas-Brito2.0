@@ -75,6 +75,24 @@ async function seedUsers() {
       }, { onConflict: 'email' });
 
       if (dbError) console.error(`Erro DB [${u.email}]:`, dbError.message);
+
+      // Debug rápido: valida se o registro foi upsertado na tabela pública
+      try {
+        const { data: check, error: checkErr } = await supabase
+          .from('usuarios')
+          .select('id, email, role, ativo')
+          .eq('email', u.email.toLowerCase())
+          .maybeSingle();
+
+        if (checkErr) {
+          console.error(`Erro verificando usuarios [${u.email}]:`, checkErr.message);
+        } else {
+          console.log(`Verificação usuarios: ${u.email} => ${check ? 'OK' : 'NÃO ENCONTRADO'}`);
+        }
+      } catch (e) {
+        console.error(`Falha na verificação pós-upsert [${u.email}]:`, e?.message || e);
+      }
+
     }
   }
 

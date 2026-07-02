@@ -1,4 +1,4 @@
-/*
+ /*
  * Módulo Clientes - Arquitetura MVC
  * Separação clara entre Dados (Supabase), Interface (DOM) e Regras de Negócio
  */
@@ -8,6 +8,8 @@ import { supabase, initSupabase, getApiUrl } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js'; // Novo sistema de avisos
 
+import { criarSeletorResponsaveis } from './responsaveis-select.js';
+
 // ==========================================
 // 1. MODEL (Gerencia Dados e Banco)
 // ==========================================
@@ -15,7 +17,7 @@ const ClienteModel = {
   async listarTodos() {
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select('*, responsaveis_cliente(usuario_id, usuarios(nome))')
       .order('nome', { ascending: true });
 
     if (error) throw error;
@@ -25,7 +27,7 @@ const ClienteModel = {
   async buscarPorId(id) {
     const { data, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select('*, responsaveis_cliente(usuario_id, usuarios(nome))')
       .eq('id', id)
       .single();
 
@@ -66,6 +68,20 @@ const ClienteModel = {
     return true;
   },
 
+  async sincronizarResponsaveis(clienteId, selecionados) {
+    await supabase.from('responsaveis_cliente').delete().eq('cliente_id', clienteId);
+
+    if (!selecionados.length) return;
+
+    const registros = selecionados.map(u => ({
+      cliente_id: clienteId,
+      usuario_id: u.id
+    }));
+
+    const { error } = await supabase.from('responsaveis_cliente').insert(registros);
+    if (error) throw error;
+  },
+
   async listarDocumentos(clienteId) {
     // Busca o token atualizado da sessão para evitar erro 401
     const { data: { session } } = await supabase.auth.getSession();
@@ -84,6 +100,7 @@ const ClienteModel = {
     return await res.json();
   }
 };
+
 
 // ==========================================
 // 2. VIEW (Gerencia o HTML e Exibição)
@@ -114,11 +131,12 @@ const ClienteView = {
                 <th>Nome</th>
                 <th>Documento</th>
                 <th>Contato</th>
+                <th>Responsáveis</th>
                 <th style="text-align: right;">Ações</th>
               </tr>
             </thead>
             <tbody id="lista-clientes-body">
-              <tr><td colspan="4" class="text-center">Carregando...</td></tr>
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -134,7 +152,7 @@ const ClienteView = {
     if (!clientes || clientes.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="4" class="text-center" style="padding: 30px; color: var(--cinza-medio);">
+          <td colspan="5" class="text-center" style="padding: 30px; color: var(--cinza-medio);">
             <i class="fa-solid fa-folder-open"></i> Nenhum cliente encontrado.
           </td>
         </tr>`;
@@ -156,6 +174,9 @@ const ClienteView = {
         <td>
           <div><i class="fa-solid fa-envelope" style="font-size: 0.8em;"></i> ${c.email || '-'}</div>
           <div><i class="fa-solid fa-phone" style="font-size: 0.8em;"></i> ${c.telefone || '-'}</div>
+        </td>
+        <td>
+          ${(c.responsaveis_cliente || []).map(r => r.usuarios?.nome?.split(' ')[0]).filter(Boolean).join(', ') || '—'}
         </td>
         <td style="text-align: right;">
           <button class="btn-sm btn-view" data-id="${c.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
@@ -256,13 +277,14 @@ const ClienteView = {
       document.getElementById('cliente-cidade').value = cliente.cidade || '';
       document.getElementById('cliente-estado').value = cliente.estado || '';
 
-      const advogadoSelect = document.getElementById('cliente-advogado');
-      if (advogadoSelect) {
-        const advId = cliente.advogado_id ?? '';
-        advogadoSelect.value = String(advId);
-        const hasOption = Array.from(advogadoSelect.options).some(o => String(o.value) === String(advId));
-        if (!hasOption) advogadoSelect.value = '';
-      }
+      const responsaveisSelecionados = (cliente.responsaveis_cliente || []).map(r => ({
+        id: r.usuario_id,
+        nome: r.usuarios?.nome || ''
+      }));
+
+      this.elementos.modal.dataset.clienteVisualizacao = visualizacao ? '1' : '0';
+      ClienteController.seletorResp?.setSelecionados(responsaveisSelecionados);
+      ClienteController.seletorResp?.setDisabled(visualizacao);
 
       document.getElementById('cliente-inss-senha').value = cliente.inss_senha || '';
       document.getElementById('cliente-inss-cpf').value = cliente.documento || '';
@@ -272,6 +294,8 @@ const ClienteView = {
     } else {
       document.getElementById('cliente-inss-cpf').value = '';
       this.renderizarSessaoDocumentos(null, false);
+      ClienteController.seletorResp?.limpar();
+      ClienteController.seletorResp?.setDisabled(false);
     }
 
     this.elementos.modal.style.display = 'flex';
@@ -1049,30 +1073,20 @@ const ClienteView = {
 const ClienteController = {
   dadosLocais: [], // Cache local para busca rápida
 
+  seletorResp: null,
+
   async init() {
     ClienteView.init();
     this.bindEvents();
-    await this.carregarAdvogados();
+
+    this.seletorResp = criarSeletorResponsaveis({
+      inputEl: document.getElementById('cli-responsaveis-busca'),
+      dropdownEl: document.getElementById('cli-responsaveis-dropdown'),
+      tagsEl: document.getElementById('cli-responsaveis-tags')
+    });
+
+    await this.seletorResp.init();
     await this.carregarDados();
-  },
-
-  async carregarAdvogados() {
-    const select = document.getElementById('cliente-advogado');
-    if (!select) return;
-
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('id, nome')
-      .in('role', ['ADMIN', 'ADVOGADO', 'ADVOGADA'])
-      .eq('ativo', true)
-      .order('nome');
-
-    if (error) {
-      return;
-    }
-
-    select.innerHTML = '<option value="">Selecione...</option>' +
-      data.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
   },
 
   bindEvents() {
@@ -1201,6 +1215,7 @@ const ClienteController = {
 
   async salvarCliente() {
     const id = document.getElementById('cliente-id').value;
+    const selecionados = ClienteController.seletorResp?.getSelecionados() || [];
 
     const getVal = (eid) => {
       const el = document.getElementById(eid);
@@ -1243,7 +1258,7 @@ const ClienteController = {
       estado_civil: getVal('cliente-estado-civil'),
       profissao: getVal('cliente-profissao'),
 
-      advogado_id: getVal('cliente-advogado'),
+      advogado_id: selecionados[0]?.id || null,
       usuario_id: usuarioIdReferencia
     };
 
@@ -1262,23 +1277,31 @@ const ClienteController = {
     }
 
     try {
+      let registroSalvo;
+
       if (id) {
         const { usuario_id, ...dadosAtualizacao } = payload;
-        await ClienteModel.atualizar(id, dadosAtualizacao);
+        registroSalvo = await ClienteModel.atualizar(id, dadosAtualizacao);
       } else {
         try {
-          await ClienteModel.criar(payload);
+          registroSalvo = await ClienteModel.criar(payload);
         } catch (err) {
           const isColumnMissing = err.code === '42703';
           const isFKViolation = err.code === '23503';
 
           if (isColumnMissing || isFKViolation || (err.message && err.message.includes('inss_senha'))) {
             const { usuario_id, inss_senha, ...dadosReduzidos } = payload;
-            await ClienteModel.criar(dadosReduzidos);
+            registroSalvo = await ClienteModel.criar(dadosReduzidos);
           } else {
             throw err;
           }
         }
+      }
+
+      const clienteIdFinal = id || registroSalvo?.id;
+      // Sincroniza múltiplos responsáveis após criar/atualizar o cliente
+      if (clienteIdFinal && ClienteController.seletorResp) {
+        await ClienteModel.sincronizarResponsaveis(clienteIdFinal, selecionados);
       }
 
       ClienteView.fecharModal();
