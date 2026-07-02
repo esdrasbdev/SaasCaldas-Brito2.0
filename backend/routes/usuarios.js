@@ -203,10 +203,15 @@ router.put('/:id', soAdmin, async (req, res) => {
       } catch (authError) {
         const { userNotFound, samePassword } = normalizeSupabaseError(authError);
 
+        // Se não for erro de usuário/ID (ex: permissões, estado, senha inválida etc),
+        // ainda assim tentamos reconciliar por email para manter resiliência.
+        const shouldTryReconcile = userNotFound || !samePassword;
+
         // Senha igual à anterior
         if (samePassword) {
           return res.status(400).json({ error: 'A nova senha deve ser diferente da senha atual.' });
         }
+
 
         // Se for relacionado ao ID/usuário no Auth, tenta reconciliar por email
         if (userNotFound) {
