@@ -172,22 +172,30 @@ router.put('/:id', soAdmin, async (req, res) => {
         const code = authError?.code;
 
         // Usuário não encontrado / ID inválido
+        // (Supabase pode variar mensagem/code conforme versão/endpoint)
         const userNotFound =
           msg.includes('user not found') ||
           msg.includes('not found') ||
-          msg.includes('invalid') && msg.includes('uuid') ||
+          msg.includes('invalid') ||
+          msg.includes('unauthorized') && msg.includes('user') ||
+          msg.includes('no rows') ||
+          msg.includes('uuid') ||
           code === 'user_not_found' ||
-          code === 'invalid_user_id';
+          code === 'invalid_user_id' ||
+          code === 'invalid_grant' ||
+          code === 'invalid_token';
 
-        // Senha igual à anterior (algumas versões retornam variações) 
+        // Senha igual à anterior (algumas versões retornam variações)
         const samePassword =
           msg.includes('same password') ||
-          msg.includes('new password') && msg.includes('must be different') ||
           msg.includes('password is the same') ||
-          code === 'new_password_same';
+          (msg.includes('new password') && msg.includes('must be different')) ||
+          code === 'new_password_same' ||
+          code === 'password_same';
 
         return { userNotFound, samePassword };
       };
+
 
       try {
         // Primeira tentativa: usa o ID recebido (público)
