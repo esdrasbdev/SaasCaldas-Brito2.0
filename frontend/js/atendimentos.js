@@ -2,6 +2,10 @@ import { supabase, initSupabase } from './supabase.js';
 
 import { AuthAPI } from './auth.js';
 import { formatarData, formatarHora24h } from './utils.js';
+import { criarSeletorResponsaveis } from './responsaveis-select.js';
+
+// Instância do seletor de responsáveis (inicializado no DOMContentLoaded)
+let seletorResp = null;
 
 const view = {
   showToast(type, title, message) {
@@ -53,11 +57,16 @@ const view = {
       const atendIdEl = document.getElementById('atend-id');
       if (atendIdEl) atendIdEl.value = '';
 
+      seletorResp?.limpar();
+      seletorResp?.setDisabled(false);
+
       this.form.reset();
     };
 
     this.btnCancelar.onclick = () => {
       this.modal.style.display = 'none';
+      seletorResp?.limpar();
+      seletorResp?.setDisabled(false);
     };
 
     this.form.onsubmit = controller.salvar;
@@ -65,7 +74,6 @@ const view = {
   },
 
   // Extrai o título do atendimento de forma segura.
-  // Suporta dois formatos: campo direto ou JSON serializado dentro de anotacoes (criado pela agenda)
   extrairTitulo(d) {
     if (d?.titulo && typeof d.titulo === 'string' && !d.titulo.startsWith('{')) return d.titulo;
 
@@ -74,7 +82,6 @@ const view = {
         const parsed = JSON.parse(d.anotacoes);
         if (parsed && parsed.titulo) return parsed.titulo;
       } catch (e) {
-        // anotacoes é texto puro
         return d.anotacoes;
       }
     }
@@ -97,9 +104,16 @@ const view = {
     return d?.anotacoes || '-';
   },
 
+  // Retorna os nomes dos responsáveis separados por vírgula,
+  // buscando primeiro da tabela de junção responsaveis_atendimento
   getRespNome(d) {
-    // Depende do formato do select no Supabase.
-    // Tentamos algumas formas.
+    if (d?.responsaveis_atendimento && d.responsaveis_atendimento.length) {
+      return d.responsaveis_atendimento
+        .map(r => r.usuarios?.nome?.split(' ')[0])
+        .filter(Boolean)
+        .join(', ');
+    }
+    // Fallback legado
     const u = d?.usuarios || d?.usuario || null;
     if (u && typeof u === 'object') {
       const nome = u.nome || u.full_name || u.name;
@@ -187,7 +201,7 @@ const view = {
                 <th>Canal</th>
                 <th>Cliente</th>
                 <th>Assunto</th>
-                <th>Responsável</th>
+                <th>Responsáveis</th>
                 <th style="text-align:right">Ações</th>
               </tr>
             </thead>
@@ -202,29 +216,16 @@ const view = {
 };
 
 const controller = {
-  async carregarResponsaveis() {
-    const select = document.getElementById('atend-responsavel');
-    if (!select) return;
-
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('id, nome, role')
-      .eq('ativo', true)
-      .order('nome', { ascending: true });
-
-    if (error) {
-      console.error('Erro ao carregar responsáveis:', error);
-      return;
-    }
-
-    select.innerHTML = '<option value="">Selecione...</option>' +
-      (data || []).map(u => `<option value="${u.id}">${u.nome} (${u.role})</option>`).join('');
-  },
-
   async init() {
     view.init();
 
-    await this.carregarResponsaveis();
+    // Inicializar componente de responsáveis (substitui carregarResponsaveis com select)
+    seletorResp = criarSeletorResponsaveis({
+      inputEl: document.getElementById('atend-responsaveis-busca'),
+      dropdownEl: document.getElementById('atend-responsaveis-dropdown'),
+      tagsEl: document.getElementById('atend-responsaveis-tags')
+    });
+    await seletorResp.init();
 
     const role = AuthAPI.getRole();
     const canEdit = ['ADMIN', 'ADVOGADO', 'ADVOGADA'].includes(role);
@@ -239,7 +240,7 @@ const controller = {
   async carregar() {
     const { data, error } = await supabase
       .from('atendimentos')
-      .select('*, clientes(nome), usuarios(nome)')
+      .select('*, clientes(nome), usuarios(nome), responsaveis_atendimento(usuario_id, usuarios(nome))')
       .order('data', { ascending: false });
 
     if (error) {
@@ -270,6 +271,12 @@ const controller = {
     e.preventDefault();
 
     if (view.form.classList.contains('mode-view')) return;
+
+    const selecionados = seletorResp?.getSelecionados() || [];
+    if (!selecionados.length) {
+      view.showToast('error', 'Responsável obrigatório', 'Selecione ao menos um responsável.');
+      return;
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -305,12 +312,20 @@ const controller = {
       canal: document.getElementById('atend-canal').value,
       duracao: document.getElementById('atend-duracao').value,
       anotacoes: document.getElementById('atend-anotacoes').value,
-      usuario_id: document.getElementById('atend-responsavel')?.value || usuarioDB.id
+      usuario_id: selecionados[0]?.id || usuarioDB.id
     };
 
-    const { error } = isEdit
-      ? await supabase.from('atendimentos').update(payload).eq('id', atendId)
-      : await supabase.from('atendimentos').insert(payload);
+    let savedId = atendId;
+    let error;
+
+    if (isEdit) {
+      const res = await supabase.from('atendimentos').update(payload).eq('id', atendId);
+      error = res.error;
+    } else {
+      const res = await supabase.from('atendimentos').insert(payload).select().single();
+      error = res.error;
+      if (!error) savedId = res.data.id;
+    }
 
     if (error) {
       const msg = error.message || 'Erro ao salvar';
@@ -318,8 +333,15 @@ const controller = {
       return;
     }
 
+    // Sincronizar responsáveis
+    await supabase.from('responsaveis_atendimento').delete().eq('atendimento_id', savedId);
+    const registrosResp = selecionados.map(u => ({ atendimento_id: savedId, usuario_id: u.id }));
+    const { error: errResp } = await supabase.from('responsaveis_atendimento').insert(registrosResp);
+    if (errResp) console.error('Erro ao salvar responsáveis:', errResp);
+
     view.modal.style.display = 'none';
     view.form.reset();
+    seletorResp?.limpar();
 
     const atendIdEl = document.getElementById('atend-id');
     if (atendIdEl) atendIdEl.value = '';
@@ -338,7 +360,7 @@ const controller = {
     if (btnView) {
       const { data, error } = await supabase
         .from('atendimentos')
-        .select('*, clientes(nome), usuarios(nome)')
+        .select('*, clientes(nome), usuarios(nome), responsaveis_atendimento(usuario_id, usuarios(nome))')
         .eq('id', id)
         .single();
 
@@ -353,9 +375,17 @@ const controller = {
       document.getElementById('atend-duracao').value = data.duracao || '';
       document.getElementById('atend-anotacoes').value = data.anotacoes || '';
 
-      // preencher responsável
-      const selectResp = document.getElementById('atend-responsavel');
-      if (selectResp && data.usuario_id) selectResp.value = data.usuario_id;
+      // Preencher responsáveis do seletor
+      const responsaveisSelecionados = (data.responsaveis_atendimento || []).map(r => ({
+        id: r.usuario_id,
+        nome: r.usuarios?.nome || ''
+      }));
+      // Fallback se não tiver tabela de junção ainda
+      if (!responsaveisSelecionados.length && data.usuario_id && data.usuarios?.nome) {
+        responsaveisSelecionados.push({ id: data.usuario_id, nome: data.usuarios.nome });
+      }
+      seletorResp?.setSelecionados(responsaveisSelecionados);
+      seletorResp?.setDisabled(true);
 
       if (data.data) {
         const dt = new Date(data.data);
@@ -403,7 +433,7 @@ const controller = {
 
       const { data, error } = await supabase
         .from('atendimentos')
-        .select('*, clientes(nome), usuarios(nome)')
+        .select('*, clientes(nome), usuarios(nome), responsaveis_atendimento(usuario_id, usuarios(nome))')
         .eq('id', id)
         .single();
 
@@ -418,9 +448,16 @@ const controller = {
       document.getElementById('atend-duracao').value = data.duracao || '';
       document.getElementById('atend-anotacoes').value = data.anotacoes || '';
 
-      // preencher responsável
-      const selectResp = document.getElementById('atend-responsavel');
-      if (selectResp && data.usuario_id) selectResp.value = data.usuario_id;
+      // Preencher responsáveis
+      const responsaveisSelecionados = (data.responsaveis_atendimento || []).map(r => ({
+        id: r.usuario_id,
+        nome: r.usuarios?.nome || ''
+      }));
+      if (!responsaveisSelecionados.length && data.usuario_id && data.usuarios?.nome) {
+        responsaveisSelecionados.push({ id: data.usuario_id, nome: data.usuarios.nome });
+      }
+      seletorResp?.setSelecionados(responsaveisSelecionados);
+      seletorResp?.setDisabled(false);
 
       if (data.data) {
         const dt = new Date(data.data);
@@ -496,4 +533,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
   controller.init();
 });
-

@@ -42,10 +42,10 @@
               </div>
 
               <div class="form-group">
-                <label>Responsável pelo Atendimento *</label>
-                <select id="atend-responsavel" required>
-                  <option value="">Selecione...</option>
-                </select>
+                <label>Responsáveis pelo Atendimento * (ADMIN, Advogados ou Estagiários)</label>
+                <input type="text" id="atend-responsaveis-busca" placeholder="Buscar por nome..." autocomplete="off">
+                <div id="atend-responsaveis-dropdown" style="display:none; position:relative; z-index:20; background:#fff; border:1px solid #e2e8f0; border-radius:8px; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+                <div id="atend-responsaveis-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
               </div>
 
 

@@ -11,7 +11,9 @@ async function seedUsers() {
     { nome: 'Priscila', email: 'priscila.adv17@gmail.com', pass: 'admin123', role: 'ADMIN' },
     { nome: 'Artur Silva', email: 'artursilvavieira2709@gmail.com', pass: 'estagio123', role: 'ESTAGIARIO' },
     { nome: 'Raul Lima', email: 'raul_limasilveira@hotmail.com', pass: 'estagio123', role: 'ESTAGIARIO' },
+    { nome: 'Rayssa Lima', email: 'rayssalima0507@gmail.com', pass: 'estagio123', role: 'ESTAGIARIO' },
     { nome: 'Natiane Lima', email: 'natianelima300@gmail.com', pass: 'secretaria123', role: 'SECRETARIA' },
+
     { nome: 'Alan Anjos', email: 'alananjos188@gmail.com', pass: 'advogado123', role: 'ADVOGADO' },
     { nome: 'Amanda Francinni', email: 'amandafran900@gmail.com', pass: 'estagia123', role: 'ESTAGIARIA' },
     { nome: 'Erica Oliveira', email: 'oliveiraericaadv3@gmail.com', pass: 'advogado123', role: 'ADVOGADA' }

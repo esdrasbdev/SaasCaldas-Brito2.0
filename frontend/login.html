@@ -218,13 +218,12 @@
       } catch (error) {
         console.error(error);
 
-        if (error.message && (error.message.includes('Invalid API key') || error.code === 401)) {
-          errorMsg.textContent = '⚠️ Erro de Sistema: A chave do Supabase em js/env.js é inválida.';
-        } else if (error.message === 'Invalid login credentials') {
-          errorMsg.textContent = '❌ E-mail não cadastrado ou senha incorreta. (Verifique no Supabase Auth)';
+        if (error && error.message && String(error.message).toLowerCase().includes('inativo')) {
+          errorMsg.textContent = 'Usuário inativo. Contate o administrador.';
         } else {
-          errorMsg.textContent = 'Acesso negado: Verifique suas credenciais.';
+          errorMsg.textContent = 'Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.';
         }
+
 
         errorMsg.style.display = 'block';
         btn.disabled = false;

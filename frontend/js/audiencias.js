@@ -1,17 +1,13 @@
 /*
  * Módulo Audiências
  * Gerenciamento de audiências vinculadas a processos
+ * Suporta múltiplos responsáveis via tabela responsaveis_audiencia
  */
 
 import { supabase, initSupabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast, formatarHora24h, formatarData } from './utils.js';
-
-// Importando explicitamente o handler de logout para evitar
-// trechos “soltos” e garantir que o arquivo compile sem erros de sintaxe.
-// (O erro “Invalid left-hand side in assignment” geralmente ocorre quando
-// há código incompatível/espalhado fora de funções.)
-
+import { criarSeletorResponsaveis } from './responsaveis-select.js';
 
 // ==========================================
 // 1. MODEL
@@ -20,16 +16,14 @@ const AudienciaModel = {
   async listarTodas() {
     const { data, error } = await supabase
       .from('audiencias')
-      .select('*, processos(numero_cnj, clientes(nome)), clientes(nome), usuarios(nome)')
+      .select('*, processos(numero_cnj, clientes(nome)), clientes(nome), usuarios(nome), responsaveis_audiencia(usuario_id, usuarios(nome))')
       .order('data', { ascending: true });
 
     if (error) throw error;
     return data;
   },
 
-
   async criar(audiencia) {
-    // CORREÇÃO AQUI: Removemos campos que não existem na tabela se vierem nulos
     const { data, error } = await supabase
       .from('audiencias')
       .insert([audiencia])
@@ -49,7 +43,7 @@ const AudienciaModel = {
   async buscarPorId(id) {
     const { data, error } = await supabase
       .from('audiencias')
-      .select('*')
+      .select('*, responsaveis_audiencia(usuario_id, usuarios(nome))')
       .eq('id', id)
       .single();
     if (error) throw error;
@@ -65,6 +59,21 @@ const AudienciaModel = {
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async sincronizarResponsaveis(audienciaId, selecionados) {
+    // Em edição: apaga e reinsere
+    await supabase.from('responsaveis_audiencia').delete().eq('audiencia_id', audienciaId);
+
+    if (!selecionados.length) return;
+
+    const registros = selecionados.map(u => ({
+      audiencia_id: audienciaId,
+      usuario_id: u.id
+    }));
+
+    const { error } = await supabase.from('responsaveis_audiencia').insert(registros);
+    if (error) throw error;
   }
 };
 
@@ -87,7 +96,7 @@ const AudienciaView = {
     if (!tbody) return;
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="padding:0;">
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:0;">
         <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
           <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
           <span style="font-size:0.9rem;">Nenhuma audiência agendada.</span>
@@ -109,6 +118,12 @@ const AudienciaView = {
         ? `<span class="status-badge ${a.tipo === 'Judicial' ? 'badge-tipo-judicial' : 'badge-tipo-administrativo'}">${a.tipo}</span>`
         : '';
 
+      // Responsáveis da tabela de junção
+      const responsaveis = (a.responsaveis_audiencia || [])
+        .map(r => r.usuarios?.nome?.split(' ')[0])
+        .filter(Boolean)
+        .join(', ') || (a.usuarios?.nome?.split(' ')[0]) || '—';
+
       return `
   <tr>
     <td style="width:140px; white-space:nowrap;">
@@ -124,6 +139,9 @@ const AudienciaView = {
     </td>
     <td style="width:110px;">
       ${tipoBadge}
+    </td>
+    <td style="max-width:160px;">
+      <div style="font-size:0.8rem; color:var(--cinza-medio);">${responsaveis}</div>
     </td>
     <td style="width:110px; text-align: right; vertical-align:middle;">
       <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
@@ -141,8 +159,6 @@ const AudienciaView = {
   </tr>
   `;
     }).join('');
-
-
   },
 
   modalEl() {
@@ -166,6 +182,19 @@ const AudienciaView = {
   }
 };
 
+// Atualizar cabeçalho da tabela para incluir coluna Responsáveis
+function atualizarCabecalhoTabela() {
+  const thead = document.querySelector('#lista-audiencias')?.closest('table')?.querySelector('thead tr');
+  if (!thead) return;
+  // Verificar se já tem a coluna
+  if (thead.querySelector('th[data-col="responsaveis"]')) return;
+  const thAcoes = thead.querySelector('th:last-child');
+  const thResp = document.createElement('th');
+  thResp.setAttribute('data-col', 'responsaveis');
+  thResp.textContent = 'Responsáveis';
+  thResp.style.maxWidth = '160px';
+  thead.insertBefore(thResp, thAcoes);
+}
 
 // ==========================================
 // 3. CONTROLLER
@@ -181,29 +210,40 @@ function filtrarAudiencias(lista, termoBusca, tipoFiltro) {
     const local = (a.local || '').toLowerCase();
     const dataObj = a.data ? new Date(a.data) : null;
     const dtTxt = dataObj ? formatarData(dataObj).toLowerCase() : '';
+    const responsaveis = (a.responsaveis_audiencia || [])
+      .map(r => r.usuarios?.nome || '').join(' ').toLowerCase();
 
-    return [cliente, numeroCnj, tipo, local, dtTxt].some((v) => v.includes(termoBusca));
+    return [cliente, numeroCnj, tipo, local, dtTxt, responsaveis].some((v) => v.includes(termoBusca));
   });
 }
 
 const AudienciaController = {
+  seletorResp: null,
+
   async init() {
     AudienciaView.init();
 
-      await this.loadClientes();
-    await this.loadProcessos(); // opcional (caso o modal permita)
+    await this.loadClientes();
+    await this.loadProcessos();
 
-    // evita duplicar listener/handlers em Hot-reload
+    // Instanciar o componente de responsáveis
+    this.seletorResp = criarSeletorResponsaveis({
+      inputEl: document.getElementById('aud-responsaveis-busca'),
+      dropdownEl: document.getElementById('aud-responsaveis-dropdown'),
+      tagsEl: document.getElementById('aud-responsaveis-tags')
+    });
+    await this.seletorResp.init();
+
     const lista = document.getElementById('lista-audiencias');
     if (lista && !lista.dataset.bound) {
       lista.dataset.bound = 'true';
     }
 
+    atualizarCabecalhoTabela();
     AudienciaView.ensureHiddenField();
     await this.carregarDados();
     this.bindEvents();
   },
-
 
   async loadClientes() {
     const { data, error } = await supabase
@@ -216,7 +256,6 @@ const AudienciaController = {
       return;
     }
 
-    // O HTML atual usa id="cliente-select".
     const selectCliente = document.getElementById('aud-cliente') || document.getElementById('cliente-select');
     if (selectCliente) {
       selectCliente.innerHTML = '<option value="">Selecione...</option>' + (data || [])
@@ -225,13 +264,9 @@ const AudienciaController = {
     }
   },
 
-
   async loadProcessos() {
-    // O HTML atual não tem select de processo.
-    // Se no futuro houver, este método passará a popular.
     return;
   },
-
 
   async carregarDados() {
     try {
@@ -267,12 +302,12 @@ const AudienciaController = {
     document.getElementById('btn-nova-audiencia').onclick = () => {
       AudienciaView.modal(true);
       document.getElementById('form-audiencia').reset();
+      this.seletorResp?.limpar();
+      this.seletorResp?.setDisabled(false);
 
-      // reset hidden id
       const idEl = document.getElementById('aud-id');
       if (idEl) idEl.value = '';
 
-      // garantir modo de edição normal
       const form = document.getElementById('form-audiencia');
       form.classList.remove('mode-view');
       Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => {
@@ -282,9 +317,11 @@ const AudienciaController = {
       document.querySelector('#form-audiencia .modal-header h2').textContent = 'Nova Audiência';
       document.querySelector('#form-audiencia button[type="submit"]').style.display = 'block';
     };
+
     document.getElementById('btn-cancelar')?.addEventListener('click', () => {
-      // Fecha modal e retorna o formulário ao modo normal
       AudienciaView.modal(false);
+      this.seletorResp?.limpar();
+      this.seletorResp?.setDisabled(false);
 
       const form = document.getElementById('form-audiencia');
       if (form) {
@@ -292,7 +329,6 @@ const AudienciaController = {
         Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => {
           el.disabled = false;
         });
-        // Reexibe submit se estiver escondido no modo view
         const submitBtn = document.querySelector('#form-audiencia button[type="submit"]');
         if (submitBtn) submitBtn.style.display = 'block';
         const headerEl = document.querySelector('#form-audiencia .modal-header h2');
@@ -314,7 +350,6 @@ const AudienciaController = {
 
         document.getElementById('cliente-select').value = audiencia.cliente_id || '';
 
-        // data/hora
         if (audiencia.data) {
           const dt = new Date(audiencia.data);
           document.getElementById('audiencia-data').value = dt.toLocaleDateString('pt-BR', {
@@ -332,15 +367,22 @@ const AudienciaController = {
         document.getElementById('audiencia-local').value = audiencia.local || '';
         document.getElementById('audiencia-obs').value = audiencia.observacoes || '';
 
+        // Carregar responsáveis
+        const responsaveisSelecionados = (audiencia.responsaveis_audiencia || []).map(r => ({
+          id: r.usuario_id,
+          nome: r.usuarios?.nome || ''
+        }));
+        this.seletorResp?.setSelecionados(responsaveisSelecionados);
+        this.seletorResp?.setDisabled(true);
+
         const form = document.getElementById('form-audiencia');
         form.classList.add('mode-view');
         Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => {
           el.disabled = true;
         });
 
-
         const headerEl = document.querySelector('#form-audiencia .modal-header h2');
-        const clienteNome = audiencia.clientes?.nome || audiencia.processos?.clientes?.nome || audiencia.clientes?.nome || null;
+        const clienteNome = audiencia.clientes?.nome || audiencia.processos?.clientes?.nome || null;
         if (headerEl) {
           headerEl.textContent = clienteNome ? clienteNome : 'Detalhes da Audiência';
           headerEl.title = clienteNome || '';
@@ -352,7 +394,6 @@ const AudienciaController = {
       }
 
       if (btnDelete) {
-        // IMPORTANTE: garantir que o botão delete tenha sido clicado
         const ok = confirm('Excluir esta audiência?');
         if (!ok) return;
 
@@ -390,6 +431,14 @@ const AudienciaController = {
         document.getElementById('audiencia-local').value = audiencia.local || '';
         document.getElementById('audiencia-obs').value = audiencia.observacoes || '';
 
+        // Carregar responsáveis para edição
+        const responsaveisSelecionados = (audiencia.responsaveis_audiencia || []).map(r => ({
+          id: r.usuario_id,
+          nome: r.usuarios?.nome || ''
+        }));
+        this.seletorResp?.setSelecionados(responsaveisSelecionados);
+        this.seletorResp?.setDisabled(false);
+
         const form = document.getElementById('form-audiencia');
         form.classList.remove('mode-view');
         Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));
@@ -402,8 +451,6 @@ const AudienciaController = {
         document.getElementById('aud-id').value = id;
         AudienciaView.modal(true);
       }
-
-
     });
 
     // Hidden id para edição
@@ -416,61 +463,52 @@ const AudienciaController = {
     }
 
     document.getElementById('form-audiencia').onsubmit = async (e) => {
-
       e.preventDefault();
-      
+
+      // Validar responsáveis
+      const selecionados = this.seletorResp?.getSelecionados() || [];
+      if (!selecionados.length) {
+        showToast('Selecione ao menos um responsável.', 'error');
+        return;
+      }
+
       const dataStr = document.getElementById('audiencia-data')?.value;
       const horaStr = document.getElementById('audiencia-hora')?.value;
-
-      // Se data/hora não estiverem preenchidos, não salvamos o campo
       const dataIso = (dataStr && horaStr) ? new Date(`${dataStr}T${horaStr}:00-03:00`).toISOString() : null;
-
-      // Recupera ID do usuário atual para ser o "advogado_id"
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        showToast('Usuário não autenticado', 'error');
-        return;
-      }
-      
-      // Busca ID na tabela usuarios com null check
-      const { data: uData, error: userError } = await supabase
-        .from('usuarios')
-        .select('id')
-        .eq('email', user.email)
-        .single();
-      
-      if (userError || !uData) {
-        showToast('Usuário não encontrado no banco', 'error');
-        return;
-      }
 
       const clienteSelect = document.getElementById('cliente-select');
 
       const payload = {
         cliente_id: clienteSelect?.value || null,
-        processo_id: null, // nesta tela o modal não inclui select de processo
+        processo_id: null,
         data: dataIso,
         tipo: document.getElementById('audiencia-tipo')?.value || null,
         local: document.getElementById('audiencia-local')?.value || '',
         observacoes: document.getElementById('audiencia-obs')?.value || '',
-        advogado_id: uData.id
+        advogado_id: selecionados[0].id
       };
 
       const audId = document.getElementById('aud-id')?.value;
       const isEdit = !!audId;
 
       try {
+        let registroId = audId;
         if (isEdit) {
           await AudienciaModel.atualizar(audId, payload);
           showToast('Audiência atualizada!', 'success');
         } else {
-          await AudienciaModel.criar(payload);
+          const nova = await AudienciaModel.criar(payload);
+          registroId = nova.id;
           showToast('Audiência agendada!', 'success');
         }
+
+        // Sincronizar responsáveis
+        await AudienciaModel.sincronizarResponsaveis(registroId, selecionados);
       } catch (error) {
         console.error(error);
         showToast('Erro ao salvar: ' + error.message, 'error');
       } finally {
+        this.seletorResp?.limpar();
         AudienciaView.modal(false);
         this.carregarDados();
       }
@@ -482,4 +520,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
   AudienciaController.init();
 });
-

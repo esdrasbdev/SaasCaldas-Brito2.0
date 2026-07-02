@@ -1,53 +1,97 @@
 /*
- * Módulo Processos - Production Ready (Senior Review)
- * Modal view exact cliente style, robust error handling
+ * Módulo Processos
+ * Suporta múltiplos responsáveis via responsaveis_processo
  */
 
 import { supabase, initSupabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js';
+import { criarSeletorResponsaveis } from './responsaveis-select.js';
 
+// ==========================================
 // MODEL
+// ==========================================
 const ProcessoModel = {
   async listarTodos() {
-    try {
-      const { data, error } = await supabase
-        .from('processos')
-        .select('*, clientes(nome)');
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from('processos')
+      .select(
+        '*, clientes(nome), ' +
+          'responsaveis_processo(usuario_id, usuarios(nome))'
+      )
+      .order('criado_em', { ascending: false });
 
-      // Ordenação: ATIVOS (mais recente primeiro) -> ARQUIVADOS -> SUSPENSOS
-      const statusRank = { ATIVO: 0, ARQUIVADO: 1, SUSPENSO: 2 };
-      return (data || []).sort((a, b) => {
-        const ra = statusRank[(a.status || '').toUpperCase()] ?? 99;
-        const rb = statusRank[(b.status || '').toUpperCase()] ?? 99;
-        if (ra !== rb) return ra - rb;
-        return new Date(b.criado_em) - new Date(a.criado_em);
-      });
-    } catch (error) {
-      console.error('listarTodos error:', error);
-      throw error;
-    }
+    if (error) throw error;
+
+    // Ordenação extra: ATIVO -> ARQUIVADO -> SUSPENSO (mantém prioridade visível)
+    const statusRank = { ATIVO: 0, ARQUIVADO: 1, SUSPENSO: 2 };
+    return (data || []).sort((a, b) => {
+      const ra = statusRank[(a.status || '').toUpperCase()] ?? 99;
+      const rb = statusRank[(b.status || '').toUpperCase()] ?? 99;
+      if (ra !== rb) return ra - rb;
+      return new Date(b.criado_em) - new Date(a.criado_em);
+    });
   },
+
+  async buscarPorId(id) {
+    const { data, error } = await supabase
+      .from('processos')
+      .select(
+        '*, clientes(id, nome), ' +
+          'responsaveis_processo(usuario_id, usuarios(nome))'
+      )
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   async deletar(id) {
     const { error } = await supabase.from('processos').delete().eq('id', id);
     if (error) throw error;
     return true;
   },
+
   async criar(processo) {
-    const { error } = await supabase.from('processos').insert([processo]);
+    const { data, error } = await supabase
+      .from('processos')
+      .insert([processo])
+      .select('id')
+      .single();
+
     if (error) throw error;
-    return true;
+    return data;
   },
+
   async atualizar(id, dados) {
     const { error } = await supabase.from('processos').update(dados).eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  async sincronizarResponsaveis(processoId, selecionados) {
+    await supabase.from('responsaveis_processo').delete().eq('processo_id', processoId);
+
+    if (!selecionados.length) return;
+
+    const registros = selecionados.map(u => ({
+      processo_id: processoId,
+      usuario_id: u.id
+    }));
+
+    const { error } = await supabase.from('responsaveis_processo').insert(registros);
+    if (error) throw error;
   }
 };
 
+// ==========================================
 // VIEW
+// ==========================================
 const ProcessoView = {
+  modalEl: () => document.getElementById('modal-container'),
+  formEl: () => document.getElementById('form-processo'),
+
   init() {
     const container = document.getElementById('view-processos-container');
     container.innerHTML = `
@@ -63,8 +107,17 @@ const ProcessoView = {
         </div>
         <div class="table-responsive">
           <table class="recent-table">
-            <thead><tr><th>Processo/Cliente</th><th>Tribunal/Vara</th><th>Status</th><th>Criação</th><th>Ações</th></tr></thead>
-            <tbody id="lista-processos-body"><tr><td colspan="5" class="text-center">Carregando...</td></tr></tbody>
+            <thead>
+              <tr>
+                <th>Processo/Cliente</th>
+                <th>Tribunal/Vara</th>
+                <th>Status</th>
+                <th>Criação</th>
+                <th>Responsáveis</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-processos-body"><tr><td colspan="6" class="text-center">Carregando...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -74,7 +127,7 @@ const ProcessoView = {
   renderizarTabela(processos, isAdmin) {
     const tbody = document.getElementById('lista-processos-body');
     if (!processos?.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center p-5"><i class="fa-solid fa-folder-open fa-2x mb-2"></i><br>Nenhum processo.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center p-5"><i class="fa-solid fa-folder-open fa-2x mb-2"></i><br>Nenhum processo.</td></tr>';
       return;
     }
 
@@ -88,14 +141,26 @@ const ProcessoView = {
 
     tbody.innerHTML = processos.map(p => {
       const sit = formatSituacao(p.status);
+      const resp = (p.responsaveis_processo || [])
+        .map(r => r.usuarios?.nome?.split(' ')[0])
+        .filter(Boolean)
+        .join(', ') || '—';
+
       return `
         <tr>
-          <td><div style="font-weight:600;">${p.clientes?.nome || 'Sem Cliente'}</div><small>${p.numero_cnj || 'S/N'}</small></td>
-          <td><div>${p.tribunal || '-'}</div><small>${p.vara || '-'}</small></td>
+          <td>
+            <div style="font-weight:600;">${p.clientes?.nome || 'Sem Cliente'}</div>
+            <small>${p.numero_cnj || 'S/N'}</small>
+          </td>
+          <td>
+            <div>${p.tribunal || '-'}</div>
+            <small>${p.vara || '-'}</small>
+          </td>
           <td>
             <span class="status-badge ${sit.badgeClass}">${sit.label}</span>
           </td>
-          <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
+          <td>${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '-'}</td>
+          <td style="max-width:220px;">${resp}</td>
           <td style="text-align:right;">
             <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
             <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
@@ -106,20 +171,19 @@ const ProcessoView = {
     }).join('');
   },
 
-abrirModal(processo = null, isView = false) {
-    const modal = document.getElementById('modal-container');
+  abrirModal(processo = null, isView = false) {
+    const modal = this.modalEl();
     const titulo = document.getElementById('modal-titulo');
-    const form = document.getElementById('form-processo');
+    const form = this.formEl();
     const btnSalvar = form.querySelector('button[type="submit"]');
     const inputs = form.querySelectorAll('input, select');
-    
-    // Title & mode
+
     titulo.textContent = isView ? 'Visualizar Processo' : (processo ? 'Editar' : 'Novo');
     form.classList.toggle('mode-view', isView);
-    inputs.forEach(el => el.disabled = isView);
-    btnSalvar.style.display = isView ? 'none' : 'block';
 
-    // Close X (garante que funcione sempre e fecha modal)
+    inputs.forEach(el => (el.disabled = isView));
+    if (btnSalvar) btnSalvar.style.display = isView ? 'none' : 'block';
+
     const closeBtn = modal.querySelector('.btn-close-modal');
     if (closeBtn) {
       closeBtn.onclick = (ev) => {
@@ -128,8 +192,6 @@ abrirModal(processo = null, isView = false) {
         modal.style.display = 'none';
       };
     }
-
-
 
     // Populate
     if (processo) {
@@ -140,79 +202,82 @@ abrirModal(processo = null, isView = false) {
       document.getElementById('proc-cliente').value = processo.clientes?.id || processo.cliente_id || '';
       document.getElementById('proc-status').value = processo.status || 'ATIVO';
     } else {
-      // default para novo
-      const procStatus = document.getElementById('proc-status');
-      if (procStatus) procStatus.value = 'ATIVO';
+      document.getElementById('proc-id').value = '';
+      document.getElementById('proc-cnj').value = '';
+      document.getElementById('proc-tribunal').value = '';
+      document.getElementById('proc-vara').value = '';
+      document.getElementById('proc-cliente').value = '';
+      document.getElementById('proc-status').value = 'ATIVO';
     }
 
-    // Troca visual do status em view (mesmo que view esteja escondida)
     modal.style.display = 'flex';
   },
 
   fecharModal() {
-    document.getElementById('modal-container').style.display = 'none';
-    document.getElementById('form-processo').reset();
+    this.modalEl().style.display = 'none';
+    this.formEl().reset();
   }
 };
 
+// ==========================================
 // CONTROLLER
+// ==========================================
 const ProcessoController = {
+  seletorResp: null,
+  data: [],
+
   async init() {
-    const isAdmin = AuthAPI.getRole() === 'ADMIN';
     ProcessoView.init();
-    this.bindEvents(isAdmin);
+    await this.initResponsaveis();
+    this.bindEvents();
     await this.loadAll();
   },
 
-  bindEvents(isAdmin) {
+  async initResponsaveis() {
+    this.seletorResp = criarSeletorResponsaveis({
+      inputEl: document.getElementById('proc-responsaveis-busca'),
+      dropdownEl: document.getElementById('proc-responsaveis-dropdown'),
+      tagsEl: document.getElementById('proc-responsaveis-tags')
+    });
+    await this.seletorResp.init();
+  },
+
+  bindEvents() {
     // Cancel button
-    document.getElementById('btn-cancelar').onclick = () => ProcessoView.fecharModal();
-
-    // Novo
-    document.getElementById('btn-novo-processo').onclick = () => ProcessoView.abrirModal();
-
-    // Form submit
-    document.getElementById('form-processo').onsubmit = async e => {
-      e.preventDefault();
-      const id = document.getElementById('proc-id').value;
-      const payload = {
-        numero_cnj: document.getElementById('proc-cnj').value,
-        tribunal: document.getElementById('proc-tribunal').value,
-        vara: document.getElementById('proc-vara').value,
-        cliente_id: document.getElementById('proc-cliente').value || null,
-        status: document.getElementById('proc-status').value
-      };
-      try {
-        if (id) await ProcessoModel.atualizar(id, payload);
-        else await ProcessoModel.criar(payload);
-        showToast(id ? 'Atualizado!' : 'Criado!', 'success');
-      } catch (err) {
-        showToast('Erro: ' + err.message, 'error');
-      } finally {
-        ProcessoView.fecharModal();
-        await this.loadAll();
-      }
+    document.getElementById('btn-cancelar').onclick = () => {
+      ProcessoView.fecharModal();
+      this.seletorResp?.limpar();
+      this.seletorResp?.setDisabled(false);
     };
 
-    // Filter
+    // Novo
+    document.getElementById('btn-novo-processo').onclick = () => {
+      ProcessoView.abrirModal(null, false);
+      this.seletorResp?.limpar();
+      this.seletorResp?.setDisabled(false);
+
+      // habilita inputs novamente
+      const form = document.getElementById('form-processo');
+      Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));
+      form.classList.remove('mode-view');
+
+      document.querySelector('#modal-titulo').textContent = 'Novo Processo';
+    };
+
     document.getElementById('busca-processo').oninput = this.filter.bind(this);
     document.getElementById('filtro-status').onchange = this.filter.bind(this);
 
-    // Table clicks
-    document.getElementById('lista-processos-body').onclick = async e => {
+    document.getElementById('lista-processos-body').onclick = async (e) => {
       const target = e.target.closest('button');
       if (!target) return;
-      
+
       const id = target.dataset.id;
       if (!id) return;
 
-      if (target.classList.contains('btn-view')) {
-        const processo = this.data.find(p => p.id === id);
-        ProcessoView.abrirModal(processo, true);
-      } else if (target.classList.contains('btn-edit')) {
-        const processo = this.data.find(p => p.id === id);
-        ProcessoView.abrirModal(processo, false);
-      } else if (target.classList.contains('btn-delete')) {
+      const isAdmin = AuthAPI.getRole() === 'ADMIN';
+      if (target.classList.contains('btn-delete')) {
+        if (!isAdmin) return;
+
         const { confirmarExclusao } = await import('./utils.js');
         const ok = await confirmarExclusao({
           title: 'Excluir processo?',
@@ -226,8 +291,75 @@ const ProcessoController = {
         await ProcessoModel.deletar(id);
         showToast('Excluído!', 'success');
         await this.loadAll();
+        return;
       }
 
+      // Para view/edit sempre busca por id completo (para trazer responsáveis)
+      const processo = await ProcessoModel.buscarPorId(id);
+      const isView = target.classList.contains('btn-view');
+      ProcessoView.abrirModal(processo, isView);
+
+      const responsaveis = (processo.responsaveis_processo || []).map(r => ({
+        id: r.usuario_id,
+        nome: r.usuarios?.nome || ''
+      }));
+
+      this.seletorResp?.setSelecionados(responsaveis);
+      this.seletorResp?.setDisabled(isView);
+
+      // modo view desabilita submit via view; também desabilita inputs.
+      if (isView) {
+        const form = document.getElementById('form-processo');
+        Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
+      }
+    };
+
+    document.getElementById('form-processo').onsubmit = async (e) => {
+      e.preventDefault();
+
+      const form = document.getElementById('form-processo');
+      if (form.classList.contains('mode-view')) return;
+
+      const selecionados = this.seletorResp?.getSelecionados() || [];
+      if (!selecionados.length) {
+        showToast('Selecione ao menos um responsável.', 'error');
+        return;
+      }
+
+      const processoId = document.getElementById('proc-id').value;
+      const isEdit = !!processoId;
+
+      const payload = {
+        numero_cnj: document.getElementById('proc-cnj').value,
+        tribunal: document.getElementById('proc-tribunal').value,
+        vara: document.getElementById('proc-vara').value,
+        cliente_id: document.getElementById('proc-cliente').value || null,
+        status: document.getElementById('proc-status').value,
+        // campo legado requerido pelo prompt (se existir no schema)
+        advogado_id: selecionados[0].id
+      };
+
+      try {
+        let savedId = processoId;
+        if (isEdit) {
+          await ProcessoModel.atualizar(processoId, payload);
+        } else {
+          const created = await ProcessoModel.criar(payload);
+          savedId = created.id;
+        }
+
+        await ProcessoModel.sincronizarResponsaveis(savedId, selecionados);
+
+        showToast(isEdit ? 'Processo atualizado!' : 'Processo criado!', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao salvar: ' + (err?.message || err), 'error');
+        return;
+      } finally {
+        ProcessoView.fecharModal();
+        this.seletorResp?.limpar();
+        await this.loadAll();
+      }
     };
   },
 
@@ -241,11 +373,18 @@ const ProcessoController = {
   filter() {
     const termo = document.getElementById('busca-processo').value.toLowerCase();
     const status = document.getElementById('filtro-status').value;
-    const filtered = this.data.filter(p => 
-      p.numero_cnj?.toLowerCase().includes(termo) || 
-      p.clientes?.nome.toLowerCase().includes(termo) || 
-      (!status || p.status === status)
-    );
+
+    const filtered = this.data.filter(p => {
+      const matchTerm =
+        p.numero_cnj?.toLowerCase().includes(termo) ||
+        p.clientes?.nome?.toLowerCase().includes(termo) ||
+        (p.tribunal || '').toLowerCase().includes(termo) ||
+        (p.vara || '').toLowerCase().includes(termo);
+
+      const matchStatus = !status || p.status === status;
+      return matchTerm && matchStatus;
+    });
+
     ProcessoView.renderizarTabela(filtered, AuthAPI.getRole() === 'ADMIN');
   },
 
@@ -258,7 +397,8 @@ const ProcessoController = {
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
-  ProcessoController.init();
+  await ProcessoController.init();
 });
+
 
 
