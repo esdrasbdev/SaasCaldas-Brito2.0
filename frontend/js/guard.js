@@ -15,8 +15,9 @@ const ROUTE_CONFIG = {
   'clientes.html': { requiresAuth: true, requiredRole: null },
   'processos.html': { requiresAuth: true, requiredRole: null },
   'agenda.html': { requiresAuth: true, requiredRole: null },
-  'audiencias.html': { requiresAuth: true, requiredRole: 'ADVOGADO' },
-  'pericias.html': { requiresAuth: true, requiredRole: 'ADVOGADO' },
+  'audiencias.html': { requiresAuth: true, requiredRole: null },
+  'pericias.html': { requiresAuth: true, requiredRole: null },
+
   'atendimentos.html': { requiresAuth: true, requiredRole: null },
   'documentos.html': { requiresAuth: true, requiredRole: null },
   'publicacoes.html': { requiresAuth: true, requiredRole: 'ADMIN' },

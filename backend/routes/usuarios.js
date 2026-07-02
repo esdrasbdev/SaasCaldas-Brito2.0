@@ -156,13 +156,94 @@ router.put('/:id', soAdmin, async (req, res) => {
     // 2) Trocar senha no Auth (se fornecida)
     if (novaSenha) {
       if (novaSenha.length < 6) {
-        return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+        return res.status(400).json({ error: 'A senha deve possuir pelo menos 6 caracteres.' });
       }
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(id, {
-        password: novaSenha
-      });
-      if (authError) throw new Error('Erro ao atualizar senha: ' + authError.message);
+
+      const attemptUpdatePassword = async (authUserId) => {
+        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+          password: novaSenha
+        });
+        if (!authError) return;
+        throw authError;
+      };
+
+      const normalizeSupabaseError = (authError) => {
+        const msg = String(authError?.message || '').toLowerCase();
+        const code = authError?.code;
+
+        // Usuário não encontrado / ID inválido
+        const userNotFound =
+          msg.includes('user not found') ||
+          msg.includes('not found') ||
+          msg.includes('invalid') && msg.includes('uuid') ||
+          code === 'user_not_found' ||
+          code === 'invalid_user_id';
+
+        // Senha igual à anterior (algumas versões retornam variações) 
+        const samePassword =
+          msg.includes('same password') ||
+          msg.includes('new password') && msg.includes('must be different') ||
+          msg.includes('password is the same') ||
+          code === 'new_password_same';
+
+        return { userNotFound, samePassword };
+      };
+
+      try {
+        // Primeira tentativa: usa o ID recebido (público)
+        await attemptUpdatePassword(id);
+      } catch (authError) {
+        const { userNotFound, samePassword } = normalizeSupabaseError(authError);
+
+        // Senha igual à anterior
+        if (samePassword) {
+          return res.status(400).json({ error: 'A nova senha deve ser diferente da senha atual.' });
+        }
+
+        // Se for relacionado ao ID/usuário no Auth, tenta reconciliar por email
+        if (userNotFound) {
+          // 1) Buscar registro na tabela pública para obter o email
+          const { data: pubUser, error: pubErr } = await supabaseAdmin
+            .from('usuarios')
+            .select('email')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (pubErr || !pubUser?.email) {
+            return res.status(400).json({ error: 'Não foi possível localizar este usuário.' });
+          }
+
+          const emailNormalizado = String(pubUser.email).toLowerCase();
+
+          // 2) Localizar o usuário no Auth pelo email e obter o verdadeiro Auth ID
+          const { data: listagem, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+          if (listError) {
+            return res.status(400).json({ error: 'Não foi possível alterar a senha. Tente novamente em instantes.' });
+          }
+
+          const existente = (listagem?.users || []).find(u => u.email?.toLowerCase() === emailNormalizado);
+          if (!existente?.id) {
+            return res.status(400).json({ error: 'Não foi possível localizar este usuário.' });
+          }
+
+          // 3) Segunda tentativa: update usando o Auth ID correto
+          try {
+            await attemptUpdatePassword(existente.id);
+          } catch (finalErr) {
+            const { samePassword: sp2 } = normalizeSupabaseError(finalErr);
+            if (sp2) {
+              return res.status(400).json({ error: 'A nova senha deve ser diferente da senha atual.' });
+            }
+            return res.status(400).json({ error: 'Não foi possível alterar a senha. Tente novamente em instantes.' });
+          }
+
+          // Caso reconciliou, segue.
+        } else {
+          return res.status(400).json({ error: 'Não foi possível alterar a senha. Tente novamente em instantes.' });
+        }
+      }
     }
+
 
     cache.del('usuarios_list');
     res.json({ ok: true });

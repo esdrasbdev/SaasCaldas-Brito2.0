@@ -128,17 +128,20 @@ export function criarSeletorResponsaveis({ inputEl, dropdownEl, tagsEl }) {
 
   function bindEventos() {
     inputEl.addEventListener('input', (e) => {
+      if (inputEl.disabled) return;
       renderizarDropdown(filtrar(e.target.value));
       dropdownEl.style.display = 'block';
     });
 
     inputEl.addEventListener('focus', () => {
+      if (inputEl.disabled) return;
       renderizarDropdown(filtrar(''));
       dropdownEl.style.display = 'block';
       inputEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     });
 
     inputEl.addEventListener('keydown', (e) => {
+      if (inputEl.disabled) return;
       if (e.key === 'Escape') {
         dropdownEl.style.display = 'none';
         inputEl.blur();
@@ -146,11 +149,13 @@ export function criarSeletorResponsaveis({ inputEl, dropdownEl, tagsEl }) {
     });
 
     document.addEventListener('click', (e) => {
+      if (inputEl.disabled) return;
       if (e.target !== inputEl && !dropdownEl.contains(e.target)) {
         dropdownEl.style.display = 'none';
       }
     });
   }
+
 
   renderizarTags();
 
@@ -171,6 +176,14 @@ export function criarSeletorResponsaveis({ inputEl, dropdownEl, tagsEl }) {
     setDisabled(disabled) {
       inputEl.disabled = disabled;
       wrapperEl?.classList.toggle('is-disabled', disabled);
+
+      if (disabled) {
+        // Fecha o dropdown e evita interações residuais
+        dropdownEl.style.display = 'none';
+        try {
+          inputEl.blur();
+        } catch (_) {}
+      }
     }
   };
 }

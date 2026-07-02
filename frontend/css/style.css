@@ -1323,3 +1323,8 @@ body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: 
 .seletor-responsaveis.is-disabled { opacity: 0.85; }
 .seletor-responsaveis.is-disabled .tag-responsavel .fa-times { display: none; }
 
+.seletor-responsaveis.is-disabled::before {
+  display: none;
+}
+
+
