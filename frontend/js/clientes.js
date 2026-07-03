@@ -452,7 +452,7 @@ const ClienteView = {
       }
       showToast('Erro ao carregar documentos do cliente.', 'error');
     }
-  }
+  },
 
   // Central de Documentos Jurídicos (jsPDF download)
   // ==========================================
@@ -554,9 +554,17 @@ const ClienteView = {
   },
 
   async baixarDocumentoPDF(chave, d) {
-  // --- helpers ---
-  const s = (v) => String(v ?? '').trim() || '—';
-  const data = new Date().toLocaleDateString('pt-BR', {
+    // --- helpers ---
+
+    const s = (v) => String(v ?? '').trim() || '—';
+
+    if (!d) {
+      showToast('Dados do cliente inválidos para geração de PDF.', 'error');
+      return;
+    }
+
+    const data = new Date().toLocaleDateString('pt-BR', {
+
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
