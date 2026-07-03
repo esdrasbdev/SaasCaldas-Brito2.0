@@ -1,6 +1,15 @@
- const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../supabase');
+
+// Wrapper para garantir que a rota sempre responda JSON em caso de erro inesperado.
+function safeJson(res, status, payload) {
+  try {
+    return res.status(status).json(payload);
+  } catch {
+    return res.status(status).send({ error: 'Erro inesperado' });
+  }
+}
 const cache = require('../cache');
 
 

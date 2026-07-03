@@ -206,8 +206,17 @@ const AdminController = {
 
     try {
       const res = await apiFetch('/usuarios');
+
+      const contentType = res.headers.get('content-type') || '';
+      const isJson = contentType.toLowerCase().includes('application/json') || contentType.toLowerCase().includes('+json');
+
+      if (!isJson) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Resposta inesperada (${res.status}): ${text.slice(0, 500)}`);
+      }
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Erro ao carregar usuários');
       AdminView.renderizarTabela(data);
     } catch (err) {
       showToast('Erro ao carregar usuários: ' + err.message, 'error');
