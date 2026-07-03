@@ -8,14 +8,13 @@ const auth = require('../middleware/auth');
 const supabase = require('../supabase');
 
 // IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
-let handleUpload = null;
 let del = null;
 try {
-  ({ handleUpload } = require('@vercel/blob/client'));
   ({ del } = require('@vercel/blob'));
 } catch (e) {
-  // fallback: rotas de blob-upload vão retornar erro claro
+  // fallback: exclusão via blob vai retornar erro claro
 }
+
 
 router.use(auth);
 
@@ -90,17 +89,15 @@ router.post('/blob-upload', async (req, res) => {
 
     const arquivoBuffer = Buffer.from(base64Part, 'base64');
 
-    const handleRes = await handleUpload({
-      data: {
-        arquivo: arquivoBuffer,
-        // @vercel/blob espera um objeto com filename/contentType; manter campos simples
-        name: nome || 'documento',
-        type: tipo
-      },
-      req
+    // @vercel/blob: para upload feito a partir do servidor, usar put()
+    const { put } = require('@vercel/blob');
+    const blob = await put(nome || 'documento', arquivoBuffer, {
+      access: 'public',
+      contentType: tipo
     });
 
-    const url = handleRes.url;
+    const url = blob.url;
+
 
     if (!url) {
       throw new Error('Falha ao gerar URL no Blob.');

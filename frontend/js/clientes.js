@@ -303,6 +303,7 @@ const ClienteView = {
 
   async renderizarSessaoDocumentos(clienteId, visualizacao) {
     const container = document.getElementById('documentos-lista-container');
+
     if (!container) return;
 
     container.innerHTML = '';
@@ -321,7 +322,9 @@ const ClienteView = {
     }
 
     this.renderizarDocumentosJuridicos(container, clienteId, visualizacao);
+    await this.renderizarDocumentosCliente(container, clienteId, visualizacao);
   },
+
 
   fecharModal() {
     this.elementos.modal.style.display = 'none';
@@ -333,10 +336,129 @@ const ClienteView = {
   },
 
   // ==========================================
+  // ==========================================
+  // Central de Documentos do Cliente (Vercel Blob)
+  // ==========================================
+  async renderizarDocumentosCliente(container, clienteId, visualizacao) {
+    if (!clienteId) return;
+
+
+
+    // Estado/headers
+    const wrapperId = 'documentos-cliente-section';
+    let wrapper = document.getElementById(wrapperId);
+    if (!wrapper) {
+      wrapper = document.createElement('div');
+      wrapper.id = wrapperId;
+      wrapper.style.cssText = 'margin-top:18px; border-top:2px solid var(--azul-claro);';
+      container.appendChild(wrapper);
+    }
+
+    wrapper.innerHTML = `
+      <div style="padding-top:15px;">
+        <h3 style="font-size:1rem; color:var(--cinza-escuro); margin-bottom:14px; border-bottom:2px solid var(--cinza-borda); padding-bottom:6px;">
+          <i class="fa-solid fa-paperclip"></i> Documentos do Cliente
+        </h3>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.9rem; color: var(--cinza-medio);">
+              Envie arquivos para anexar na ficha do cliente.
+            </div>
+          </div>
+
+          ${visualizacao ? '' : `
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input type="file" id="upload-doc-cliente" data-cliente="${clienteId}" hidden>
+              <button type="button" class="btn-gj-baixar" id="btn-upload-doc-cliente"
+                style="padding:8px 12px; font-size:0.85rem; border:1px solid var(--cinza-borda); border-radius:8px; background:var(--branco); cursor:pointer; color:var(--cinza-escuro); display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-upload"></i> Enviar arquivo
+              </button>
+            </div>
+          `}
+        </div>
+
+        <div id="documentos-cliente-lista" style="margin-top:16px;">
+          <div style="background: var(--azul-claro); color: var(--azul-medio); padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 500;">
+            <i class="fa-solid fa-spinner fa-spin"></i> Carregando documentos...
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (!visualizacao) {
+      const btnUpload = document.getElementById('btn-upload-doc-cliente');
+      if (btnUpload) {
+        btnUpload.addEventListener('click', () => {
+          const input = document.getElementById('upload-doc-cliente');
+          if (input) input.click();
+        }, { once: true });
+      }
+    }
+
+    try {
+      const docs = await ClienteModel.listarDocumentos(clienteId);
+
+      const listaEl = document.getElementById('documentos-cliente-lista');
+      if (!listaEl) return;
+
+      if (!docs || docs.length === 0) {
+        listaEl.innerHTML = `
+          <div style="background: var(--branco); color: var(--cinza-medio); padding: 12px; border-radius: 8px; text-align: center; font-size: 0.92rem; font-weight: 500; border:1px dashed var(--cinza-borda);">
+            Nenhum documento enviado ainda.
+          </div>
+        `;
+        return;
+      }
+
+      listaEl.innerHTML = docs.map(d => {
+        const criado = d.criado_em ? new Date(d.criado_em).toLocaleDateString('pt-BR') : '—';
+        const enviadoPor = d.usuarios?.nome ? d.usuarios.nome : '—';
+
+        const btnExcluir = visualizacao ? '' : `
+          <button class="btn-del-doc" data-id="${d.id}" data-cliente="${clienteId}" title="Excluir" 
+            style="border:1px solid #ef4444; color:#ef4444; background: var(--branco); padding:6px 10px; border-radius:8px; cursor:pointer; font-size:0.82rem; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-trash"></i> Excluir
+          </button>
+        `;
+
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; padding:12px 14px; border:1px solid var(--cinza-borda); border-radius:10px; background:var(--branco); margin-bottom:10px;">
+            <div style="min-width:0;">
+              <div style="font-weight:700; color: var(--cinza-escuro); word-break:break-word;">
+                ${d.nome || 'documento'}
+              </div>
+              <div style="font-size:0.85rem; color: var(--cinza-medio); margin-top:4px;">
+                <div><i class="fa-solid fa-calendar-days"></i> ${criado}</div>
+                <div><i class="fa-solid fa-user"></i> ${enviadoPor}</div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+              <a href="${d.url}" target="_blank" rel="noopener noreferrer"
+                 style="border:1px solid var(--cinza-borda); background: var(--branco); padding:6px 10px; border-radius:8px; cursor:pointer; font-size:0.82rem; text-decoration:none; color: var(--cinza-escuro); display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-file"></i> Abrir/Baixar
+              </a>
+              ${btnExcluir}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error(err);
+      const listaEl = document.getElementById('documentos-cliente-lista');
+      if (listaEl) {
+        listaEl.innerHTML = '';
+      }
+      showToast('Erro ao carregar documentos do cliente.', 'error');
+    }
+  }
+
   // Central de Documentos Jurídicos (jsPDF download)
   // ==========================================
   renderizarDocumentosJuridicos(container, clienteId, visualizacao) {
     if (!clienteId) return;
+
 
     const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
 
