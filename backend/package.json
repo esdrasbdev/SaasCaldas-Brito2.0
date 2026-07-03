@@ -9,12 +9,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "@vercel/blob": "^2.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
-    "resend": "^3.5.0",
-    "@vercel/blob": "^0.26.1"
+    "resend": "^3.5.0"
   },
   "author": "Antonio e Priscila - Escritório de Advocacia",
   "engines": {
