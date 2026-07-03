@@ -7,8 +7,15 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const supabase = require('../supabase');
 
-const { handleUpload } = require('@vercel/blob/client');
-const { del } = require('@vercel/blob');
+// IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
+let handleUpload = null;
+let del = null;
+try {
+  ({ handleUpload } = require('@vercel/blob/client'));
+  ({ del } = require('@vercel/blob'));
+} catch (e) {
+  // fallback: rotas de blob-upload vão retornar erro claro
+}
 
 router.use(auth);
 
