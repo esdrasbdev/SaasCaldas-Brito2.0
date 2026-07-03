@@ -7,10 +7,14 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const supabase = require('../supabase');
 
+const { handleUpload } = require('@vercel/blob/client');
+const { del } = require('@vercel/blob');
+
 router.use(auth);
 
 // GET /api/documentos
 router.get('/', async (req, res) => {
+
   try {
     const { cliente_id } = req.query;
 
@@ -33,19 +37,102 @@ router.get('/', async (req, res) => {
   }
 });
 
+// POST /api/documentos/blob-upload
+// Upload direto do cliente -> Vercel Blob (evita limites de payload serverless)
+router.post('/blob-upload', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    const { cliente_id, nome, tipo, base64 } = req.body || {};
+
+    if (!cliente_id) {
+      return res.status(400).json({ error: 'cliente_id é obrigatório.' });
+    }
+
+    if (!base64) {
+      return res.status(400).json({ error: 'Arquivo não enviado.' });
+    }
+
+    // Limites (ajustáveis)
+    const allowedContentTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain'
+    ];
+
+    if (!tipo || !allowedContentTypes.includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo de arquivo não permitido.' });
+    }
+
+    // Estimativa de tamanho (base64)
+    const base64Part = String(base64).split(',')[1] || String(base64);
+    const sizeBytes = Math.floor((base64Part.length * 3) / 4);
+    const maximumSizeInBytes = 15 * 1024 * 1024; // 15MB
+
+    if (sizeBytes > maximumSizeInBytes) {
+      return res.status(400).json({ error: 'Arquivo excede o tamanho máximo (15MB).' });
+    }
+
+    const arquivoBuffer = Buffer.from(base64Part, 'base64');
+
+    const handleRes = await handleUpload({
+      data: {
+        arquivo: arquivoBuffer,
+        // @vercel/blob espera um objeto com filename/contentType; manter campos simples
+        name: nome || 'documento',
+        type: tipo
+      },
+      req
+    });
+
+    const url = handleRes.url;
+
+    if (!url) {
+      throw new Error('Falha ao gerar URL no Blob.');
+    }
+
+    const { data: dbData, error: dbError } = await supabase
+      .from('documentos')
+      .insert({
+        nome: nome || 'documento',
+        url,
+        tipo,
+        cliente_id,
+        upload_por: req.user.id
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    res.json(dbData);
+  } catch (error) {
+    console.error('Erro blob-upload:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/documentos/upload
-// Recebe arquivo em Base64 para simplificar a infraestrutura (sem multer)
+// Recebe arquivo em Base64 para fallback (arquivos menores)
 router.post('/upload', async (req, res) => {
   try {
     const { nome, arquivo, tipo, cliente_id, processo_id } = req.body;
-    
+
     if (!arquivo) return res.status(400).json({ error: 'Arquivo não enviado' });
 
     // 1. Upload para o Storage do Supabase
     const fileName = `${Date.now()}_${nome}`;
     const fileBuffer = Buffer.from(arquivo.split(',')[1] || arquivo, 'base64');
 
-    const { data: storageData, error: storageError } = await supabase.storage
+    const { error: storageError } = await supabase.storage
       .from('documentos')
       .upload(fileName, fileBuffer, { contentType: tipo, upsert: true });
 
@@ -65,7 +152,7 @@ router.post('/upload', async (req, res) => {
         tipo: tipo,
         cliente_id: cliente_id || null,
         processo_id: processo_id || null,
-        upload_por: req.user.id // Identifica quem subiu, mas todos verão
+        upload_por: req.user.id
       }])
       .select()
       .single();
@@ -79,6 +166,7 @@ router.post('/upload', async (req, res) => {
   }
 });
 
+
 // DELETE /api/documentos/:id
 router.delete('/:id', async (req, res) => {
   try {
@@ -91,14 +179,24 @@ router.delete('/:id', async (req, res) => {
       .eq('id', id)
       .single();
 
-    if (doc && doc.url) {
-      const fileName = doc.url.split('/').pop();
-      await supabase.storage.from('documentos').remove([fileName]);
+    if (doc?.url) {
+      // Se for Blob, tenta remover via Vercel Blob; caso contrário remove do Supabase Storage.
+      try {
+        await del(doc.url);
+      } catch (_) {
+        try {
+          const fileName = doc.url.split('/').pop();
+          await supabase.storage.from('documentos').remove([fileName]);
+        } catch (e2) {
+          // não bloqueia remoção do registro
+        }
+      }
     }
 
     const { error } = await supabase.from('documentos').delete().eq('id', id);
-    
+
     if (error) throw error;
+
 
     res.json({ message: 'Documento excluído com sucesso' });
   } catch (error) {

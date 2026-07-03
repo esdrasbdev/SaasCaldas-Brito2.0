@@ -1,4 +1,4 @@
-const express = require('express');
+ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../supabase');
 const cache = require('../cache');
@@ -171,6 +171,14 @@ router.put('/:id', soAdmin, async (req, res) => {
         const msg = String(authError?.message || '').toLowerCase();
         const code = authError?.code;
 
+        console.log('[usuarios.put] normalizeSupabaseError:', {
+          message: authError?.message,
+          status: authError?.status,
+          code: authError?.code,
+          name: authError?.name
+        });
+
+
         // Usuário não encontrado / ID inválido
         // (Supabase pode variar mensagem/code conforme versão/endpoint)
         const userNotFound =
@@ -205,7 +213,18 @@ router.put('/:id', soAdmin, async (req, res) => {
 
         // Se não for erro de usuário/ID (ex: permissões, estado, senha inválida etc),
         // ainda assim tentamos reconciliar por email para manter resiliência.
-        const shouldTryReconcile = userNotFound || !samePassword;
+        console.log('[usuarios.put] Falha ao atualizar senha - detalhes:', {
+          id,
+          authError: {
+            message: authError?.message,
+            status: authError?.status,
+            code: authError?.code,
+            name: authError?.name
+          },
+          userNotFound,
+          samePassword
+        });
+
 
         // Senha igual à anterior
         if (samePassword) {
@@ -214,6 +233,12 @@ router.put('/:id', soAdmin, async (req, res) => {
 
 
         // Se for relacionado ao ID/usuário no Auth, tenta reconciliar por email
+        console.log('[usuarios.put] shouldReconcile?', {
+          id,
+          userNotFound,
+          samePassword
+        });
+
         if (userNotFound) {
           // 1) Buscar registro na tabela pública para obter o email
           const { data: pubUser, error: pubErr } = await supabaseAdmin
@@ -222,11 +247,19 @@ router.put('/:id', soAdmin, async (req, res) => {
             .eq('id', id)
             .maybeSingle();
 
+          console.log('[usuarios.put] pubUser?', {
+            id,
+            found: !!pubUser,
+            email: pubUser?.email
+          });
+
+
           if (pubErr || !pubUser?.email) {
             return res.status(400).json({ error: 'Não foi possível localizar este usuário.' });
           }
 
-          const emailNormalizado = String(pubUser.email).toLowerCase();
+          const emailNormalizado = String(pubUser.email).toLowerCase().trim();
+
 
           // 2) Localizar o usuário no Auth pelo email e obter o verdadeiro Auth ID
           const { data: listagem, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -234,15 +267,41 @@ router.put('/:id', soAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Não foi possível alterar a senha. Tente novamente em instantes.' });
           }
 
-          const existente = (listagem?.users || []).find(u => u.email?.toLowerCase() === emailNormalizado);
-          if (!existente?.id) {
-            return res.status(400).json({ error: 'Não foi possível localizar este usuário.' });
+          const existente = (listagem?.users || []).find(u => u.email?.toLowerCase().trim() === emailNormalizado);
+
+          // Self-healing: se não existir no Auth, cria conta no Auth e então atualiza a senha.
+          let authIdParaAtualizar = existente?.id;
+
+          if (!authIdParaAtualizar) {
+            console.log('[usuarios.put] Self-healing: criando conta no Auth para email', {
+              email: emailNormalizado
+            });
+
+            const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+              email: emailNormalizado,
+              password: novaSenha,
+              email_confirm: true
+            });
+
+            if (createErr) {
+              console.log('[usuarios.put] Self-healing: erro ao criar conta no Auth', {
+                email: emailNormalizado,
+                createErr: createErr?.message,
+                status: createErr?.status,
+                code: createErr?.code,
+                name: createErr?.name
+              });
+              throw createErr;
+            }
+
+            authIdParaAtualizar = created?.user?.id;
           }
 
           // 3) Segunda tentativa: update usando o Auth ID correto
           try {
-            await attemptUpdatePassword(existente.id);
+            await attemptUpdatePassword(authIdParaAtualizar);
           } catch (finalErr) {
+
             const { samePassword: sp2 } = normalizeSupabaseError(finalErr);
             if (sp2) {
               return res.status(400).json({ error: 'A nova senha deve ser diferente da senha atual.' });

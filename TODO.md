@@ -1,53 +1,32 @@
-# TODO.md — Implementação das Correções (Rodada 3)
+## TODO.md — Implementação das Correções (Rodada 3)
 
-## Passo 1 — Plano confirmado
-- [x] Ler prompt.md (escopo e requisitos)
-- [x] Inspecionar arquivos relevantes (usuarios.js, guard.js, sidebar.js, responsaveis-select.js, style.css)
-- [x] Atualizar TODO e confirmar execução
+### Passo A — PROBLEMA 01: Procuração em 1 página A4
+- [x] Ajustar somente no bloco `if (chave === 'procuracao')` em `frontend/js/clientes.js`
+- [ ] Garantir que conteúdo final fique abaixo de `PH - MAR_BOTTOM - 12` antes de `addRodapeEscritorio()`
+- [ ] Validar gerando PDF da Procuração (1 página A4)
+- [ ] Validar que os outros 5 modelos não mudaram
 
-
-
-
-## Passo 2 — Corrigir erro 400 ao alterar senha (usuários antigos)
-- [x] Atualizar `backend/routes/usuarios.js`:
-
-  - [x] Implementar tentativa primária com updateUserById(id recebido)
-
-  - [x] Se falhar por ID inexistente, buscar email na `public.usuarios` e localizar Auth ID via listUsers()
-
-  - [x] Reexecutar updateUserById com Auth ID correto
-
-  - [x] Mensagens de erro amigáveis
+### Observações
+- Não mexer em `addTexto`, `addMisto`, `aplicarTimbrado`, `checarPagina`.
 
 
-## Passo 3 — Permitir acesso completo a ESTAGIÁRIO em Audiências e Perícias
+### Passo B — PROBLEMA 02: Documentos do Cliente com Vercel Blob
 
-- [x] Atualizar `frontend/js/guard.js`:
+- [x] Adicionar dependência `@vercel/blob` em `backend/package.json`
+- [x] Criar rota `POST /api/documentos/blob-upload` em `backend/routes/documentos.js`
 
-  - [x] `audiencias.html`: requiredRole -> null
-  - [x] `pericias.html`: requiredRole -> null
-- [x] Atualizar `frontend/js/sidebar.js`:
-
-  - [x] `audiencias.html`: incluir ESTAGIARIO/ESTAGIARIA
-
-  - [x] `pericias.html`: incluir ESTAGIARIO/ESTAGIARIA
-
-
-## Passo 4 — Corrigir modo visualização do componente de responsáveis
-- [ ] Atualizar `frontend/css/style.css`:
-  - [x] esconder `.seletor-responsaveis.is-disabled::before`
+- [ ] Persistir `nome`, `url`, `tipo`, `cliente_id`, `upload_por`
+- [ ] Atualizar `DELETE /api/documentos/:id` para usar `del(url)` do Blob
+- [ ] Atualizar `frontend/js/clientes.js` para usar `upload()` do Blob e listar/excluir corretamente
+- [ ] Garantir modo visualização (somente leitura) sem upload/exclusão
 
 
 
-- [ ] Atualizar `frontend/js/responsaveis-select.js`:
-  - [x] `setDisabled(true)` fechar dropdown e impedir interação
+### Passo C — PROBLEMA 03: Corrigir erro 400 ao trocar senha
+- [x] Adicionar logs temporários na rota `PUT /api/usuarios/:id` em `backend/routes/usuarios.js`
+- [ ] Reproduzir e registrar causa nos logs
+- [x] Aplicar self-healing (cria conta no Auth quando email não existir) e normalizar email
+- [x] Remover código morto (não usada variável `shouldTryReconcile` no fluxo atual)
+- [ ] Validar manualmente os 3 cenários de troca de senha
 
-  - [x] evitar sobreposição/artefatos visuais no modo leitura
-
-
-## Passo 5 — Validação
-- [ ] Testar cenário: alterar senha (usuário antigo e novo)
-- [ ] Testar cenário: estagiários acessam Audiências/Perícias via menu e URL direta
-- [ ] Testar cenário: visualizar cliente com responsáveis (sem sobreposição)
-- [ ] Garantir que não houve regressão em Atendimentos
 

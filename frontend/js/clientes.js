@@ -798,6 +798,11 @@ const ClienteView = {
                ' Edifício Timbaúba (Apartamento 04), Várzea Alegre/CE.' }
     ], { antes: 0, depois: 6 });
 
+    const DEPOIS_PODERES_PROC = 6;
+    const DEPOIS_DATA_PROC = 12;
+
+    const FONT_SIZE_TEXTO_PROC = 10.5;
+
     addMisto([
       { texto: 'PODERES: ', bold: true },
       { texto: 'Por este instrumento particular de procuração, o(a) outorgante acima qualificado(a) e abaixo' +
@@ -811,9 +816,11 @@ const ClienteView = {
                ' especiais para confessar, desistir, transigir, firmar compromisso ou acordos, receber dinheiro' +
                ' e dar quitação, agindo em conjunto ou separadamente, podendo ainda substabelecer esta a outrem,' +
                ' com ou sem reservas de iguais poderes, dando tudo por bom, firme e valioso.' }
-    ], { antes: 0, depois: 8 });
+    ], { antes: 0, depois: DEPOIS_PODERES_PROC, fontSize: FONT_SIZE_TEXTO_PROC });
 
-    addTexto(`Várzea Alegre, ${data}.`, { depois: 16 });
+    addTexto(`Várzea Alegre, ${data}.`, { depois: DEPOIS_DATA_PROC });
+
+
     addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
     addRodapeEscritorio();
   }
@@ -1153,7 +1160,8 @@ const ClienteController = {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token;
 
-            const res = await fetch(`${getApiUrl()}/documentos/upload`, {
+            // Payload enviado como base64 para suportar upload para Blob (endpoint dedicado)
+            const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1162,7 +1170,7 @@ const ClienteController = {
               body: JSON.stringify({
                 nome: file.name,
                 tipo: file.type,
-                arquivo: reader.result,
+                base64: reader.result,
                 cliente_id: clienteId
               })
             });
@@ -1178,6 +1186,7 @@ const ClienteController = {
         reader.readAsDataURL(file);
       }
     });
+
 
     document.body.addEventListener('click', async (e) => {
       const btn = e.target.closest('.btn-del-doc');
