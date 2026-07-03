@@ -114,7 +114,7 @@ router.post('/', soAdmin, async (req, res) => {
 
       if (updError) throw new Error('Erro ao atualizar cadastro existente: ' + updError.message);
 
-      cache.del('usuarios_list');
+      cache.invalidate('usuarios_list');
       return res.json({ ok: true, id: linhaExistente.id, reconciliado: true });
     }
 
@@ -135,7 +135,7 @@ router.post('/', soAdmin, async (req, res) => {
       throw new Error('Erro ao inserir na tabela usuarios: ' + dbError.message);
     }
 
-    cache.del('usuarios_list');
+    cache.invalidate('usuarios_list');
     res.json({ ok: true, id: authUserId });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -326,7 +326,7 @@ router.put('/:id', soAdmin, async (req, res) => {
     }
 
 
-    cache.del('usuarios_list');
+    cache.invalidate('usuarios_list');
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
