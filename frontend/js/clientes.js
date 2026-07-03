@@ -1284,7 +1284,15 @@ const ClienteController = {
         const clienteId = e.target.dataset.cliente;
         if (!file || !clienteId) return;
 
+        const MAX_TAMANHO_DOCUMENTO = 15 * 1024 * 1024; // 15MB
+        if (file.size > MAX_TAMANHO_DOCUMENTO) {
+          showToast('Arquivo excede o tamanho máximo permitido (15MB).', 'error');
+          e.target.value = '';
+          return;
+        }
+
         const reader = new FileReader();
+
         reader.onload = async () => {
           try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -1305,17 +1313,25 @@ const ClienteController = {
               })
             });
 
+            const data = await res.json().catch(() => ({}));
+
             if (res.ok) {
               showToast('Arquivo anexado!', 'success');
               ClienteController.atualizarSessaoDocumentos(clienteId);
+            } else {
+              showToast(data.error || 'Erro ao enviar arquivo.', 'error');
             }
           } catch (err) {
             showToast('Erro no upload', 'error');
           }
         };
         reader.readAsDataURL(file);
+
+        // permite selecionar o mesmo arquivo novamente na próxima tentativa
+        e.target.value = '';
       }
     });
+
 
 
     document.body.addEventListener('click', async (e) => {

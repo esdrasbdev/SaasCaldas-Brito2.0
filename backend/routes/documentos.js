@@ -9,14 +9,15 @@ const { supabasePublic } = require('../supabase');
 
 // IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
 let del = null;
+let put = null;
 try {
-  ({ del } = require('@vercel/blob'));
+  ({ del, put } = require('@vercel/blob'));
 } catch (e) {
-  // fallback: exclusão via blob vai retornar erro claro
+  console.error('[documentos] Pacote @vercel/blob não encontrado no runtime:', e?.message || e);
 }
 
-
 router.use(auth);
+
 
 // GET /api/documentos
 router.get('/', async (req, res) => {
@@ -90,12 +91,18 @@ router.post('/blob-upload', async (req, res) => {
 
     const arquivoBuffer = Buffer.from(base64Part, 'base64');
 
+    if (!put) {
+      return res.status(500).json({
+        error: 'Serviço de armazenamento de arquivos indisponível no momento.'
+      });
+    }
+
     // @vercel/blob: para upload feito a partir do servidor, usar put()
-    const { put } = require('@vercel/blob');
     const blob = await put(nome || 'documento', arquivoBuffer, {
       access: 'public',
       contentType: tipo
     });
+
 
     const url = blob.url;
 

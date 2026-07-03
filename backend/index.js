@@ -24,8 +24,11 @@ app.use(cors({
 
 
 // Parser JSON para bodies das requisições
-app.use(express.json({ limit: '10mb' })); // 10mb para documentos
+// Upload de documentos é enviado como base64 dentro de JSON.
+// Para suportar ~15MB reais em base64 (≈ 20,5MB) com overhead de JSON, usamos um limite maior.
+app.use(express.json({ limit: '22mb' }));
 app.use(express.urlencoded({ extended: true }));
+
 
 // Rotas principais
 app.get('/health', (req, res) => {
@@ -104,12 +107,23 @@ app.use('/api/escavador/webhook', escavadorRouter);
 
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
-  console.error('❌ Erro Crítico:', err.stack);
-  res.status(500).json({ 
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+  console.error('❌ Erro Crítico:', err?.stack || err);
+
+  const status = err?.status || err?.statusCode || 500;
+
+  // Payload muito grande (ex.: express.json limit)
+  if (status === 413 || err?.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Arquivo excede o tamanho máximo permitido pelo servidor.'
+    });
+  }
+
+  return res.status(status).json({
+    error: status === 500 ? 'Erro interno do servidor' : (err?.message || 'Erro na requisição'),
+    message: process.env.NODE_ENV === 'development' ? err?.message : undefined
   });
 });
+
 
 // Inicializa Jobs Agendados (Cron)
 // Evita executar em Vercel serverless; executa sempre no Railway/Node
