@@ -1,232 +1,126 @@
-# PROMPT.md — Deixar a Central de "Documentos do Cliente" 100% funcional (upload retornando 500)
+# PROMPT.md — `@vercel/blob` não está disponível no runtime da Vercel (causa raiz do 500 no upload)
 
 ## Contexto
 
-Analise integralmente os arquivos envolvidos antes de alterar.
+Analise integralmente antes de alterar.
 
 **Repositório:**
 https://github.com/esdrasbdev/SaasCaldas-Brito2.0.git
 
-**Stack:** Vanilla JS ES Modules (frontend) + Node.js/Express (backend) + Supabase + Vercel Blob, tudo servido pela mesma Vercel Function (`api/index.js` expõe `backend/index.js`).
+Este prompt resolve a causa raiz definitiva do erro 500 em `POST /api/documentos/blob-upload`, confirmada pelos logs da Vercel:
 
-**Arquivos envolvidos:**
-- `backend/index.js` (configuração global do Express)
-- `backend/routes/documentos.js` (rotas de documentos)
-- `frontend/js/clientes.js` (seção "Documentos do Cliente" dentro da ficha do cliente)
-
-O objetivo desta rodada é **eliminar de vez o erro 500 no upload** e deixar todo o fluxo (upload, listagem, download, exclusão) robusto e com feedback de erro real para o usuário — não só "parece que funciona quando o arquivo é pequeno".
-
----
-
-# PROBLEMA — Upload de documento do cliente retorna 500, sem mensagem útil no Network
-
-## Causa raiz confirmada no código
-
-O arquivo é enviado como **base64 dentro de um JSON** (`frontend/js/clientes.js`, listener de `#upload-doc-cliente`, por volta da linha 1281-1317):
-
-```js
-body: JSON.stringify({
-  nome: file.name,
-  tipo: file.type,
-  base64: reader.result,
-  cliente_id: clienteId
-})
+```
+Execution Duration: 20ms
+External APIs: No outgoing requests
 ```
 
-Só que existe um **descompasso de limites**:
+Execução extremamente curta e nenhuma chamada externa feita = a function nunca chegou a chamar o Vercel Blob. Isso só acontece no seguinte trecho de `backend/routes/documentos.js`:
 
-- `backend/index.js` (linha ~27): `app.use(express.json({ limit: '10mb' }));`
-- `backend/routes/documentos.js`, rota `/blob-upload`: valida `maximumSizeInBytes = 15 * 1024 * 1024` (15MB) **depois** que o body já foi parseado.
-
-Base64 aumenta o tamanho do arquivo em ~33%. Um arquivo de ~7-8MB já vira um body JSON maior que 10MB — o `body-parser` do Express rejeita a requisição **antes** dela chegar na rota (`PayloadTooLargeError`), então a validação de 15MB dentro de `documentos.js` nunca chega a rodar para arquivos grandes.
-
-Esse erro cai no middleware global de erro (`backend/index.js`, linha ~104-110):
 ```js
-app.use((err, req, res, next) => {
-  console.error('❌ Erro Crítico:', err.stack);
-  res.status(500).json({ 
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined 
+if (!put) {
+  return res.status(500).json({
+    error: 'Serviço de armazenamento de arquivos indisponível no momento.'
   });
-});
-```
-Ele **sempre** responde com `500` e omite a `message` em produção — por isso o Network mostra só `500`, sem nenhuma pista do motivo real (era na verdade um `413 Payload Too Large`).
-
-Além disso, no frontend, o listener de upload só trata o caminho de sucesso:
-```js
-if (res.ok) {
-  showToast('Arquivo anexado!', 'success');
-  ClienteController.atualizarSessaoDocumentos(clienteId);
 }
 ```
-Quando `res.ok` é `false` (qualquer erro do backend, incluindo o 500 atual), **nada acontece na tela** — nenhum toast de erro, nenhuma indicação para o usuário do que deu errado. O `catch` só pega erros de rede (ex.: sem internet), não respostas HTTP de erro.
 
-## Objetivo
-
-1. Alinhar os limites de tamanho em toda a cadeia (frontend → Express → validação da rota) para que arquivos até o teto anunciado (15MB) funcionem de ponta a ponta.
-2. Fazer o middleware global de erro devolver status e mensagens corretas (sem quebrar segurança em produção).
-3. Fazer o frontend mostrar um erro real e útil quando o upload falhar, em vez de falhar silenciosamente.
-4. Validar que o `@vercel/blob` (`put`) está de fato disponível em runtime e que `BLOB_READ_WRITE_TOKEN` está acessível — já confirmado conectado no projeto Vercel, mas o código deve falhar com mensagem clara caso algo mude no futuro, em vez de um 500 genérico.
-
----
-
-## Implementação esperada
-
-### 1) `backend/index.js` — aumentar o limite do body para acomodar o base64
-
-Trocar:
+`put` está `null` porque, no topo do arquivo, o `require('@vercel/blob')` está falhando e caindo no `catch`:
 ```js
-app.use(express.json({ limit: '10mb' })); // 10mb para documentos
-```
-Por um limite que comporte 15MB reais em base64 (15MB × 1.37 ≈ 20.5MB) com folga para o overhead do JSON:
-```js
-app.use(express.json({ limit: '22mb' })); // 22mb: comporta arquivo de até 15MB em base64 (~+33%) + overhead do JSON
-```
-
-Manter `maximumSizeInBytes = 15 * 1024 * 1024` em `documentos.js` como está — ele continua sendo o teto "de negócio" (mensagem amigável ao usuário), enquanto o limite do Express passa a ser só a rede de segurança técnica, sempre maior que o teto de negócio.
-
-### 2) `backend/index.js` — corrigir o middleware global de erro para não mascarar tudo como 500
-
-Trocar:
-```js
-app.use((err, req, res, next) => {
-  console.error('❌ Erro Crítico:', err.stack);
-  res.status(500).json({ 
-    error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined 
-  });
-});
-```
-Por uma versão que preserva o status real de erros conhecidos (como `PayloadTooLargeError`, que já vem com `err.status`/`err.statusCode` = 413) e devolve uma mensagem amigável mesmo em produção para esse caso específico, sem vazar stack trace:
-
-```js
-app.use((err, req, res, next) => {
-  console.error('❌ Erro Crítico:', err.stack);
-
-  const status = err.status || err.statusCode || 500;
-
-  if (status === 413 || err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Arquivo excede o tamanho máximo permitido pelo servidor.' });
-  }
-
-  res.status(status).json({
-    error: status === 500 ? 'Erro interno do servidor' : (err.message || 'Erro na requisição'),
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-```
-
-Ajustar a mensagem/formato acima se necessário para manter consistência com o padrão de resposta de erro já usado no resto do projeto — o importante é: **não devolver 500 para erros que não são 500**, e **sempre incluir uma mensagem utilizável pelo frontend**, mesmo em produção, quando não houver risco de segurança nisso (como é o caso de "arquivo muito grande").
-
-### 3) `backend/routes/documentos.js` — carregar `put` junto com `del`, com mensagem clara se o módulo faltar
-
-Hoje `del` é importado com fallback seguro no topo do arquivo, mas `put` é importado com `require('@vercel/blob')` **dentro** do handler da rota `/blob-upload`, a cada requisição. Unificar os dois no mesmo bloco do topo:
-
-```js
-// IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
 let del = null;
 let put = null;
 try {
   ({ del, put } = require('@vercel/blob'));
 } catch (e) {
-  console.error('[documentos] Pacote @vercel/blob não encontrado no runtime:', e.message);
+  console.error('[documentos] Pacote @vercel/blob não encontrado no runtime:', e?.message || e);
 }
 ```
 
-E na rota `/blob-upload`, antes de tentar usar `put`, validar explicitamente:
-```js
-if (!put) {
-  return res.status(500).json({ error: 'Serviço de armazenamento de arquivos indisponível no momento.' });
-}
+## Causa raiz confirmada
+
+- `.gitignore` do projeto ignora `node_modules/` e `backend/node_modules/`.
+- **Porém `backend/node_modules/` está parcialmente versionado no git** (milhares de arquivos, incluindo `@supabase/supabase-js` inteiro) — commitados **antes** dessa regra do `.gitignore` existir. O `.gitignore` só impede adicionar arquivos *novos* às próximas alterações; não remove o que já estava rastreado.
+- `@vercel/blob` foi adicionado ao `backend/package.json` **depois** que o `.gitignore` já bloqueava `node_modules/`, então **nunca foi commitado** — ele existe apenas em `package.json`, não em `backend/node_modules/` versionado.
+- Como a Vercel, nesse projeto (sem `package.json` na raiz, sem "Install Command" customizado configurado), está efetivamente publicando o `backend/node_modules/` que está no próprio repositório em vez de rodar um `npm install` limpo a partir do `package.json`, o `@vercel/blob` nunca chega ao ambiente de produção — daí o `require()` falhar e `put`/`del` ficarem `null` sempre.
+
+## Objetivo
+
+Garantir que `@vercel/blob` (e qualquer dependência futura declarada em `package.json`) seja de fato instalado e disponibilizado no ambiente de produção da Vercel, resolvendo o problema pela raiz — não só para `@vercel/blob`, mas para evitar que isso se repita com a próxima dependência nova que for adicionada ao projeto.
+
+## Diagnóstico obrigatório antes de aplicar a correção
+
+1. Confirmar, no painel do projeto na Vercel, em **Settings → General → Build & Development Settings**, qual é o **Install Command** configurado (padrão do framework detectado, ou customizado). Se não houver `package.json` na raiz do projeto, é bem provável que a Vercel não esteja rodando nenhum install automaticamente para as functions, e por isso o projeto depende do `node_modules` já commitado.
+2. Confirmar isso rodando localmente `git log --follow -- backend/node_modules/@supabase` (ou qualquer subpasta de `backend/node_modules` rastreada) para ver a data do commit original que trouxe esses arquivos, comparando com a data em que `@vercel/blob` foi adicionado ao `package.json` — só para registrar o histórico, não é bloqueante para a correção.
+
+## Implementação esperada (escolher a Opção A — mais robusta e alinhada com boas práticas; a B é um remendo rápido)
+
+### Opção A (recomendada): parar de versionar `node_modules` e deixar a Vercel instalar de verdade
+
+1. **Remover `backend/node_modules/` do controle de versão** (sem apagar do disco local, só do git):
+   ```bash
+   git rm -r --cached backend/node_modules
+   git rm -r --cached frontend/node_modules 2>/dev/null || true
+   git rm -r --cached node_modules 2>/dev/null || true
+   ```
+   O `.gitignore` já cobre esses caminhos, então depois desse `rm --cached` eles não vão mais aparecer como pendentes.
+
+2. **Criar um `package.json` na raiz do projeto** (hoje não existe) para que a Vercel identifique corretamente onde estão as dependências do backend usado por `api/index.js`. Duas formas possíveis, usar a que exigir menos mudança estrutural:
+   - **A1 (mais simples):** mover/duplicar as dependências de `backend/package.json` para um `package.json` na raiz (ou apontar via `workspaces`/instalação nas duas pastas), garantindo que a Vercel rode `npm install` na raiz do projeto antes do build das functions.
+   - **A2:** configurar em `vercel.json` a opção `installCommand` explícita, por exemplo:
+     ```json
+     {
+       "installCommand": "npm install --prefix backend"
+     }
+     ```
+     Mantendo o restante do `vercel.json` (rewrites, crons) como já está.
+
+3. **Confirmar que `backend/package-lock.json` está atualizado e commitado**, incluindo `@vercel/blob`:
+   ```bash
+   cd backend
+   npm install
+   ```
+   Isso deve adicionar `@vercel/blob` ao lockfile (hoje ausente dele, apesar de estar em `package.json`). Commitar o `package-lock.json` atualizado.
+
+4. Fazer um novo deploy e confirmar, pelos logs de build da Vercel, que o passo de instalação (`npm install` ou equivalente) realmente roda e instala `@vercel/blob`.
+
+### Opção B (remendo rápido, só se não for possível mexer na configuração de build agora)
+
+Commitar manualmente a pasta `backend/node_modules/@vercel/blob` (e suas dependências transitivas) no git, **forçando** com `git add -f`, já que o `.gitignore` bloqueia:
+```bash
+git add -f backend/node_modules/@vercel/blob
+git commit -m "fix: adiciona @vercel/blob ao repositorio (dependencia ausente no deploy)"
 ```
-Isso evita depender de `require()` repetido a cada upload e dá uma mensagem clara caso o pacote não esteja disponível, em vez de um erro genérico de "Cannot find module".
-
-### 4) `frontend/js/clientes.js` — tratar erro real no upload (não falhar silenciosamente)
-
-No listener de `#upload-doc-cliente` (linha ~1281-1317), tratar explicitamente o caso `!res.ok`, lendo a mensagem de erro devolvida pelo backend e mostrando via `showToast`:
-
-```js
-const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    nome: file.name,
-    tipo: file.type,
-    base64: reader.result,
-    cliente_id: clienteId
-  })
-});
-
-const data = await res.json().catch(() => ({}));
-
-if (res.ok) {
-  showToast('Arquivo anexado!', 'success');
-  ClienteController.atualizarSessaoDocumentos(clienteId);
-} else {
-  showToast(data.error || 'Erro ao enviar arquivo.', 'error');
-}
-```
-
-Também resetar o valor do input após o upload (sucesso ou falha), para permitir selecionar o mesmo arquivo de novo em uma nova tentativa:
-```js
-e.target.value = '';
-```
-
-### 5) `frontend/js/clientes.js` — validação de tamanho no cliente (evitar upload fadado a falhar)
-
-Antes de iniciar o `FileReader`, validar o tamanho do arquivo contra o mesmo teto de negócio usado no backend (15MB), mostrando erro imediato sem gastar tempo/dados do usuário:
-
-```js
-const MAX_TAMANHO_DOCUMENTO = 15 * 1024 * 1024; // 15MB — deve bater com maximumSizeInBytes em documentos.js
-
-if (file.size > MAX_TAMANHO_DOCUMENTO) {
-  showToast('Arquivo excede o tamanho máximo permitido (15MB).', 'error');
-  e.target.value = '';
-  return;
-}
-```
-
-Inserir essa checagem logo após `if (!file || !clienteId) return;`, antes de criar o `FileReader`.
+Isso resolve o sintoma imediato, mas **não resolve o problema de fundo** (qualquer dependência nova adicionada no futuro vai sofrer do mesmo bug, silenciosamente, até alguém notar em produção). Usar a Opção B apenas como correção emergencial e planejar migrar para a Opção A depois.
 
 ## Não fazer
 
-- Não alterar a lógica de negócio de RBAC, autenticação ou nomes de tabelas/colunas.
-- Não alterar o fluxo de `/upload` (fallback Supabase Storage) nem `DELETE /:id`, exceto se algum ajuste de limite de body também os afetar — nesse caso, só ajustar o necessário para manter consistência.
-- Não reduzir o teto de negócio de 15MB sem confirmar com o usuário — apenas alinhar os limites técnicos para que os 15MB anunciados realmente funcionem.
+- Não remover `@supabase/supabase-js` nem qualquer outra dependência já commitada em `backend/node_modules` sem antes garantir (pela Opção A) que a Vercel vai instalar tudo corretamente a partir do `package.json` — remover sem essa garantia quebraria toda a aplicação, não só o upload.
+- Não alterar a lógica de negócio de `documentos.js`, `clientes.js` ou qualquer outra rota — o problema é 100% de infraestrutura/build, não de código de aplicação.
 
 ## Método de validação (obrigatório)
 
-1. Confirmar `BLOB_READ_WRITE_TOKEN` presente no projeto Vercel (Settings → Environment Variables) e o Blob Store conectado (Storage → Connect) — já reportado como conectado, apenas reconfirmar após o deploy.
-2. Testar upload de:
-   - um arquivo pequeno (ex.: 50KB) — deve funcionar como já funcionava;
-   - um arquivo médio (ex.: 5-8MB, o cenário que hoje quebra) — deve funcionar após a correção;
-   - um arquivo no limite (perto de 15MB) — deve funcionar;
-   - um arquivo acima de 15MB — deve ser bloqueado **no frontend**, com toast de erro claro, sem sequer chamar a API.
-3. Testar upload de cada tipo permitido (`pdf`, `jpeg`, `png`, `gif`, `doc`, `docx`, `xls`, `xlsx`, `txt`) e um tipo não permitido (deve dar erro 400 com mensagem clara).
-4. Forçar um erro proposital (ex.: comentar temporariamente o `put` para simular módulo ausente) e confirmar que a resposta é uma mensagem clara (não um 500 mudo) — depois reverter.
-5. Confirmar que a lista de documentos do cliente atualiza imediatamente após um upload com sucesso, sem precisar recarregar a página.
-6. Confirmar que download e exclusão continuam funcionando normalmente após todas as mudanças.
+1. Após o deploy, verificar nos **logs de build** da Vercel que a instalação de dependências rodou e incluiu `@vercel/blob` (procurar pelo nome do pacote no log de `npm install`).
+2. Testar upload de um arquivo pequeno (ex.: 50KB) na ficha do cliente e confirmar que:
+   - a resposta é `200`, não `500`;
+   - nos logs da function, agora aparece pelo menos uma chamada em **External APIs** (a chamada real ao Vercel Blob), diferente do "No outgoing requests" atual;
+   - o arquivo aparece na lista de "Documentos do Cliente" imediatamente.
+3. Testar download e exclusão do documento recém-enviado.
+4. Confirmar que nenhuma outra funcionalidade do sistema (login, clientes, processos, etc.) quebrou após a mudança na forma de instalar dependências.
 
 ## Critérios de aceitação
 
-- Upload de arquivos até 15MB funciona de ponta a ponta, sem 500.
-- Arquivos acima de 15MB são bloqueados no frontend antes mesmo de tentar o upload, com mensagem clara.
-- Qualquer erro de upload (tipo inválido, arquivo grande, falha no Blob, etc.) aparece como toast de erro legível para o usuário — nunca falha silenciosamente.
-- O middleware global de erro não devolve mais `500` para erros que na verdade são `413`/`400`/outros.
-- Nenhuma regressão em `GET /api/documentos`, `POST /api/documentos/upload` (fallback), `DELETE /api/documentos/:id`, ou em qualquer outra rota do backend.
+- `require('@vercel/blob')` resolve com sucesso em produção; `put` e `del` deixam de ser `null`.
+- Upload de documento do cliente funciona de ponta a ponta (200, arquivo salvo no Blob, registro salvo no Supabase, aparece na lista).
+- O processo de instalação de dependências da Vercel fica confiável para qualquer pacote novo adicionado no futuro (Opção A), evitando que esse tipo de bug se repita silenciosamente.
+- Nenhuma regressão em nenhuma outra rota ou página do sistema.
 
 ---
 
 # Checklist final
 
-- [ ] `backend/index.js`: limite do `express.json` aumentado para acomodar base64 de até 15MB reais.
-- [ ] `backend/index.js`: middleware global de erro preserva status reais (ex.: 413) e devolve mensagem útil.
-- [ ] `backend/routes/documentos.js`: `put` carregado junto com `del` no topo, com fallback claro se o módulo faltar.
-- [ ] `frontend/js/clientes.js`: erro de upload (`!res.ok`) tratado com toast real, input resetado após tentativa.
-- [ ] `frontend/js/clientes.js`: validação de tamanho (15MB) no cliente antes de iniciar o upload.
-- [ ] Testado com arquivos pequenos, médios (5-8MB), no limite (~15MB) e acima do limite.
-- [ ] Testado com todos os tipos de arquivo permitidos e um tipo não permitido.
-- [ ] Download e exclusão de documentos continuam funcionando normalmente.
+- [ ] Diagnóstico confirmado: `Install Command` da Vercel checado, ausência de `package.json` na raiz confirmada.
+- [ ] `backend/node_modules` removido do controle de versão (`git rm -r --cached`) — Opção A.
+- [ ] `package.json`/`installCommand` configurado para a Vercel instalar as dependências do backend corretamente — Opção A.
+- [ ] `backend/package-lock.json` atualizado com `@vercel/blob` e commitado.
+- [ ] Novo deploy feito e log de build confirmando instalação de `@vercel/blob`.
+- [ ] Upload de documento testado end-to-end (200, arquivo no Blob, aparece na lista).
+- [ ] Nenhuma outra funcionalidade do sistema quebrada após a mudança.
