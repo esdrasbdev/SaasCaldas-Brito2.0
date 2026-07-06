@@ -5,6 +5,7 @@
 
 import { supabase, initSupabase, getApiUrl } from './supabase.js';
 
+
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js'; // Novo sistema de avisos
 
@@ -451,7 +452,7 @@ const ClienteView = {
         listaEl.innerHTML = '';
       }
       showToast('Erro ao carregar documentos do cliente.', 'error');
-    }
+}
   },
 
   // Central de Documentos Jurídicos (jsPDF download)
@@ -1291,46 +1292,43 @@ const ClienteController = {
           return;
         }
 
-        const reader = new FileReader();
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
 
-        reader.onload = async () => {
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+          // Upload via multipart/form-data (evita 413 de body JSON/base64 no runtime)
+          const form = new FormData();
+          form.append('file', file);
+          form.append('nome', file.name);
+          form.append('tipo', file.type);
+          form.append('cliente_id', clienteId);
 
-            // Payload enviado como base64 para suportar upload para Blob (endpoint dedicado)
-            const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                nome: file.name,
-                tipo: file.type,
-                base64: reader.result,
-                cliente_id: clienteId
-              })
-            });
+          const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: form
+          });
 
-            const data = await res.json().catch(() => ({}));
+          const data = await res.json().catch(() => ({}));
 
-            if (res.ok) {
-              showToast('Arquivo anexado!', 'success');
-              ClienteController.atualizarSessaoDocumentos(clienteId);
-            } else {
-              showToast(data.error || 'Erro ao enviar arquivo.', 'error');
-            }
-          } catch (err) {
-            showToast('Erro no upload', 'error');
+          if (res.ok) {
+            showToast('Arquivo anexado!', 'success');
+            ClienteController.atualizarSessaoDocumentos(clienteId);
+          } else {
+            showToast(data.error || 'Erro ao enviar arquivo.', 'error');
           }
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+          console.error(err);
+          showToast('Erro no upload', 'error');
+        }
 
         // permite selecionar o mesmo arquivo novamente na próxima tentativa
         e.target.value = '';
       }
     });
+
 
 
 

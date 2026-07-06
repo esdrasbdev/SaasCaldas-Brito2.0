@@ -28,8 +28,10 @@ app.use(cors({
 // Para suportar ~15MB reais em base64 (≈ 20,5MB) com overhead de JSON, usamos um limite maior.
 // Limite do body para suportar upload base64 (aprox. 15MB arquivo + overhead de base64/json)
 // Aumentamos para reduzir chance de 413 no runtime/serverless.
+// Para endpoints multipart não precisa do body parser JSON.
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ extended: true, limit: '60mb' }));
+
 
 
 

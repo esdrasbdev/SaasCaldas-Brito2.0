@@ -68,15 +68,77 @@ router.post('/blob-upload', async (req, res) => {
       return res.status(401).json({ error: 'Não autenticado.' });
     }
 
-    const { cliente_id, nome, tipo, base64 } = req.body || {};
+    const Busboy = require('busboy');
 
+    // Espera multipart/form-data com:
+    // - file (campo 'file')
+    // - cliente_id
+    // - nome (opcional)
+    // - tipo (opcional)
+    const { cliente_id, nome: nomeForm, tipo: tipoForm } = req.body || {};
+
+    // req.body pode não vir dependendo do runtime; então coletamos também via multipart
     if (!cliente_id) {
+      // seguimos e validamos após coletar os campos do multipart
+    }
+
+    const maxFileSizeBytes = 15 * 1024 * 1024; // 15MB
+
+    const { fields, file } = await new Promise((resolve, reject) => {
+      const bb = Busboy({ headers: req.headers, limits: { fileSize: maxFileSizeBytes } });
+
+      const fieldsLocal = {};
+      let fileLocal = null;
+
+      bb.on('field', (name, val) => {
+        fieldsLocal[name] = val;
+      });
+
+      bb.on('file', (name, stream, filename, encoding, mimeType) => {
+        const chunks = [];
+        let total = 0;
+
+        stream.on('data', (d) => {
+          total += d.length;
+          if (total > maxFileSizeBytes) {
+            stream.resume();
+            reject(Object.assign(new Error('Arquivo excede o tamanho máximo (15MB).'), { status: 400 }));
+            return;
+          }
+          chunks.push(d);
+        });
+
+        stream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          fileLocal = {
+            fieldname: name,
+            filename,
+            mimeType,
+            buffer,
+            size: total
+          };
+        });
+
+        stream.on('error', (err) => reject(err));
+      });
+
+      bb.on('finish', () => resolve({ fields: fieldsLocal, file: fileLocal }));
+      bb.on('error', (err) => reject(err));
+
+      req.pipe(bb);
+    });
+
+    const clienteIdFinal = fields.cliente_id || cliente_id;
+    if (!clienteIdFinal) {
       return res.status(400).json({ error: 'cliente_id é obrigatório.' });
     }
 
-    if (!base64) {
+    if (!file) {
       return res.status(400).json({ error: 'Arquivo não enviado.' });
     }
+
+    const nome = nomeForm || file.filename || 'documento';
+    const tipo = tipoForm || file.mimeType;
 
     // Limites (ajustáveis)
     const allowedContentTypes = [
@@ -95,16 +157,8 @@ router.post('/blob-upload', async (req, res) => {
       return res.status(400).json({ error: 'Tipo de arquivo não permitido.' });
     }
 
-    // Estimativa de tamanho (base64)
-    const base64Part = String(base64).split(',')[1] || String(base64);
-    const sizeBytes = Math.floor((base64Part.length * 3) / 4);
-    const maximumSizeInBytes = 15 * 1024 * 1024; // 15MB
+    const arquivoBuffer = file.buffer;
 
-    if (sizeBytes > maximumSizeInBytes) {
-      return res.status(400).json({ error: 'Arquivo excede o tamanho máximo (15MB).' });
-    }
-
-    const arquivoBuffer = Buffer.from(base64Part, 'base64');
 
     if (!put) {
       return res.status(500).json({

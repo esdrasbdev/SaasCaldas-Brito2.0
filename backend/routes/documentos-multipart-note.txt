@@ -1,0 +1,6 @@
+Plano de correção simples (sem mexer demais):
+1) Front: enviar multipart/form-data com FormData contendo o arquivo.
+2) Backend: substituir leitura de base64 por parser multipart (busboy) e manter o restante do fluxo (valida tipo, usa @vercel/blob put(), insere em Supabase).
+
+O objetivo é eliminar o 413 causado pelo payload JSON/base64.
+
