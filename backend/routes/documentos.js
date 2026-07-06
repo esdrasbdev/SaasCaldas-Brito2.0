@@ -45,6 +45,12 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/documentos/blob-upload
+// (rota existe apenas como POST; handler para evitar 401 confuso)
+router.get('/blob-upload', (req, res) => {
+  res.status(405).json({ error: 'Use POST /api/documentos/blob-upload (Authorization obrigatório).' });
+});
+
 // POST /api/documentos/blob-upload
 // Upload direto do cliente -> Vercel Blob (evita limites de payload serverless)
 router.post('/blob-upload', async (req, res) => {
