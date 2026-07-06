@@ -87,6 +87,10 @@ app.use('/api/processos', authMiddleware, processosRouter);
 const documentosRouter = require('./routes/documentos.js');
 app.use('/api/documentos', authMiddleware, documentosRouter);
 
+const documentosDebugRouter = require('./routes/documentos-debug.js');
+app.use('/api/documentos', authMiddleware, documentosDebugRouter);
+
+
 const audienciasRouter = require('./routes/audiencias.js');
 app.use('/api/audiencias', authMiddleware, audienciasRouter);
 
