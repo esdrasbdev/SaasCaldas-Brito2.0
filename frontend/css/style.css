@@ -1190,7 +1190,8 @@ body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: 
 }
 
 .seletor-responsaveis::before {
-  content: '\\f002';
+  content: '\f002';
+
   font-family: 'Font Awesome 6 Free';
   font-weight: 900;
   position: absolute;

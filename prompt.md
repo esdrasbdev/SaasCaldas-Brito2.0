@@ -1,126 +1,423 @@
-# PROMPT.md — `@vercel/blob` não está disponível no runtime da Vercel (causa raiz do 500 no upload)
+# PROMPT — Corrigir upload de Documentos do Cliente (500) + Vercel Blob + ícone quebrado no seletor de responsáveis
 
-## Contexto
+Repositório: `SaasCaldas-Brito2.0`
 
-Analise integralmente antes de alterar.
+Este prompt foi escrito após analisar o código-fonte real do projeto (`backend/index.js`, `backend/routes/documentos.js`, `backend/routes/documentos-debug.js`, `backend/middleware/auth.js`, `backend/supabase.js`, `frontend/js/clientes.js`, `frontend/css/style.css`, `package.json` e fluxo completo de upload).
 
-**Repositório:**
-https://github.com/esdrasbdev/SaasCaldas-Brito2.0.git
+## IMPORTANTE
 
-Este prompt resolve a causa raiz definitiva do erro 500 em `POST /api/documentos/blob-upload`, confirmada pelos logs da Vercel:
+O projeto **NÃO utiliza Supabase Storage**.
 
-```
-Execution Duration: 20ms
-External APIs: No outgoing requests
-```
+Toda a persistência de arquivos deve ocorrer **exclusivamente através do Vercel Blob**.
 
-Execução extremamente curta e nenhuma chamada externa feita = a function nunca chegou a chamar o Vercel Blob. Isso só acontece no seguinte trecho de `backend/routes/documentos.js`:
+A tabela `documentos` do Supabase serve apenas para armazenar os metadados do arquivo (nome, URL, tamanho, cliente, usuário etc.).
 
-```js
-if (!put) {
-  return res.status(500).json({
-    error: 'Serviço de armazenamento de arquivos indisponível no momento.'
-  });
-}
-```
+Portanto:
 
-`put` está `null` porque, no topo do arquivo, o `require('@vercel/blob')` está falhando e caindo no `catch`:
-```js
-let del = null;
-let put = null;
-try {
-  ({ del, put } = require('@vercel/blob'));
-} catch (e) {
-  console.error('[documentos] Pacote @vercel/blob não encontrado no runtime:', e?.message || e);
-}
-```
+* remover qualquer fallback para Supabase Storage;
+* remover dependências de bucket `documentos`;
+* concentrar toda a correção no funcionamento correto do `@vercel/blob`.
 
-## Causa raiz confirmada
-
-- `.gitignore` do projeto ignora `node_modules/` e `backend/node_modules/`.
-- **Porém `backend/node_modules/` está parcialmente versionado no git** (milhares de arquivos, incluindo `@supabase/supabase-js` inteiro) — commitados **antes** dessa regra do `.gitignore` existir. O `.gitignore` só impede adicionar arquivos *novos* às próximas alterações; não remove o que já estava rastreado.
-- `@vercel/blob` foi adicionado ao `backend/package.json` **depois** que o `.gitignore` já bloqueava `node_modules/`, então **nunca foi commitado** — ele existe apenas em `package.json`, não em `backend/node_modules/` versionado.
-- Como a Vercel, nesse projeto (sem `package.json` na raiz, sem "Install Command" customizado configurado), está efetivamente publicando o `backend/node_modules/` que está no próprio repositório em vez de rodar um `npm install` limpo a partir do `package.json`, o `@vercel/blob` nunca chega ao ambiente de produção — daí o `require()` falhar e `put`/`del` ficarem `null` sempre.
-
-## Objetivo
-
-Garantir que `@vercel/blob` (e qualquer dependência futura declarada em `package.json`) seja de fato instalado e disponibilizado no ambiente de produção da Vercel, resolvendo o problema pela raiz — não só para `@vercel/blob`, mas para evitar que isso se repita com a próxima dependência nova que for adicionada ao projeto.
-
-## Diagnóstico obrigatório antes de aplicar a correção
-
-1. Confirmar, no painel do projeto na Vercel, em **Settings → General → Build & Development Settings**, qual é o **Install Command** configurado (padrão do framework detectado, ou customizado). Se não houver `package.json` na raiz do projeto, é bem provável que a Vercel não esteja rodando nenhum install automaticamente para as functions, e por isso o projeto depende do `node_modules` já commitado.
-2. Confirmar isso rodando localmente `git log --follow -- backend/node_modules/@supabase` (ou qualquer subpasta de `backend/node_modules` rastreada) para ver a data do commit original que trouxe esses arquivos, comparando com a data em que `@vercel/blob` foi adicionado ao `package.json` — só para registrar o histórico, não é bloqueante para a correção.
-
-## Implementação esperada (escolher a Opção A — mais robusta e alinhada com boas práticas; a B é um remendo rápido)
-
-### Opção A (recomendada): parar de versionar `node_modules` e deixar a Vercel instalar de verdade
-
-1. **Remover `backend/node_modules/` do controle de versão** (sem apagar do disco local, só do git):
-   ```bash
-   git rm -r --cached backend/node_modules
-   git rm -r --cached frontend/node_modules 2>/dev/null || true
-   git rm -r --cached node_modules 2>/dev/null || true
-   ```
-   O `.gitignore` já cobre esses caminhos, então depois desse `rm --cached` eles não vão mais aparecer como pendentes.
-
-2. **Criar um `package.json` na raiz do projeto** (hoje não existe) para que a Vercel identifique corretamente onde estão as dependências do backend usado por `api/index.js`. Duas formas possíveis, usar a que exigir menos mudança estrutural:
-   - **A1 (mais simples):** mover/duplicar as dependências de `backend/package.json` para um `package.json` na raiz (ou apontar via `workspaces`/instalação nas duas pastas), garantindo que a Vercel rode `npm install` na raiz do projeto antes do build das functions.
-   - **A2:** configurar em `vercel.json` a opção `installCommand` explícita, por exemplo:
-     ```json
-     {
-       "installCommand": "npm install --prefix backend"
-     }
-     ```
-     Mantendo o restante do `vercel.json` (rewrites, crons) como já está.
-
-3. **Confirmar que `backend/package-lock.json` está atualizado e commitado**, incluindo `@vercel/blob`:
-   ```bash
-   cd backend
-   npm install
-   ```
-   Isso deve adicionar `@vercel/blob` ao lockfile (hoje ausente dele, apesar de estar em `package.json`). Commitar o `package-lock.json` atualizado.
-
-4. Fazer um novo deploy e confirmar, pelos logs de build da Vercel, que o passo de instalação (`npm install` ou equivalente) realmente roda e instala `@vercel/blob`.
-
-### Opção B (remendo rápido, só se não for possível mexer na configuração de build agora)
-
-Commitar manualmente a pasta `backend/node_modules/@vercel/blob` (e suas dependências transitivas) no git, **forçando** com `git add -f`, já que o `.gitignore` bloqueia:
-```bash
-git add -f backend/node_modules/@vercel/blob
-git commit -m "fix: adiciona @vercel/blob ao repositorio (dependencia ausente no deploy)"
-```
-Isso resolve o sintoma imediato, mas **não resolve o problema de fundo** (qualquer dependência nova adicionada no futuro vai sofrer do mesmo bug, silenciosamente, até alguém notar em produção). Usar a Opção B apenas como correção emergencial e planejar migrar para a Opção A depois.
-
-## Não fazer
-
-- Não remover `@supabase/supabase-js` nem qualquer outra dependência já commitada em `backend/node_modules` sem antes garantir (pela Opção A) que a Vercel vai instalar tudo corretamente a partir do `package.json` — remover sem essa garantia quebraria toda a aplicação, não só o upload.
-- Não alterar a lógica de negócio de `documentos.js`, `clientes.js` ou qualquer outra rota — o problema é 100% de infraestrutura/build, não de código de aplicação.
-
-## Método de validação (obrigatório)
-
-1. Após o deploy, verificar nos **logs de build** da Vercel que a instalação de dependências rodou e incluiu `@vercel/blob` (procurar pelo nome do pacote no log de `npm install`).
-2. Testar upload de um arquivo pequeno (ex.: 50KB) na ficha do cliente e confirmar que:
-   - a resposta é `200`, não `500`;
-   - nos logs da function, agora aparece pelo menos uma chamada em **External APIs** (a chamada real ao Vercel Blob), diferente do "No outgoing requests" atual;
-   - o arquivo aparece na lista de "Documentos do Cliente" imediatamente.
-3. Testar download e exclusão do documento recém-enviado.
-4. Confirmar que nenhuma outra funcionalidade do sistema (login, clientes, processos, etc.) quebrou após a mudança na forma de instalar dependências.
-
-## Critérios de aceitação
-
-- `require('@vercel/blob')` resolve com sucesso em produção; `put` e `del` deixam de ser `null`.
-- Upload de documento do cliente funciona de ponta a ponta (200, arquivo salvo no Blob, registro salvo no Supabase, aparece na lista).
-- O processo de instalação de dependências da Vercel fica confiável para qualquer pacote novo adicionado no futuro (Opção A), evitando que esse tipo de bug se repita silenciosamente.
-- Nenhuma regressão em nenhuma outra rota ou página do sistema.
+Existem **4 problemas**.
 
 ---
 
-# Checklist final
+# BUG 1 — Remover completamente o fallback para Supabase Storage
 
-- [ ] Diagnóstico confirmado: `Install Command` da Vercel checado, ausência de `package.json` na raiz confirmada.
-- [ ] `backend/node_modules` removido do controle de versão (`git rm -r --cached`) — Opção A.
-- [ ] `package.json`/`installCommand` configurado para a Vercel instalar as dependências do backend corretamente — Opção A.
-- [ ] `backend/package-lock.json` atualizado com `@vercel/blob` e commitado.
-- [ ] Novo deploy feito e log de build confirmando instalação de `@vercel/blob`.
-- [ ] Upload de documento testado end-to-end (200, arquivo no Blob, aparece na lista).
-- [ ] Nenhuma outra funcionalidade do sistema quebrada após a mudança.
+Arquivo:
+
+```
+backend/routes/documentos.js
+```
+
+Hoje existe uma lógica semelhante a:
+
+```js
+try {
+    // upload para Vercel Blob
+}
+catch {
+    // fallback para Supabase Storage
+}
+```
+
+Esse fallback está incorreto por dois motivos:
+
+* não existe bucket de Storage sendo utilizado pelo projeto;
+* o frontend nunca deveria depender do Storage do Supabase.
+
+A consequência é que qualquer erro do Blob produz mensagens como:
+
+> Falha no upload: @vercel/blob indisponível e fallback no Supabase também falhou.
+
+Esse fluxo deve desaparecer completamente.
+
+### Ação
+
+Eliminar toda lógica relacionada a:
+
+```js
+storage.from(...)
+storage.upload(...)
+storage.remove(...)
+bucket documentos
+fallback
+```
+
+O fluxo correto passa a ser:
+
+```
+Recebe arquivo
+↓
+
+Upload exclusivamente para Vercel Blob
+
+↓
+
+Obtém URL retornada pelo Blob
+
+↓
+
+Insere registro na tabela documentos
+
+↓
+
+Retorna sucesso
+```
+
+Se o upload do Blob falhar:
+
+* retornar erro imediatamente;
+* não tentar nenhum fallback.
+
+Exemplo:
+
+```js
+try {
+
+    const blob = await put(...);
+
+    ...
+
+}
+catch (err) {
+
+    return res.status(500).json({
+        error: err.message
+    });
+
+}
+```
+
+---
+
+# BUG 2 — Inserções na tabela documentos devem usar supabaseAdmin
+
+O projeto possui RLS habilitado.
+
+Como o backend já executa:
+
+```
+authMiddleware
+```
+
+antes dessas rotas, o correto é utilizar o client administrativo para persistir metadados.
+
+Em `documentos.js`, substituir:
+
+```js
+supabasePublic
+```
+
+por
+
+```js
+supabaseAdmin
+```
+
+nas operações da tabela:
+
+* INSERT
+* SELECT
+* DELETE
+* UPDATE (caso exista)
+
+O objetivo é evitar problemas de RLS durante a gravação dos metadados.
+
+**Importante**
+
+Isso **não significa voltar a utilizar Supabase Storage**.
+
+O `supabaseAdmin` deve ser usado **somente para a tabela `documentos`**.
+
+Nenhum upload deve acontecer pelo Supabase.
+
+---
+
+# BUG 3 — Garantir funcionamento do @vercel/blob em produção
+
+O frontend chama exclusivamente:
+
+```
+POST /api/documentos/blob-upload
+```
+
+Foi confirmado que:
+
+```
+/api/documentos/upload
+```
+
+não é utilizado por nenhum arquivo JavaScript.
+
+É código morto.
+
+## Ação 1
+
+Remover completamente:
+
+```
+router.post('/upload')
+```
+
+caso ele ainda exista.
+
+Todo upload deve passar apenas por:
+
+```
+blob-upload
+```
+
+---
+
+## Ação 2
+
+Revisar toda inicialização do Blob.
+
+Verificar:
+
+* importação do pacote;
+* resolução do módulo;
+* leitura da variável de ambiente.
+
+Conferir especialmente:
+
+```js
+const { put } = require('@vercel/blob');
+```
+
+ou equivalente.
+
+Não utilizar importações condicionais desnecessárias.
+
+---
+
+## Ação 3
+
+Revisar todo o backend procurando referências a:
+
+```
+BLOB_READ_WRITE_TOKEN
+
+@vercel/blob
+
+put(...)
+
+del(...)
+
+head(...)
+```
+
+Garantir que:
+
+* nenhuma variável antiga esteja sendo usada;
+* nenhuma referência ao Storage do Supabase permaneça.
+
+---
+
+## Ação 4
+
+Atualizar a rota de diagnóstico
+
+```
+/api/documentos/debug-blob
+```
+
+Ela deve informar claramente:
+
+```json
+{
+    "moduleResolved": true,
+    "tokenPresent": true,
+    "environment": "production",
+    "error": null
+}
+```
+
+Caso exista erro, retornar a mensagem completa.
+
+---
+
+## Ação 5
+
+Se:
+
+```
+moduleResolved = false
+```
+
+o problema é build/cache.
+
+Se:
+
+```
+tokenPresent = false
+```
+
+o problema é variável de ambiente.
+
+A rota deve deixar isso evidente.
+
+---
+
+# BUG 4 — texto "f002" aparece acima da busca de responsáveis
+
+Arquivo:
+
+```
+frontend/css/style.css
+```
+
+Hoje existe:
+
+```css
+content: '\\f002';
+```
+
+Corrigir para:
+
+```css
+content: '\f002';
+```
+
+Essa é a única ocorrência desse erro no projeto.
+
+---
+
+# Limpeza de código
+
+Como o projeto utiliza apenas Vercel Blob, remover tudo que não faz mais sentido.
+
+Excluir:
+
+* comentários sobre fallback;
+* comentários sobre bucket;
+* comentários sobre Supabase Storage;
+* imports inutilizados;
+* funções mortas;
+* código não referenciado.
+
+Também verificar se existe algo semelhante a:
+
+```js
+uploadSupabase()
+
+uploadStorage()
+
+fallbackUpload()
+```
+
+Caso exista, remover.
+
+---
+
+# Fluxo final esperado
+
+O upload deverá seguir exatamente este fluxo:
+
+```
+Frontend
+
+↓
+
+POST /api/documentos/blob-upload
+
+↓
+
+@vercel/blob
+
+↓
+
+arquivo salvo
+
+↓
+
+URL retornada pelo Blob
+
+↓
+
+supabaseAdmin
+
+↓
+
+INSERT na tabela documentos
+
+↓
+
+200 OK
+```
+
+Não deve existir nenhum caminho alternativo.
+
+---
+
+# Ordem recomendada
+
+1. Remover completamente o fallback para Supabase Storage.
+2. Remover qualquer código morto relacionado ao endpoint `/upload`.
+3. Garantir que apenas `/blob-upload` permaneça.
+4. Ajustar todas as operações da tabela `documentos` para `supabaseAdmin`.
+5. Revisar todas as referências ao `@vercel/blob`.
+6. Melhorar `/debug-blob`.
+7. Corrigir `content: '\f002'`.
+8. Limpar imports e funções mortas.
+9. Commit.
+10. Deploy na Vercel **sem utilizar Build Cache**.
+
+---
+
+# Resultado esperado
+
+Após as alterações:
+
+* ✅ Upload funcionando exclusivamente via Vercel Blob.
+* ✅ Nenhuma dependência de Supabase Storage.
+* ✅ Inserções na tabela `documentos` funcionando via `supabaseAdmin`.
+* ✅ `/api/documentos/debug-blob` identificando corretamente problemas de módulo ou variável de ambiente.
+* ✅ Endpoint `/upload` removido (caso exista).
+* ✅ Código morto eliminado.
+* ✅ Ícone de lupa exibido corretamente, sem o texto `"f002"`.
+
+---
+
+## Convenções do projeto
+
+Preservar:
+
+* JavaScript puro (CommonJS/Node.js conforme o projeto atual);
+* comentários em português;
+* Font Awesome 6 Free;
+* RBAC existente;
+* arquitetura:
+
+```
+Frontend
+        ↓
+Express
+        ↓
+Vercel Blob (arquivos)
+        ↓
+Supabase (Postgres/Auth apenas para dados)
+```
+
+**Não reintroduzir Supabase Storage em nenhuma parte do fluxo.**

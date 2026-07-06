@@ -36,16 +36,13 @@ router.get('/debug-blob', async (req, res) => {
     },
     blob: {
       moduleResolved: !!put,
-      putType: typeof put,
-      delType: typeof del,
-      env: {
-        BLOB_READ_WRITE_TOKEN_PRESENT: !!process.env.BLOB_READ_WRITE_TOKEN,
-        BLOB_READ_WRITE_TOKEN_LENGTH: process.env.BLOB_READ_WRITE_TOKEN
-          ? String(process.env.BLOB_READ_WRITE_TOKEN).length
-          : 0
-      },
-      importError: blobImportError ? safeMessage(blobImportError) : null
+      tokenPresent: !!process.env.BLOB_READ_WRITE_TOKEN,
+      environment: process.env.NODE_ENV || 'production',
+      error: blobImportError ? safeMessage(blobImportError) : null
     },
+
+
+
 
     auth: {
       userId: req.user?.id || null,

@@ -5,7 +5,12 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { supabasePublic } = require('../supabase');
+const { supabaseAdmin } = require('../supabase');
+
+
+
+
+
 
 // IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
 let del = null;
@@ -21,19 +26,23 @@ router.use(auth);
 
 // GET /api/documentos
 router.get('/', async (req, res) => {
-
   try {
+
     const { cliente_id } = req.query;
 
+
     // Constrói a query base
-    let query = supabasePublic
+    let query = supabaseAdmin
       .from('documentos')
       .select('*, clientes(nome), processos(numero_cnj), usuarios(nome)');
+
 
     // Se houver cliente_id, filtra os documentos específicos
     if (cliente_id) {
       query = query.eq('cliente_id', cliente_id);
     }
+
+
 
     const { data, error } = await query.order('criado_em', { ascending: false });
 
@@ -98,44 +107,19 @@ router.post('/blob-upload', async (req, res) => {
     const arquivoBuffer = Buffer.from(base64Part, 'base64');
 
     if (!put) {
-      // Fallback: se Vercel Blob não estiver disponível, salva no Supabase Storage.
-      const fileName = `${Date.now()}_${nome || 'documento'}`;
-      const { error: storageError } = await supabasePublic.storage
-        .from('documentos')
-        .upload(fileName, arquivoBuffer, { contentType: tipo, upsert: true });
-
-      if (storageError) {
-        return res.status(500).json({
-          error: 'Falha no upload: @vercel/blob indisponível e fallback no Supabase também falhou.',
-          hint: 'O pacote @vercel/blob não está disponível no runtime.'
-        });
-      }
-
-      const { data: { publicUrl } } = supabasePublic.storage
-        .from('documentos')
-        .getPublicUrl(fileName);
-
-      const { data: dbData, error: dbError } = await supabasePublic
-        .from('documentos')
-        .insert({
-          nome: nome || 'documento',
-          url: publicUrl,
-          tipo,
-          cliente_id,
-          upload_por: req.user.id
-        })
-        .select()
-        .single();
-
-      if (dbError) throw dbError;
-      return res.json(dbData);
+      return res.status(500).json({
+        error: 'Falha no upload: @vercel/blob indisponível no runtime.',
+        hint: 'Verifique se o pacote @vercel/blob e a variável BLOB_READ_WRITE_TOKEN estão disponíveis no build/deploy.'
+      });
     }
 
     // @vercel/blob: para upload feito a partir do servidor, usar put()
+
     const blob = await put(nome || 'documento', arquivoBuffer, {
       access: 'public',
       contentType: tipo
     });
+
 
 
     const url = blob.url;
@@ -145,9 +129,10 @@ router.post('/blob-upload', async (req, res) => {
       throw new Error('Falha ao gerar URL no Blob.');
     }
 
-    const { data: dbData, error: dbError } = await supabasePublic
+    const { data: dbData, error: dbError } = await supabaseAdmin
       .from('documentos')
       .insert({
+
         nome: nome || 'documento',
         url,
         tipo,
@@ -166,51 +151,7 @@ router.post('/blob-upload', async (req, res) => {
   }
 });
 
-// POST /api/documentos/upload
-// Recebe arquivo em Base64 para fallback (arquivos menores)
-router.post('/upload', async (req, res) => {
-  try {
-    const { nome, arquivo, tipo, cliente_id, processo_id } = req.body;
 
-    if (!arquivo) return res.status(400).json({ error: 'Arquivo não enviado' });
-
-    // 1. Upload para o Storage do Supabase
-    const fileName = `${Date.now()}_${nome}`;
-    const fileBuffer = Buffer.from(arquivo.split(',')[1] || arquivo, 'base64');
-
-    const { error: storageError } = await supabasePublic.storage
-      .from('documentos')
-      .upload(fileName, fileBuffer, { contentType: tipo, upsert: true });
-
-    if (storageError) throw storageError;
-
-    // 2. Obtém URL pública
-    const { data: { publicUrl } } = supabasePublic.storage
-      .from('documentos')
-      .getPublicUrl(fileName);
-
-    // 3. Salva referência no banco de dados
-    const { data: dbData, error: dbError } = await supabasePublic
-      .from('documentos')
-      .insert([{
-        nome: nome,
-        url: publicUrl,
-        tipo: tipo,
-        cliente_id: cliente_id || null,
-        processo_id: processo_id || null,
-        upload_por: req.user.id
-      }])
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-
-    res.json(dbData);
-  } catch (error) {
-    console.error('Erro Upload:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 
 // DELETE /api/documentos/:id
@@ -219,27 +160,25 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     // 1. Busca dados do documento para remover o arquivo físico do Storage
-    const { data: doc } = await supabasePublic
+    const { data: doc } = await supabaseAdmin
+
       .from('documentos')
+
       .select('url')
       .eq('id', id)
       .single();
 
     if (doc?.url) {
-      // Se for Blob, tenta remover via Vercel Blob; caso contrário remove do Supabase Storage.
       try {
         await del(doc.url);
       } catch (_) {
-        try {
-          const fileName = doc.url.split('/').pop();
-          await supabasePublic.storage.from('documentos').remove([fileName]);
-        } catch (e2) {
-          // não bloqueia remoção do registro
-        }
+        // não bloqueia remoção do registro
       }
     }
 
-    const { error } = await supabasePublic.from('documentos').delete().eq('id', id);
+
+    const { error } = await supabaseAdmin.from('documentos').delete().eq('id', id);
+
 
     if (error) throw error;
 
