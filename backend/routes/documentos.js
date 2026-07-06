@@ -92,9 +92,37 @@ router.post('/blob-upload', async (req, res) => {
     const arquivoBuffer = Buffer.from(base64Part, 'base64');
 
     if (!put) {
-      return res.status(500).json({
-        error: 'Serviço de armazenamento de arquivos indisponível no momento.'
-      });
+      // Fallback: se Vercel Blob não estiver disponível, salva no Supabase Storage.
+      const fileName = `${Date.now()}_${nome || 'documento'}`;
+      const { error: storageError } = await supabasePublic.storage
+        .from('documentos')
+        .upload(fileName, arquivoBuffer, { contentType: tipo, upsert: true });
+
+      if (storageError) {
+        return res.status(500).json({
+          error: 'Falha no upload: @vercel/blob indisponível e fallback no Supabase também falhou.',
+          hint: 'O pacote @vercel/blob não está disponível no runtime.'
+        });
+      }
+
+      const { data: { publicUrl } } = supabasePublic.storage
+        .from('documentos')
+        .getPublicUrl(fileName);
+
+      const { data: dbData, error: dbError } = await supabasePublic
+        .from('documentos')
+        .insert({
+          nome: nome || 'documento',
+          url: publicUrl,
+          tipo,
+          cliente_id,
+          upload_por: req.user.id
+        })
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+      return res.json(dbData);
     }
 
     // @vercel/blob: para upload feito a partir do servidor, usar put()
