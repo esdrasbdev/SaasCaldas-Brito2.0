@@ -93,6 +93,7 @@ app.use('/api/documentos', documentosDebugRouter);
 
 
 
+
 const audienciasRouter = require('./routes/audiencias.js');
 app.use('/api/audiencias', authMiddleware, audienciasRouter);
 

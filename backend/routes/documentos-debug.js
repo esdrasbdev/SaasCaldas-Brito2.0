@@ -18,16 +18,6 @@ try {
   blobImportError = e;
 }
 
-let supabaseAdmin = null;
-let getAdminClient = null;
-try {
-  const sup = require('../supabase');
-  supabaseAdmin = sup?.supabaseAdmin || null;
-  getAdminClient = sup?.getAdminClient;
-} catch (e) {
-  // se supabase.js falhar por falta de env, o endpoint ainda deve responder o estado do blob
-}
-
 function safeMessage(err) {
   if (!err) return null;
   return err?.message || String(err);
@@ -56,11 +46,7 @@ router.get('/debug-blob', async (req, res) => {
       },
       importError: blobImportError ? safeMessage(blobImportError) : null
     },
-    supabase: {
-      supabaseAdmin_present: !!supabaseAdmin,
-      supabaseAdmin_info: supabaseAdmin ? 'service-role client exists' : null,
-      getAdminClient_isSupabaseAdmin: !!getAdminClient
-    },
+
     auth: {
       userId: req.user?.id || null,
       userEmail: req.user?.email || null,
