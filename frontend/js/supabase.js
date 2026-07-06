@@ -7,11 +7,20 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 export const getApiUrl = () => {
-  // Backend local (Express/Railway) usa a mesma origem em produção.
-  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3001/api'
-    : '/api';
+  // Backend local (Express/Railway)
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocal) return 'http://localhost:3001/api';
+
+  // Produção: evita basePath ambíguo (alguns deploys/iframes/caminhos causam 404 em '/api')
+  // Prioriza um override explícito se existir.
+  const override = window.__API_BASE_URL || window.__API_BASE_URL__;
+  if (override && typeof override === 'string') {
+    return override.replace(/\/$/, '') + '/api';
+  }
+
+  return `${window.location.origin}/api`;
 };
+
 
 let _client = null;
 let _initPromise = null;
