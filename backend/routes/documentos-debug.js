@@ -23,17 +23,14 @@ function safeMessage(err) {
   return err?.message || String(err);
 }
 
-router.use(auth);
-
-// GET /api/documentos/debug-blob
-// Retorna estado do @vercel/blob e supabaseAdmin.
+// Não exige autenticação para diagnosticar falhas de runtime em produção.
 router.get('/debug-blob', async (req, res) => {
   const result = {
     ok: true,
     runtime: {
       node: process.version,
       vercelEnv: {
-        VERCEl?: process.env.VERCEL,
+        VERCEL: process.env.VERCEL,
         NODE_ENV: process.env.NODE_ENV,
       },
     },
