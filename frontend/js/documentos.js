@@ -88,7 +88,8 @@ const DocumentosUI = {
       const reader = new FileReader();
       reader.onload = async () => {
         const token = localStorage.getItem('supabaseToken');
-        const res = await fetch(`${getApiUrl()}/documentos/upload`, {
+        const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
+
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
