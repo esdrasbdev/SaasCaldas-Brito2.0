@@ -26,8 +26,11 @@ app.use(cors({
 // Parser JSON para bodies das requisições
 // Upload de documentos é enviado como base64 dentro de JSON.
 // Para suportar ~15MB reais em base64 (≈ 20,5MB) com overhead de JSON, usamos um limite maior.
-app.use(express.json({ limit: '22mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Limite do body para suportar upload base64 (aprox. 15MB arquivo + overhead de base64/json)
+// Aumentamos para reduzir chance de 413 no runtime/serverless.
+app.use(express.json({ limit: '60mb' }));
+app.use(express.urlencoded({ extended: true, limit: '60mb' }));
+
 
 
 // Rotas principais
