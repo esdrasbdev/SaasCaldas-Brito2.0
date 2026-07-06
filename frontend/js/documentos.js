@@ -85,29 +85,41 @@ const DocumentosUI = {
       const file = e.target.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = async () => {
+      try {
         const token = localStorage.getItem('supabaseToken');
-        const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
 
+        const formData = new FormData();
+        // Backend espera multipart/form-data via busboy com campo 'file'
+        formData.append('file', file);
+
+        // Campos opcionais que ajudam o backend a salvar metadata
+        formData.append('nome', file.name);
+        formData.append('tipo', file.type);
+
+        // IMPORTANTE: backend exige cliente_id.
+        // Como a tela atual de documentos.html está em desenvolvimento e não tem select,
+        // este campo precisa ser definido quando você integrar o vínculo com cliente/processo.
+        // Por enquanto deixamos opcional (vai falhar com 400 se cliente_id não vier).
+        // Exemplo: formData.append('cliente_id', clienteId);
+
+        const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            nome: file.name,
-            tipo: file.type,
-            arquivo: reader.result
-          })
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
         });
 
         if (res.ok) {
           showToast('Documento enviado!', 'success');
           this.carregarDocumentos();
+          return;
         }
-      };
-      reader.readAsDataURL(file);
+
+        const err = await res.json().catch(() => null);
+        showToast(err?.error || 'Erro ao enviar documento', 'error');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro de conexão com o servidor', 'error');
+      }
     });
 
     document.getElementById('lista-documentos')?.addEventListener('click', async (e) => {

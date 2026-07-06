@@ -85,10 +85,12 @@ router.post('/blob-upload', async (req, res) => {
     const maxFileSizeBytes = 15 * 1024 * 1024; // 15MB
 
     const { fields, file } = await new Promise((resolve, reject) => {
+      // busboy streams multipart e evita estourar body parser
       const bb = Busboy({ headers: req.headers, limits: { fileSize: maxFileSizeBytes } });
 
       const fieldsLocal = {};
       let fileLocal = null;
+
 
       bb.on('field', (name, val) => {
         fieldsLocal[name] = val;
