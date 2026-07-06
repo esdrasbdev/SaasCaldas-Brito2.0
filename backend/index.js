@@ -88,7 +88,9 @@ const documentosRouter = require('./routes/documentos.js');
 app.use('/api/documentos', authMiddleware, documentosRouter);
 
 const documentosDebugRouter = require('./routes/documentos-debug.js');
-app.use('/api/documentos', authMiddleware, documentosDebugRouter);
+// Debug de blob deve ficar acessível sem auth para diagnóstico em produção
+app.use('/api/documentos', documentosDebugRouter);
+
 
 
 const audienciasRouter = require('./routes/audiencias.js');
