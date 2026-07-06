@@ -3,13 +3,17 @@
   "name": "juridico-caldas-brito",
   "installCommand": "npm install --prefix backend",
   "rewrites": [
-
-
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
     {
       "source": "/(.*)",
       "destination": "/frontend/$1"
     }
   ],
+
+
   "crons": [
     {
       "path": "/api/publicacoes/sincronizar",
