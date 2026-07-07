@@ -536,10 +536,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   });
 
-  // Listener separado para a lista ARQUIVADAS
-  document.getElementById('lista-pericias-arquivadas')?.addEventListener('click', async (e) => {
-    const btnRestaurar = e.target.closest('.btn-restaurar');
+  // Listener genérico (delegação) para garantir que o botão restaurar funcione
+  document.addEventListener('click', async (e) => {
+    const btnRestaurar = e.target.closest?.('.btn-restaurar');
     if (!btnRestaurar) return;
+
+    // Debug hard: se isso não aparecer, o clique não está chegando no DOM do botão
+    console.log('[pericias] RESTAURAR clicado', { id: btnRestaurar.dataset?.id, target: e.target?.tagName });
+    alert(`RESTaurar clicado! id=${btnRestaurar.dataset?.id || ''}`);
 
     const ok = confirm('Restaurar esta perícia para a lista de ativas?');
     if (!ok) return;
