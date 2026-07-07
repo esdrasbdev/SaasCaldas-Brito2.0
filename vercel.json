@@ -3,6 +3,7 @@
   "name": "juridico-caldas-brito",
   "installCommand": "cd backend && npm ci",
   "buildCommand": "cd backend && npm ci",
+  "outputDirectory": "frontend",
   "rewrites": [
     {
       "source": "/api/(.*)",
