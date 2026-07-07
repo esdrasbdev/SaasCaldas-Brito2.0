@@ -521,16 +521,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const btnArquivar = e.target.closest('.btn-arquivar');
     if (btnArquivar) {
-      const ok = confirm('Mover esta perícia para arquivadas?');
-      if (!ok) return;
-      try {
-        await PericiaModel.arquivar(btnArquivar.dataset.id);
-        showToast('Perícia arquivada!', 'success');
-        await carregarPericiasPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao arquivar perícia: ' + (err?.message || err), 'error');
-      }
+      openConfirmModalPericia({
+        title: 'Arquivar Perícia',
+        message: 'Mover esta perícia para a lista de arquivadas?',
+        confirmText: 'Arquivar',
+        onConfirm: async () => {
+          await PericiaModel.arquivar(btnArquivar.dataset.id);
+          showToast('Perícia arquivada!', 'success');
+          await carregarPericiasPorStatus();
+        }
+      });
       return;
     }
 
@@ -593,6 +593,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  function openConfirmModalPericia({ title, message, confirmText, onConfirm }) {
+    if (!modalOverlayEl || !modalFormEl || !modalBodyEl || !modalHeaderTitleEl) return;
+
+    if (_periciaModalBodyOriginalHTML === null) {
+      _periciaModalBodyOriginalHTML = modalBodyEl.innerHTML;
+    }
+
+    // Hide actual form fields visually
+    modalBodyEl.querySelectorAll('input, select, textarea').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    modalHeaderTitleEl.textContent = title;
+    modalBodyEl.textContent = message;
+
+    modalOverlayEl.style.display = 'flex';
+
+    if (modalCancelBtn) {
+      modalCancelBtn.textContent = 'Cancelar';
+      modalCancelBtn.onclick = () => {
+        modalOverlayEl.style.display = 'none';
+        if (_periciaModalBodyOriginalHTML !== null) {
+          modalBodyEl.innerHTML = _periciaModalBodyOriginalHTML;
+        }
+      };
+    }
+
+    if (modalSubmitBtn) {
+      modalSubmitBtn.textContent = confirmText || 'Confirmar';
+      modalSubmitBtn.onclick = async (ev) => {
+        ev?.preventDefault?.();
+        try {
+          await onConfirm();
+        } finally {
+          modalOverlayEl.style.display = 'none';
+          if (_periciaModalBodyOriginalHTML !== null) {
+            modalBodyEl.innerHTML = _periciaModalBodyOriginalHTML;
+          }
+        }
+      };
+    }
+  }
+
   // Listener somente para ARQUIVADAS (evita interferência com outros modais/handlers)
   document.getElementById('lista-pericias-arquivadas')?.addEventListener('click', async (e) => {
     const btnRestaurar = e.target.closest?.('.btn-restaurar');
@@ -601,20 +644,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const id = btnRestaurar.dataset.id;
     if (!id) return;
 
-    openConfirmRestoreModal({
+    openConfirmModalPericia({
       title: 'Restaurar Perícia',
       message: 'Restaurar esta perícia para a lista de ativas?',
       confirmText: 'Restaurar',
       onConfirm: async () => {
-        try {
-          await PericiaModel.restaurar(id);
-          showToast('Perícia restaurada!', 'success');
-          await carregarPericiasPorStatus();
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
-          throw err;
-        }
+        await PericiaModel.restaurar(id);
+        showToast('Perícia restaurada!', 'success');
+        await carregarPericiasPorStatus();
       }
     });
   });

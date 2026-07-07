@@ -395,6 +395,61 @@ const AudienciaController = {
     const buscaEl = document.getElementById('audiencias-busca');
     const filtroTipoEl = document.getElementById('audiencias-filtro-tipo');
 
+    // Modal estético de confirmação reutilizando o modal existente (form-container / form-audiencia)
+    const modalOverlayEl = document.getElementById('form-container');
+    const modalFormEl = document.getElementById('form-audiencia');
+    const modalHeaderTitleEl = modalFormEl?.querySelector('.modal-header h2');
+    const modalBodyEl = modalFormEl?.querySelector('.modal-body');
+    const modalFooter = modalFormEl?.querySelector('.modal-footer');
+    const modalCancelBtn = modalFooter?.querySelector('#btn-cancelar');
+    const modalSubmitBtn = modalFooter?.querySelector('button[type="submit"]');
+
+    let _audModalBodyOriginalHTML = null;
+
+    const openConfirmModalAudiencia = ({ title, message, confirmText, onConfirm }) => {
+      if (!modalOverlayEl || !modalFormEl || !modalBodyEl || !modalHeaderTitleEl) return;
+
+      if (_audModalBodyOriginalHTML === null) {
+        _audModalBodyOriginalHTML = modalBodyEl.innerHTML;
+      }
+
+      // Oculta campos do formulário visualmente
+      modalBodyEl.querySelectorAll('input, select, textarea').forEach(el => {
+        el.style.display = 'none';
+      });
+
+      modalHeaderTitleEl.textContent = title;
+      modalBodyEl.textContent = message;
+
+      modalOverlayEl.style.display = 'flex';
+
+      if (modalCancelBtn) {
+        modalCancelBtn.textContent = 'Cancelar';
+        modalCancelBtn.onclick = () => {
+          modalOverlayEl.style.display = 'none';
+          if (_audModalBodyOriginalHTML !== null) {
+            modalBodyEl.innerHTML = _audModalBodyOriginalHTML;
+          }
+        };
+      }
+
+      if (modalSubmitBtn) {
+        modalSubmitBtn.textContent = confirmText || 'Confirmar';
+        modalSubmitBtn.onclick = async (ev) => {
+          ev?.preventDefault?.();
+          try {
+            await onConfirm();
+          } finally {
+            modalOverlayEl.style.display = 'none';
+            if (_audModalBodyOriginalHTML !== null) {
+              modalBodyEl.innerHTML = _audModalBodyOriginalHTML;
+            }
+          }
+        };
+      }
+    };
+
+
     const aplicarFiltros = () => {
       const termo = (buscaEl?.value || '').trim().toLowerCase();
       const tipo = filtroTipoEl?.value || '';
@@ -470,16 +525,22 @@ const AudienciaController = {
       if (!id) return;
 
       if (btnArquivar) {
-        const ok = confirm('Mover esta audiência para arquivadas?');
-        if (!ok) return;
-        try {
-          await AudienciaModel.arquivar(id);
-          showToast('Audiência arquivada!', 'success');
-          await this.carregarDados();
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao arquivar audiência: ' + (err?.message || err), 'error');
-        }
+        openConfirmModalAudiencia({
+          title: 'Arquivar Audiência',
+          message: 'Mover esta audiência para a lista de arquivadas?',
+          confirmText: 'Arquivar',
+          onConfirm: async () => {
+            try {
+              await AudienciaModel.arquivar(id);
+              showToast('Audiência arquivada!', 'success');
+              await this.carregarDados();
+            } catch (err) {
+              console.error(err);
+              showToast('Erro ao arquivar audiência: ' + (err?.message || err), 'error');
+              throw err;
+            }
+          }
+        });
         return;
       }
 
@@ -619,17 +680,22 @@ const AudienciaController = {
       const id = btnRestaurar.dataset.id;
       if (!id) return;
 
-      const ok = confirm('Restaurar esta audiência para a lista de ativas?');
-      if (!ok) return;
-
-      try {
-        await AudienciaModel.restaurar(id);
-        showToast('Audiência restaurada!', 'success');
-        await this.carregarDados();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao restaurar audiência: ' + (err?.message || err), 'error');
-      }
+      openConfirmModalAudiencia({
+        title: 'Restaurar Audiência',
+        message: 'Restaurar esta audiência para a lista de ativas?',
+        confirmText: 'Restaurar',
+        onConfirm: async () => {
+          try {
+            await AudienciaModel.restaurar(id);
+            showToast('Audiência restaurada!', 'success');
+            await this.carregarDados();
+          } catch (err) {
+            console.error(err);
+            showToast('Erro ao restaurar audiência: ' + (err?.message || err), 'error');
+            throw err;
+          }
+        }
+      });
     });
 
     document.getElementById('form-audiencia').onsubmit = async (e) => {
