@@ -534,20 +534,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const btnRestaurar = e.target.closest('.btn-restaurar');
-    if (btnRestaurar) {
-      const ok = confirm('Restaurar esta perícia para a lista de ativas?');
-      if (!ok) return;
-      try {
-        await PericiaModel.restaurar(btnRestaurar.dataset.id);
-        showToast('Perícia restaurada!', 'success');
-        await carregarPericiasPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
-      }
-      return;
-    }
-
   });
+
+  // Listener separado para a lista ARQUIVADAS
+  document.getElementById('lista-pericias-arquivadas')?.addEventListener('click', async (e) => {
+    const btnRestaurar = e.target.closest('.btn-restaurar');
+    if (!btnRestaurar) return;
+
+    const ok = confirm('Restaurar esta perícia para a lista de ativas?');
+    if (!ok) return;
+
+    try {
+      await PericiaModel.restaurar(btnRestaurar.dataset.id);
+      showToast('Perícia restaurada!', 'success');
+      await carregarPericiasPorStatus();
+    } catch (err) {
+      console.error(err);
+      showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
+    }
+  });
+
 });
