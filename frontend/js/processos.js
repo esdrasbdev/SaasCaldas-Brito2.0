@@ -96,16 +96,33 @@ const ProcessoView = {
     const container = document.getElementById('view-processos-container');
     container.innerHTML = `
       <div class="card-section">
-        <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
-          <input id="busca-processo" placeholder="Buscar CNJ/Cliente/Vara..." style="flex:1;">
-          <select id="filtro-status" style="width:200px;">
-            <option value="">Todos Status</option>
-            <option value="ATIVO">Ativos</option>
-            <option value="ARQUIVADO">Arquivados</option>
-            <option value="SUSPENSO">Suspensos</option>
-          </select>
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1; min-width:240px; position: relative;">
+            <input id="busca-processo" placeholder="Buscar CNJ/Cliente/Vara..." style="width:100%; padding-right:12px;">
+          </div>
+
+          <div style="min-width:190px;">
+            <label style="display:block; font-size:0.82rem; color: var(--cinza-medio); margin-bottom:6px;">Status</label>
+            <select id="filtro-status" style="width:100%;">
+              <option value="">Todos</option>
+              <option value="ATIVO">Ativo</option>
+              <option value="ARQUIVADO">Arquivado</option>
+              <option value="SUSPENSO">Suspenso</option>
+            </select>
+          </div>
+
+          <div style="min-width:260px;">
+            <label style="display:block; font-size:0.82rem; color: var(--cinza-medio); margin-bottom:6px;">Responsável (filtrar)</label>
+            <div class="seletor-responsaveis">
+              <input type="text" id="proc-responsaveis-filtro-busca" placeholder="Buscar responsável..." autocomplete="off" />
+              <div id="proc-responsaveis-filtro-dropdown" class="responsaveis-dropdown" style="display:none;"></div>
+              <div id="proc-responsaveis-filtro-tags" class="responsaveis-tags"></div>
+            </div>
+          </div>
         </div>
+
         <div class="table-responsive">
+
           <table class="recent-table">
             <thead>
               <tr>
@@ -252,7 +269,16 @@ const ProcessoController = {
       tagsEl: document.getElementById('proc-responsaveis-tags')
     });
     await this.seletorResp.init();
+
+    // Filtro por responsável (topo da lista)
+    this.seletorRespFiltro = criarSeletorResponsaveis({
+      inputEl: document.getElementById('proc-responsaveis-filtro-busca'),
+      dropdownEl: document.getElementById('proc-responsaveis-filtro-dropdown'),
+      tagsEl: document.getElementById('proc-responsaveis-filtro-tags')
+    });
+    await this.seletorRespFiltro.init();
   },
+
 
   bindEvents() {
     // Cancel button
@@ -278,6 +304,17 @@ const ProcessoController = {
 
     document.getElementById('busca-processo').oninput = this.filter.bind(this);
     document.getElementById('filtro-status').onchange = this.filter.bind(this);
+
+    document.getElementById('proc-responsaveis-filtro-busca')?.addEventListener('input', this.filter.bind(this));
+    // quando selecionar tags, o componente não dispara change nativo; usamos clique no documento via captura do componente
+    document.body.addEventListener('click', () => {
+      // re-filtra sempre que o usuário interagir com o filtro (dropdown/tags)
+      if (document.activeElement?.id === 'proc-responsaveis-filtro-busca' ||
+          document.activeElement?.closest?.('#proc-responsaveis-filtro-tags')) {
+        this.filter();
+      }
+    });
+
 
     document.getElementById('lista-processos-body').onclick = async (e) => {
       const target = e.target.closest('button');
@@ -386,8 +423,8 @@ const ProcessoController = {
     const termo = document.getElementById('busca-processo').value.toLowerCase();
     const status = document.getElementById('filtro-status').value;
 
-    // Filtro por responsável (pelo seletor do modal: usa primeiro responsável selecionado)
-    const selecionadosResp = this.seletorResp?.getSelecionados?.() || [];
+    // Filtro por responsável (topo da lista)
+    const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
     const usuarioIdFiltro = selecionadosResp[0]?.id || null;
 
     const filtered = this.data.filter(p => {
@@ -409,7 +446,6 @@ const ProcessoController = {
 
     ProcessoView.renderizarTabela(filtered, AuthAPI.getRole() === 'ADMIN');
   },
-
 
   async loadClientes() {
     const { data } = await supabase.from('clientes').select('id, nome').order('nome');
