@@ -1,7 +1,8 @@
 {
   "version": 2,
   "name": "juridico-caldas-brito",
-  "installCommand": "rm -rf backend/node_modules && npm install --prefix backend",
+  "installCommand": "cd backend && npm ci",
+  "buildCommand": "cd backend && npm ci",
   "rewrites": [
     {
       "source": "/api/(.*)",
