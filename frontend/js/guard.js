@@ -19,8 +19,7 @@ const ROUTE_CONFIG = {
   
   'pericias.html': { requiresAuth: true, requiredRole: null },
   
-  'audiencias-arquivadas.html': { requiresAuth: true, requiredRole: null },
-  'pericias-arquivadas.html': { requiresAuth: true, requiredRole: null },
+
 
 
   'atendimentos.html': { requiresAuth: true, requiredRole: null },
@@ -57,7 +56,8 @@ async function pageGuard() {
     // Verifica autenticação (espera o Supabase restaurar sessão via onAuthStateChange)
     let session;
     try {
-      session = await requireAuth({ timeoutMs: 6000 });
+      session = await requireAuth({ timeoutMs: 2500 });
+
     } catch (e) {
       // requireAuth já redireciona
       return;

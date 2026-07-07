@@ -23,13 +23,40 @@ const AudienciaModel = {
     return data;
   },
 
+  async listarPorStatus(status) {
+    const { data, error } = await supabase
+      .from('audiencias')
+      .select('*, processos(numero_cnj, clientes(nome)), clientes(nome), usuarios(nome), responsaveis_audiencia(usuario_id, usuarios(nome))')
+      .eq('status', status)
+      .order('data', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async arquivar(id) {
+    const { error } = await supabase
+      .from('audiencias')
+      .update({ status: 'ARQUIVADA' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async restaurar(id) {
+    const { error } = await supabase
+      .from('audiencias')
+      .update({ status: 'ATIVA' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   async criar(audiencia) {
     const { data, error } = await supabase
       .from('audiencias')
       .insert([audiencia])
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -91,6 +118,10 @@ const AudienciaView = {
     return document.getElementById('lista-audiencias');
   },
 
+  tabelaBodyArquivadas() {
+    return document.getElementById('lista-audiencias-arquivadas');
+  },
+
   renderizarTabela(lista) {
     const tbody = this.tabelaBody();
     if (!tbody) return;
@@ -113,16 +144,14 @@ const AudienciaView = {
       const clienteNome = a.processos?.clientes?.nome || a.clientes?.nome || '—';
       const numeroCnj = a.processos?.numero_cnj || 'S/N';
 
-      // Badge de tipo compacto (judicial/administrativo)
       const tipoBadge = a.tipo
         ? `<span class="status-badge ${a.tipo === 'Judicial' ? 'badge-tipo-judicial' : 'badge-tipo-administrativo'}">${a.tipo}</span>`
         : '';
 
-      // Responsáveis da tabela de junção
       const responsaveis = (a.responsaveis_audiencia || [])
         .map(r => r.usuarios?.nome?.split(' ')[0])
         .filter(Boolean)
-        .join(', ') || (a.usuarios?.nome?.split(' ')[0]) || '—';
+        .join(', ') || '—';
 
       return `
   <tr>
@@ -159,7 +188,53 @@ const AudienciaView = {
           <i class="fa-solid fa-box-archive"></i>
         </button>
       ` : ''}
+      </div>
+    </td>
+  </tr>
+  `;
+    }).join('');
+  },
 
+  renderizarTabelaArquivadas(lista) {
+    const tbody = this.tabelaBodyArquivadas();
+    if (!tbody) return;
+
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhuma audiência arquivada.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lista.map(a => {
+      const dataObj = a.data ? new Date(a.data) : null;
+      const dataTxt = dataObj ? formatarData(dataObj) : '-';
+      const horaTxt = dataObj ? formatarHora24h(dataObj) : '';
+
+      const clienteNome = a.processos?.clientes?.nome || a.clientes?.nome || '—';
+      const numeroCnj = a.processos?.numero_cnj || 'S/N';
+
+      const tipoBadge = a.tipo
+        ? `<span class="status-badge status-arquivado">Arquivada</span>`
+        : `<span class="status-badge status-arquivado">Arquivada</span>`;
+
+      return `
+  <tr>
+    <td style="width:140px; white-space:nowrap;">
+      <div style="font-weight:600; color:var(--azul-escuro); font-size:0.9rem;">${dataTxt}</div>
+      <div style="font-size:0.8rem; color:var(--cinza-medio);">${horaTxt}</div>
+    </td>
+    <td>
+      <div style="font-weight:600; font-size:0.9rem;">${clienteNome}</div>
+      <div style="font-size:0.75rem; color:var(--cinza-medio);">CNJ: ${numeroCnj}</div>
+    </td>
+    <td>
+      <div style="font-size:0.85rem;">${a.local || 'Virtual'}</div>
+    </td>
+    <td style="width:110px;">${tipoBadge}</td>
+    <td style="width:110px; text-align:right; vertical-align:middle;">
+      <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+        <button class="btn-sm btn-restaurar" data-id="${a.id}" title="Restaurar">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
       </div>
     </td>
   </tr>
@@ -188,11 +263,9 @@ const AudienciaView = {
   }
 };
 
-// Atualizar cabeçalho da tabela para incluir coluna Responsáveis
 function atualizarCabecalhoTabela() {
   const thead = document.querySelector('#lista-audiencias')?.closest('table')?.querySelector('thead tr');
   if (!thead) return;
-  // Verificar se já tem a coluna
   if (thead.querySelector('th[data-col="responsaveis"]')) return;
   const thAcoes = thead.querySelector('th:last-child');
   const thResp = document.createElement('th');
@@ -202,11 +275,8 @@ function atualizarCabecalhoTabela() {
   thead.insertBefore(thResp, thAcoes);
 }
 
-// ==========================================
-// 3. CONTROLLER
-// ==========================================
 function filtrarAudiencias(lista, termoBusca, tipoFiltro, usuarioIdFiltro) {
-  return lista.filter((a) => {
+  return (lista || []).filter((a) => {
     if (tipoFiltro && a.tipo !== tipoFiltro) return false;
 
     if (usuarioIdFiltro) {
@@ -223,12 +293,13 @@ function filtrarAudiencias(lista, termoBusca, tipoFiltro, usuarioIdFiltro) {
     const dataObj = a.data ? new Date(a.data) : null;
     const dtTxt = dataObj ? formatarData(dataObj).toLowerCase() : '';
     const responsaveis = (a.responsaveis_audiencia || [])
-      .map(r => r.usuarios?.nome || '').join(' ').toLowerCase();
+      .map(r => r.usuarios?.nome || '')
+      .join(' ')
+      .toLowerCase();
 
     return [cliente, numeroCnj, tipo, local, dtTxt, responsaveis].some((v) => v.includes(termoBusca));
   });
 }
-
 
 const AudienciaController = {
   seletorResp: null,
@@ -240,7 +311,6 @@ const AudienciaController = {
     await this.loadClientes();
     await this.loadProcessos();
 
-    // Instanciar componente de responsáveis (modal)
     this.seletorResp = criarSeletorResponsaveis({
       inputEl: document.getElementById('aud-responsaveis-busca'),
       dropdownEl: document.getElementById('aud-responsaveis-dropdown'),
@@ -248,7 +318,6 @@ const AudienciaController = {
     });
     await this.seletorResp.init();
 
-    // Instanciar componente de responsáveis (filtro topo)
     const inputFiltro = document.getElementById('aud-responsaveis-filtro-busca');
     if (inputFiltro) {
       this.seletorRespFiltro = criarSeletorResponsaveis({
@@ -259,14 +328,14 @@ const AudienciaController = {
       await this.seletorRespFiltro.init();
     }
 
-
-    const lista = document.getElementById('lista-audiencias');
-    if (lista && !lista.dataset.bound) {
-      lista.dataset.bound = 'true';
+    if (!document.getElementById('lista-audiencias')?.dataset.bound) {
+      const lista = document.getElementById('lista-audiencias');
+      if (lista) lista.dataset.bound = 'true';
     }
 
     atualizarCabecalhoTabela();
     AudienciaView.ensureHiddenField();
+
     await this.carregarDados();
     this.bindEvents();
   },
@@ -296,21 +365,27 @@ const AudienciaController = {
 
   async carregarDados() {
     try {
-      const dados = await AudienciaModel.listarTodas();
-      window.__listaAudienciasCompleta = dados;
-      
+      const [ativas, arquivadas] = await Promise.all([
+        AudienciaModel.listarPorStatus('ATIVA'),
+        AudienciaModel.listarPorStatus('ARQUIVADA')
+      ]);
+
+      window.__listaAudienciasCompleta = ativas;
+      window.__listaAudienciasArquivadasCompleta = arquivadas;
+
       const buscaEl = document.getElementById('audiencias-busca');
       const filtroTipoEl = document.getElementById('audiencias-filtro-tipo');
-      
+
       const termo = (buscaEl?.value || '').trim().toLowerCase();
       const tipo = filtroTipoEl?.value || '';
+
       const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
       const usuarioIdFiltro = selecionadosResp[0]?.id || null;
 
-      AudienciaView.renderizarTabela(
-        filtrarAudiencias(window.__listaAudienciasCompleta, termo, tipo, usuarioIdFiltro)
+      AudienciaView.renderizarTabela(filtrarAudiencias(ativas, termo, tipo, usuarioIdFiltro));
+      AudienciaView.renderizarTabelaArquivadas(
+        filtrarAudiencias(arquivadas, termo, tipo, usuarioIdFiltro)
       );
-
     } catch (error) {
       showToast('Erro ao listar audiências', 'error');
     }
@@ -323,24 +398,30 @@ const AudienciaController = {
     const aplicarFiltros = () => {
       const termo = (buscaEl?.value || '').trim().toLowerCase();
       const tipo = filtroTipoEl?.value || '';
-      const base = window.__listaAudienciasCompleta || [];
+
+      const baseAtivas = window.__listaAudienciasCompleta || [];
+      const baseArquivadas = window.__listaAudienciasArquivadasCompleta || [];
 
       const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
       const usuarioIdFiltro = selecionadosResp[0]?.id || null;
 
       AudienciaView.renderizarTabela(
-        filtrarAudiencias(base, termo, tipo, usuarioIdFiltro)
+        filtrarAudiencias(baseAtivas, termo, tipo, usuarioIdFiltro)
+      );
+
+      AudienciaView.renderizarTabelaArquivadas(
+        filtrarAudiencias(baseArquivadas, termo, tipo, usuarioIdFiltro)
       );
     };
 
     buscaEl?.addEventListener('input', aplicarFiltros);
     filtroTipoEl?.addEventListener('change', aplicarFiltros);
     document.getElementById('aud-responsaveis-filtro-busca')?.addEventListener('input', aplicarFiltros);
-    document.body.addEventListener('click', () => {
+
+    document.body.addEventListener('click', (e) => {
       const ae = document.activeElement;
       if (ae?.id === 'aud-responsaveis-filtro-busca' || ae?.closest?.('#aud-responsaveis-filtro-tags')) aplicarFiltros();
     });
-
 
     document.getElementById('btn-nova-audiencia').onclick = () => {
       AudienciaView.modal(true);
@@ -379,13 +460,28 @@ const AudienciaController = {
       }
     });
 
-    // Ações em linha (view/edit)
-    document.getElementById('lista-audiencias').addEventListener('click', async (e) => {
+    // Ações em linha (view/edit/delete/arquivar)
+    document.getElementById('lista-audiencias')?.addEventListener('click', async (e) => {
       const btnView = e.target.closest('.btn-view');
       const btnEdit = e.target.closest('.btn-edit');
       const btnDelete = e.target.closest('.btn-delete');
-      const id = (btnView || btnEdit || btnDelete)?.dataset?.id;
+      const btnArquivar = e.target.closest('.btn-arquivar');
+      const id = (btnView || btnEdit || btnDelete || btnArquivar)?.dataset?.id;
       if (!id) return;
+
+      if (btnArquivar) {
+        const ok = confirm('Mover esta audiência para arquivadas?');
+        if (!ok) return;
+        try {
+          await AudienciaModel.arquivar(id);
+          showToast('Audiência arquivada!', 'success');
+          await this.carregarDados();
+        } catch (err) {
+          console.error(err);
+          showToast('Erro ao arquivar audiência: ' + (err?.message || err), 'error');
+        }
+        return;
+      }
 
       if (btnView) {
         const audiencia = await AudienciaModel.buscarPorId(id);
@@ -410,7 +506,6 @@ const AudienciaController = {
         document.getElementById('audiencia-local').value = audiencia.local || '';
         document.getElementById('audiencia-obs').value = audiencia.observacoes || '';
 
-        // Carregar responsáveis
         const responsaveisSelecionados = (audiencia.responsaveis_audiencia || []).map(r => ({
           id: r.usuario_id,
           nome: r.usuarios?.nome || ''
@@ -434,12 +529,12 @@ const AudienciaController = {
           (document.querySelector('#form-audiencia button[type="submit"]').style.display = 'none');
 
         AudienciaView.modal(true);
+        return;
       }
 
       if (btnDelete) {
         const ok = confirm('Excluir esta audiência?');
         if (!ok) return;
-
         try {
           await AudienciaModel.deletar(id);
           showToast('Audiência excluída!', 'success');
@@ -474,7 +569,6 @@ const AudienciaController = {
         document.getElementById('audiencia-local').value = audiencia.local || '';
         document.getElementById('audiencia-obs').value = audiencia.observacoes || '';
 
-        // Carregar responsáveis para edição
         const responsaveisSelecionados = (audiencia.responsaveis_audiencia || []).map(r => ({
           id: r.usuario_id,
           nome: r.usuarios?.nome || ''
@@ -484,7 +578,9 @@ const AudienciaController = {
 
         const form = document.getElementById('form-audiencia');
         form.classList.remove('mode-view');
-        Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = false));
+        Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => {
+          el.disabled = false;
+        });
 
         const headerEl = document.querySelector('#form-audiencia .modal-header h2');
         if (headerEl) headerEl.textContent = 'Editar Audiência';
@@ -493,6 +589,7 @@ const AudienciaController = {
 
         document.getElementById('aud-id').value = id;
         AudienciaView.modal(true);
+        return;
       }
     });
 
@@ -505,10 +602,39 @@ const AudienciaController = {
       document.getElementById('form-audiencia').insertBefore(hidden, document.getElementById('form-audiencia').firstChild);
     }
 
+    // Toggle da seção de arquivadas
+    const toggleBtn = document.getElementById('toggle-arquivadas');
+    const bloco = document.getElementById('bloco-arquivadas');
+    toggleBtn?.addEventListener('click', () => {
+      const abrir = bloco.style.display === 'none';
+      bloco.style.display = abrir ? 'block' : 'none';
+      toggleBtn.classList.toggle('aberto', abrir);
+    });
+
+    // Restaurar arquivadas
+    document.getElementById('lista-audiencias-arquivadas')?.addEventListener('click', async (e) => {
+      const btnRestaurar = e.target.closest('.btn-restaurar');
+      if (!btnRestaurar) return;
+
+      const id = btnRestaurar.dataset.id;
+      if (!id) return;
+
+      const ok = confirm('Restaurar esta audiência para a lista de ativas?');
+      if (!ok) return;
+
+      try {
+        await AudienciaModel.restaurar(id);
+        showToast('Audiência restaurada!', 'success');
+        await this.carregarDados();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao restaurar audiência: ' + (err?.message || err), 'error');
+      }
+    });
+
     document.getElementById('form-audiencia').onsubmit = async (e) => {
       e.preventDefault();
 
-      // Validar responsáveis
       const selecionados = this.seletorResp?.getSelecionados() || [];
       if (!selecionados.length) {
         showToast('Selecione ao menos um responsável.', 'error');
@@ -545,7 +671,6 @@ const AudienciaController = {
           showToast('Audiência agendada!', 'success');
         }
 
-        // Sincronizar responsáveis
         await AudienciaModel.sincronizarResponsaveis(registroId, selecionados);
       } catch (error) {
         console.error(error);
@@ -563,3 +688,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initSupabase();
   AudienciaController.init();
 });
+

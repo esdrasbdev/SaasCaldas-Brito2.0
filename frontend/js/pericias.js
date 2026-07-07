@@ -107,9 +107,9 @@ async function carregarClientes() {
   });
 }
 
-// Funções de filtro e renderização unificadas
+// Funções de filtro e renderização (ATIVA/ARQUIVADA)
 function filtrarPericias(lista, termoBusca, tipoFiltro) {
-  return lista.filter((p) => {
+  return (lista || []).filter((p) => {
     if (tipoFiltro && p.tipo !== tipoFiltro) return false;
     if (!termoBusca) return true;
 
@@ -125,13 +125,16 @@ function filtrarPericias(lista, termoBusca, tipoFiltro) {
   });
 }
 
-function renderizarTabela(lista) {
+function renderizarTabelaAtivas(lista) {
+  const tbody = document.getElementById('lista-pericias');
+  if (!tbody) return;
+
   const isAdmin = AuthAPI.getRole() === 'ADMIN';
 
-  if (lista.length === 0) {
-    listaPericias.innerHTML = `
+  if (!lista.length) {
+    tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="padding:0;">
+        <td colspan="5" style="padding:0;">
           <div style="min-height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--cinza-medio); gap:10px;">
             <i class="fa-regular fa-folder-open" style="font-size:2rem; opacity:0.4;"></i>
             <span style="font-size:0.9rem;">Nenhuma perícia encontrada.</span>
@@ -142,7 +145,7 @@ function renderizarTabela(lista) {
     return;
   }
 
-  listaPericias.innerHTML = lista.map(p => {
+  tbody.innerHTML = lista.map(p => {
     const dataTxt = p.data ? formatarData(p.data) : '-';
     const horaTxt = p.data ? formatarHora24h(p.data) : '';
 
@@ -169,14 +172,63 @@ function renderizarTabela(lista) {
             : ''}
         </td>
         <td style="font-size:0.85rem;">${p.local || '-'}</td>
-        <td style="font-size:0.85rem;">${p.perito || 'Não informado'}</td>
-        <td style="font-size:0.8rem; color:var(--cinza-medio); max-width:140px;">${responsaveis}</td>
-        <td style="text-align:right; width:90px;">
+        <td style="font-size:0.85rem;">${p.perito || 'Não informado'}
+          <div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">${responsaveis}</div>
+        </td>
+        <td style="text-align:right; width:130px;">
           <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
             <button class="btn-sm btn-view" data-id="${p.id}" title="Visualizar"><i class="fa-solid fa-eye"></i></button>
             <button class="btn-sm btn-edit" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
             ${isAdmin ? `<button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color:#ef4444;"><i class="fa-solid fa-trash"></i></button>` : ''}
+            <button class="btn-sm btn-arquivar" data-id="${p.id}" title="Arquivar" style="color: var(--cinza-medio);">
+              <i class="fa-solid fa-box-archive"></i>
+            </button>
           </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderizarTabelaArquivadas(lista) {
+  const tbody = document.getElementById('lista-pericias-arquivadas');
+  if (!tbody) return;
+
+  if (!lista.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center">Nenhuma perícia arquivada.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = lista.map(p => {
+    const dataTxt = p.data ? formatarData(p.data) : '-';
+
+    const tipoCor = 'background:#f1f5f9; color:#475569;';
+
+    const responsaveis = (p.responsaveis_pericia || [])
+      .map(r => r.usuarios?.nome?.split(' ')[0])
+      .filter(Boolean)
+      .join(', ') || '—';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600; font-size:0.9rem;">${p.clientes?.nome || '-'}</div>
+          <span class="status-badge" style="${tipoCor} font-size:0.7rem; padding:2px 8px; border-radius:12px; display:inline-block; white-space:nowrap;">Arquivada</span>
+          <div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">${responsaveis}</div>
+        </td>
+        <td style="white-space:nowrap;">
+          <div style="font-size:0.9rem; font-weight:600;">${dataTxt}</div>
+        </td>
+        <td style="font-size:0.85rem;">${p.local || '-'}</td>
+        <td style="font-size:0.85rem;">${p.perito || 'Não informado'}</td>
+        <td style="text-align:right; width:90px;">
+          <button class="btn-sm btn-restaurar" data-id="${p.id}" title="Restaurar">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
         </td>
       </tr>
     `;
@@ -186,54 +238,100 @@ function renderizarTabela(lista) {
 const aplicarFiltros = () => {
   const termoBuscaEl = document.getElementById('pericias-busca');
   const filtroTipoEl = document.getElementById('pericias-filtro-tipo');
-  
+
   const termo = termoBuscaEl ? termoBuscaEl.value.trim().toLowerCase() : '';
   const tipo = filtroTipoEl ? filtroTipoEl.value : '';
-  
-  const base = window.__listaPericiasCompleta || [];
-  renderizarTabela(filtrarPericias(base, termo, tipo));
+
+  const baseAtivas = window.__listaPericiasCompleta || [];
+  const baseArquivadas = window.__listaPericiasArquivadasCompleta || [];
+
+  renderizarTabelaAtivas(filtrarPericias(baseAtivas, termo, tipo));
+  renderizarTabelaArquivadas(filtrarPericias(baseArquivadas, termo, tipo));
 };
 
-// Carrega e exibe as perícias na tabela
-async function carregarPericias() {
-  let { data, error } = await supabase
-    .from('pericias')
-    .select(`
-      *,
-      clientes(nome),
-      usuarios(nome),
-      responsaveis_pericia(usuario_id, usuarios(nome))
-    `)
-    .order('data', { ascending: true });
+// ==========================================
+// MODEL + FETCH (ATIVA/ARQUIVADA)
+// ==========================================
+const PericiaModel = {
+  async listarPorStatus(status) {
+    // Relações esperadas: clientes + responsaveis_pericia(usuario_id, usuarios(nome))
+    let { data, error } = await supabase
+      .from('pericias')
+      .select(`
+        *,
+        clientes(nome),
+        responsaveis_pericia(usuario_id, usuarios(nome))
+      `)
+      .eq('status', status)
+      .order('data', { ascending: true });
 
-  // Fallback: Se falhar por relacionamento inexistente, tenta carregar sem responsáveis
-  if (error && (error.code === 'PGRST200' || error.code === 'PGRST204' || !data)) {
-    const res = await supabase.from('pericias').select('*, clientes(nome)').order('data', { ascending: true });
-    data = res.data;
-    error = res.error;
+    // Fallback (caso relacionamento de responsaveis não exista no schema atual)
+    if (error && (error.code === 'PGRST200' || error.code === 'PGRST204' || !data)) {
+      const res = await supabase
+        .from('pericias')
+        .select('*, clientes(nome)')
+        .eq('status', status)
+        .order('data', { ascending: true });
+      data = res.data;
+      error = res.error;
+    }
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async arquivar(id) {
+    const { error } = await supabase
+      .from('pericias')
+      .update({ status: 'ARQUIVADA' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async restaurar(id) {
+    const { error } = await supabase
+      .from('pericias')
+      .update({ status: 'ATIVA' })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async deletar(id) {
+    const { error } = await supabase.from('pericias').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async buscarPorId(id) {
+    const { data, error } = await supabase
+      .from('pericias')
+      .select('*, responsaveis_pericia(usuario_id, usuarios(nome))')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async carregarRelacionadosSemResponsaveis(id) {
+    const { data, error } = await supabase
+      .from('pericias')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
   }
+};
 
-  if (error) {
-    console.error('Erro ao carregar perícias:', error.message);
-    listaPericias.innerHTML = `<tr><td colspan="6" class="text-center">Erro ao carregar dados.</td></tr>`;
-    return;
-  }
+async function carregarPericiasPorStatus() {
+  const [ativas, arquivadas] = await Promise.all([
+    PericiaModel.listarPorStatus('ATIVA'),
+    PericiaModel.listarPorStatus('ARQUIVADA')
+  ]);
 
-  window.__listaPericiasCompleta = data || [];
+  window.__listaPericiasCompleta = ativas;
+  window.__listaPericiasArquivadasCompleta = arquivadas;
+
   aplicarFiltros();
-}
-
-// Atualizar cabeçalho da tabela para incluir coluna Responsáveis
-function atualizarCabecalhoTabelaPericias() {
-  const thead = listaPericias?.closest('table')?.querySelector('thead tr');
-  if (!thead) return;
-  if (thead.querySelector('th[data-col="responsaveis"]')) return;
-  const thAcoes = thead.querySelector('th:last-child');
-  const thResp = document.createElement('th');
-  thResp.setAttribute('data-col', 'responsaveis');
-  thResp.textContent = 'Responsáveis';
-  thResp.style.maxWidth = '140px';
-  thead.insertBefore(thResp, thAcoes);
 }
 
 // Salva uma nova perícia / atualiza existente
@@ -241,6 +339,7 @@ formPericia.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const selecionados = seletorResp?.getSelecionados() || [];
+
   if (!selecionados.length) {
     showToast('Selecione ao menos um responsável.', 'error');
     return;
@@ -297,6 +396,14 @@ formPericia.addEventListener('submit', async (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const toggleBtn = document.getElementById('toggle-pericias-arquivadas');
+  const bloco = document.getElementById('bloco-pericias-arquivadas');
+  toggleBtn?.addEventListener('click', () => {
+    const abrir = bloco.style.display === 'none';
+    bloco.style.display = abrir ? 'block' : 'none';
+    toggleBtn.classList.toggle('aberto', abrir);
+  });
+
   ajustarCamposFormulario();
   await initSupabase();
   await carregarClientes();
@@ -309,8 +416,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   await seletorResp.init();
 
-  atualizarCabecalhoTabelaPericias();
-  await carregarPericias();
+  // Cabeçalho permanece o padrão do HTML (evita divergências entre ATIVAS e ARQUIVADAS)
+  await carregarPericiasPorStatus();
+
 
   // Busca local na tabela
   const termoBuscaEl = document.getElementById('pericias-busca');
@@ -319,7 +427,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   termoBuscaEl?.addEventListener('input', aplicarFiltros);
   filtroTipoEl?.addEventListener('change', aplicarFiltros);
 
-  listaPericias.addEventListener('click', async (e) => {
+  document.getElementById('lista-pericias')?.addEventListener('click', async (e) => {
+
     const btnEdit = e.target.closest('.btn-edit');
     const btnView = e.target.closest('.btn-view');
     const btnDelete = e.target.closest('.btn-delete');
@@ -400,15 +509,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const id = btnDelete.dataset.id;
       try {
-        const { error } = await supabase.from('pericias').delete().eq('id', id);
-        if (error) throw error;
+        await PericiaModel.deletar(id);
         showToast('Perícia excluída!', 'success');
-        carregarPericias();
+        await carregarPericiasPorStatus();
       } catch (err) {
         console.error(err);
         showToast('Erro ao excluir perícia: ' + (err?.message || err), 'error');
       }
       return;
     }
+
+    const btnArquivar = e.target.closest('.btn-arquivar');
+    if (btnArquivar) {
+      const ok = confirm('Mover esta perícia para arquivadas?');
+      if (!ok) return;
+      try {
+        await PericiaModel.arquivar(btnArquivar.dataset.id);
+        showToast('Perícia arquivada!', 'success');
+        await carregarPericiasPorStatus();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao arquivar perícia: ' + (err?.message || err), 'error');
+      }
+      return;
+    }
+
+    const btnRestaurar = e.target.closest('.btn-restaurar');
+    if (btnRestaurar) {
+      const ok = confirm('Restaurar esta perícia para a lista de ativas?');
+      if (!ok) return;
+      try {
+        await PericiaModel.restaurar(btnRestaurar.dataset.id);
+        showToast('Perícia restaurada!', 'success');
+        await carregarPericiasPorStatus();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
+      }
+      return;
+    }
+
   });
 });

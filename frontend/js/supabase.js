@@ -48,11 +48,48 @@ export const supabase = /** @type {any} */ (new Proxy({}, {
 }));
 
 
+const CHAVE_CACHE = 'supabase_env_cache_v1';
+const TTL_CACHE_MS = 6 * 60 * 60 * 1000; // 6h
+
+function lerCacheEnv() {
+  try {
+    const bruto = localStorage.getItem(CHAVE_CACHE);
+    if (!bruto) return null;
+    const { dados, expiraEm } = JSON.parse(bruto);
+    if (!dados || typeof expiraEm !== 'number') return null;
+    if (Date.now() > expiraEm) return null;
+    return dados;
+  } catch {
+    return null;
+  }
+}
+
+function salvarCacheEnv(dados) {
+  try {
+    localStorage.setItem(CHAVE_CACHE, JSON.stringify({
+      dados,
+      expiraEm: Date.now() + TTL_CACHE_MS
+    }));
+  } catch {
+    // localStorage indisponível — segue sem cache
+  }
+}
+
 export async function initSupabase() {
   if (_initPromise) return _initPromise;
 
   _initPromise = (async () => {
     if (_client) return _client;
+
+    const cache = lerCacheEnv();
+    if (cache) {
+      const created = createIfPossible(cache);
+      if (created) {
+        _client = created;
+        window.supabase = _client;
+        return _client;
+      }
+    }
 
     const apiUrl = getApiUrl();
 
@@ -60,6 +97,7 @@ export async function initSupabase() {
       headers: { accept: 'application/json' },
       cache: 'no-store'
     });
+
 
     const contentType = resp.headers.get('content-type') || '';
 
@@ -77,7 +115,10 @@ export async function initSupabase() {
 
     const data = await resp.json();
 
+    salvarCacheEnv(data);
+
     const created = createIfPossible(data);
+
     if (!created) {
       throw new Error('Supabase init: client não foi criado (chaves inválidas em /api/env).');
     }

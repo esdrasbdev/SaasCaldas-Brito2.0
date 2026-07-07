@@ -465,6 +465,37 @@ textarea:focus {
   text-transform: uppercase;
 }
 
+/* ===========================
+   SEÇÕES COLAPSÁVEIS (Arquivadas)
+   =========================== */
+.card-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.card-section-toggle i.fa-chevron-down {
+  transition: transform 0.2s ease;
+  color: var(--cinza-medio);
+}
+
+.card-section-toggle.aberto i.fa-chevron-down {
+  transform: rotate(180deg);
+}
+
+.status-arquivado {
+  background: rgba(107, 114, 128, 0.12);
+  color: var(--status-arquivado);
+}
+
+
 .status-ativo    { background: #d1fae5; color: var(--status-ativo); }
 .prazo-verde     { background: #d1fae5; color: var(--status-prazo-verde); }
 .prazo-amarelo   { background: #fef3c7; color: var(--status-prazo-amarelo); }

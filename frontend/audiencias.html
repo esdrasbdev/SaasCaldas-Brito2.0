@@ -105,7 +105,7 @@
         </div>
       </div>
 
-      <!-- Tabela -->
+      <!-- Tabela (Ativas) -->
       <div class="card-section">
         <div class="table-responsive">
           <table class="recent-table">
@@ -125,7 +125,31 @@
         </div>
       </div>
 
-    </main>
+      <!-- Seção: Audiências Arquivadas -->
+      <div class="card-section" style="margin-top: 16px;">
+        <button type="button" id="toggle-arquivadas" class="card-section-toggle">
+          <h2 style="margin:0;"><i class="fa-solid fa-box-archive"></i> Audiências Arquivadas</h2>
+          <i class="fa-solid fa-chevron-down" id="icone-toggle-arquivadas"></i>
+        </button>
+        <div id="bloco-arquivadas" class="table-responsive" style="display:none; margin-top: 12px;">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Data / Hora</th>
+                <th>Cliente / Processo</th>
+                <th>Local</th>
+                <th style="width: 110px;">Tipo</th>
+                <th style="width: 110px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-audiencias-arquivadas">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+</main>
   </div>
 
   <script type="module" src="js/supabase.js"></script><script type="module" src="js/auth.js"></script><script type="module" src="js/guard.js"></script><script type="module" src="js/sidebar.js"></script><script type="module" src="js/audiencias.js"></script>
