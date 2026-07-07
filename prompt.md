@@ -1,391 +1,352 @@
-# PROMPT — SaasCaldas-Brito2.0: Correções e Novas Funcionalidades
+# PROMPT — SaasCaldas-Brito2.0: Correções (Julho/2026)
 
 Você é um desenvolvedor Full Stack Sênior trabalhando no repositório
-`esdrasbdev/SaasCaldas-Brito2.0`. O projeto é **Vanilla JS (ES Modules) no
+`esdrasbdev/SaasCaldas-Brito2.0`. Stack: **Vanilla JS (ES Modules) no
 frontend + Node/Express no backend + Supabase (Postgres + Auth) + Vercel
-Blob + hospedagem na Vercel via função serverless única (`api/index.js` →
-`backend/index.js`)**. Siga as convenções já existentes: nomes de
-variáveis/comentários em português, sem frameworks front-end, sem emojis,
-ícones Font Awesome 6 Free, RBAC com os papéis `ADMIN`, `ADVOGADO`/`ADVOGADA`,
-`SECRETARIA`, `ESTAGIARIO`/`ESTAGIARIA`. **Não remova funcionalidades
-existentes e mantenha compatibilidade com o banco atual.**
+Blob, hospedado como função serverless única na Vercel**
+(`api/index.js` → `backend/index.js`). Siga as convenções já existentes:
+nomes de variáveis/comentários em português, sem frameworks front-end, sem
+emojis, ícones Font Awesome 6 Free, RBAC com os papéis `ADMIN`,
+`ADVOGADO`/`ADVOGADA`, `SECRETARIA`, `ESTAGIARIO`/`ESTAGIARIA`.
+
+**Regras gerais: não remova funcionalidades existentes, preserve a
+estrutura de arquivos atual e mantenha compatibilidade total com o banco
+de dados atual (nenhuma migração é necessária para os itens abaixo).**
 
 Este PROMPT já foi pré-diagnosticado a partir do código real do repositório
-(commit atual da branch principal). Cada seção abaixo descreve **o que já
-existe**, **a causa raiz confirmada** (quando aplicável) e **o que
-implementar**. Siga a ordem, pois os itens 1 e 2 são bloqueadores de
-produção.
+(branch principal, commit `d19ca56`). São 3 problemas, cada um com causa
+raiz confirmada em código.
 
 ---
 
-## 1. CORREÇÃO CRÍTICA — Upload de documentos (`Cannot find module 'busboy'`)
+## 1. BUG — Botão "Ver Processo Ativo" não abre o processo correto
 
-### Diagnóstico confirmado
-- `backend/package.json` **já lista `busboy: ^1.6.0`** como dependência, e
-  `backend/package-lock.json` (lockfileVersion 3) **já tem a entrada
-  resolvida** de `busboy` em `node_modules/busboy`. Ou seja, a dependência
-  está corretamente declarada.
-- `backend/node_modules` **não está mais versionado no git** (confirmado via
-  `git ls-files`) — o problema histórico de node_modules parcialmente
-  commitado já foi corrigido.
-- `vercel.json` define `"installCommand": "npm install --prefix backend"`,
-  o que é a abordagem correta para este layout de repositório.
-- Porém, o erro `Cannot find module 'busboy'` só pode acontecer se, no
-  momento em que a Vercel empacotou a função serverless
-  (`api/index.js` → `backend/index.js` → `backend/routes/documentos.js`),
-  o diretório `backend/node_modules/busboy` **não existia no disco de
-  build**. Isso indica um dos seguintes problemas reais encontrados no
-  repositório:
-  1. Existe um **`package-lock.json` órfão na raiz do projeto**
-     (`/package-lock.json`) com `"packages": {}` (vazio) e **sem
-     `package.json` correspondente na raiz**. Isso é lixo de uma tentativa
-     anterior de instalar algo na raiz e pode confundir a detecção de
-     projeto/cache de dependências da Vercel (a Vercel decide como
-     cachear `node_modules` com base em lockfiles encontrados).
-  2. Existe um arquivo **`backend/vercel-blob-2.5.0.tgz`** (180KB)
-     commitado no repositório — resquício de uma tentativa manual de
-     instalar `@vercel/blob` via tarball local. Ele não é referenciado por
-     nenhum `package.json`, mas sua presença é sinal de que o ambiente de
-     instalação já ficou inconsistente antes.
-  3. O cache de build da Vercel pode estar restaurando um
-     `backend/node_modules` **anterior à adição do `busboy`** ao
-     `package.json`, pulando a reinstalação real do pacote.
+### Arquivo
+`frontend/js/dashboard.js` (tabela "Últimos Processos" do dashboard,
+função `carregarDashboard`).
 
-### O que fazer
-1. **Remover o `package-lock.json` órfão da raiz** do projeto (ele não tem
-   `package.json` correspondente e não deve existir). Se o `.gitignore` da
-   raiz precisar ignorar lockfiles residuais no futuro, adicione a regra.
-2. **Remover o arquivo `backend/vercel-blob-2.5.0.tgz`** do repositório
-   (não é usado por nenhuma configuração e é apenas ruído).
-3. **Forçar instalação limpa no build da Vercel**, para eliminar qualquer
-   cache stale, alterando `installCommand` em `vercel.json` para:
-   ```json
-   "installCommand": "rm -rf backend/node_modules && npm install --prefix backend"
-   ```
-   Isso garante que, independentemente do estado do cache de build, o
-   `node_modules` do backend seja reconstruído do zero a partir do
-   `package.json`/`package-lock.json` atuais (que já incluem `busboy` e
-   `@vercel/blob`).
-4. Em `backend/routes/documentos.js`, mover `const Busboy =
-   require('busboy');` do meio do handler para o **topo do arquivo**,
-   junto dos outros `require`s, dentro de um `try/catch` (no mesmo padrão
-   já usado para `@vercel/blob`):
-   ```js
-   let Busboy = null;
-   try {
-     Busboy = require('busboy');
-   } catch (e) {
-     console.error('[documentos] Pacote "busboy" não encontrado no runtime:', e?.message || e);
-   }
-   ```
-   E, dentro da rota `POST /blob-upload`, antes de usar `Busboy`, adicionar
-   a mesma verificação defensiva já usada para `put`:
-   ```js
-   if (!Busboy) {
-     return res.status(500).json({
-       error: 'Falha no upload: pacote "busboy" indisponível no runtime.',
-       hint: 'Rode "npm install --prefix backend" e confirme o deploy antes de tentar novamente.'
-     });
-   }
-   ```
-   Isso não corrige a causa raiz (que é de infraestrutura/build), mas
-   garante uma mensagem amigável em vez de um 500 genérico caso o problema
-   reapareça.
-5. Após o deploy, **validar via `GET /api/documentos/debug-blob`** (rota já
-   existente em `backend/routes/documentos-debug.js`) que:
-   - `blob.moduleResolved` está `true`
-   - `blob.tokenPresent` está `true`
-   - Adicionar ao mesmo endpoint de debug um campo `busboy.moduleResolved`
-     (mesma lógica de `try { require('busboy') } catch`) para facilitar
-     diagnóstico futuro sem precisar reproduzir upload real.
-6. Confirmar nas variáveis de ambiente do projeto na Vercel (Dashboard →
-   Settings → Environment Variables) que `BLOB_READ_WRITE_TOKEN` está
-   presente em **Production**, **Preview** e **Development** — o
-   `debug-blob` já loga isso, então basta checar a resposta.
+### Causa raiz confirmada
+```js
+tbody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.btn-ver-processo-ativo');
+  if (!btn) return;
+  const clienteId = btn.dataset.clienteId || '';
+  const processoIdLinha = btn.dataset.processoId;
+  ...
+}, { once: true });   // <-- BUG 1
+```
+Existem **dois defeitos combinados**:
 
-### Requisitos funcionais adicionais (mantendo o handler atual)
-- **Tipos aceitos**: a lista `allowedContentTypes` em `documentos.js` já
-  cobre PDF, DOC, DOCX, XLS/XLSX, JPEG, PNG, GIF e TXT — adicionar
-  `image/jpg` como alias defensivo (alguns navegadores enviam esse
-  content-type não padrão para `.jpg`).
-- **Mensagens amigáveis**: no frontend (`frontend/js/documentos.js`),
-  mapear os códigos de erro retornados (`400`, `401`, `413`, `500`) para
-  textos em português já usando o sistema de toast existente
-  (`showToast` em `utils.js`), evitando exibir `error.message` bruto do
-  Supabase/Node ao usuário final.
-- **Barra de progresso**: como o upload atual usa `fetch` (não
-  `XMLHttpRequest`), trocar a chamada de upload em
-  `frontend/js/documentos.js` para `XMLHttpRequest` com
-  `xhr.upload.onprogress` para alimentar uma barra de progresso visual
-  (reaproveitar o padrão de modal já usado em outras telas do sistema).
-- **Confirmação de sucesso**: exibir toast de sucesso e atualizar a lista
-  de documentos do cliente sem reload de página, reutilizando o padrão de
-  atualização otimista já usado em `clientes.js`.
-- **Logs de erro**: no backend, padronizar todos os `catch` de
-  `documentos.js` para logar `console.error('[documentos] <contexto>:',
-  error)` antes de responder, para facilitar depuração via `vercel logs`.
+1. **`{ once: true }`**: o listener delegado no `<tbody>` é removido
+   automaticamente depois do **primeiro clique em qualquer linha**. Ou
+   seja: o botão funciona uma única vez por carregamento da página — no
+   segundo clique (mesma linha ou outra linha), nada acontece, porque o
+   listener já não existe mais.
+2. **Lógica de redirecionamento ignora o processo da própria linha**: cada
+   linha já carrega o `id` exato do processo exibido
+   (`data-processo-id="${p.id}"`), mas o clique **não usa esse id
+   diretamente** — em vez disso, dispara uma nova consulta ao Supabase
+   filtrando `processos` por `cliente_id` e `status = 'ATIVO'`. Isso faz
+   o botão te levar para **outro processo do mesmo cliente** (ou para a
+   tela de lista filtrada, se houver mais de um processo ativo), em vez de
+   abrir o processo que está de fato naquela linha — que é o "processo
+   devido" que o usuário clicou para ver.
+
+### Correção a implementar
+Substituir o bloco do botão e do listener por:
+
+```js
+tbody.innerHTML = resRecentes.data.map(p => `
+  <tr>
+    <td>
+      <strong>${p.clientes?.nome || 'Sem cliente'}</strong>
+      <span class="text-muted">${p.numero_cnj || 'S/N'}</span>
+    </td>
+    <td><span class="status-badge status-${p.status?.toLowerCase() || 'ativo'}">${p.status || 'ATIVO'}</span></td>
+    <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
+    <td>
+      <button class="btn-sm btn-ver-processo-ativo" data-processo-id="${p.id}">
+        Ver Processo
+      </button>
+    </td>
+  </tr>
+`).join('');
+```
+
+E o handler de clique (delegado uma única vez, sem `{ once: true }`, e
+navegando direto pelo id da linha clicada):
+
+```js
+// Delegação de clique — registrar UMA vez fora do fluxo de re-render,
+// usando o próprio tbody como referência estável (innerHTML é
+// substituído a cada carregamento, mas o elemento <tbody> não muda).
+if (!tbody.dataset.listenerVerProcesso) {
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-ver-processo-ativo');
+    if (!btn) return;
+
+    const processoId = btn.dataset.processoId;
+    if (!processoId) return;
+
+    // Vai direto para o processo exibido naquela linha —
+    // é sempre esse o processo "devido" que o usuário quer ver.
+    window.location.href = `processo-detalhe.html?id=${processoId}`;
+  });
+  tbody.dataset.listenerVerProcesso = 'true';
+}
+```
+
+Notas de implementação:
+- Renomeei o rótulo do botão para **"Ver Processo"** (mantendo a classe
+  `btn-ver-processo-ativo` para não quebrar nenhum outro seletor/estilo
+  já existente), porque a linha pode exibir um processo que não está
+  `ATIVO` (a query de recentes em `carregarDashboard` não filtra por
+  status — ver linhas 55-58) e o texto "Ver Processo Ativo" ficava
+  incorreto nesses casos. **Se preferir manter o texto original**, é só
+  não alterar a string do botão — a correção de comportamento (itens 1 e
+  2 acima) é o que resolve o bug relatado, o texto é só um ajuste de
+  clareza opcional.
+- Removi a consulta extra a `processos` por `cliente_id`/`ATIVO` porque
+  ela não é mais necessária: o id do processo já está disponível na
+  própria linha. Isso também deixa o clique instantâneo (sem round-trip
+  ao Supabase) e elimina o `showToast(...)` sem `window.` (linha 151 do
+  código atual) que podia lançar `ReferenceError` silenciosamente dentro
+  do `catch`.
+- O guard `if (!tbody.dataset.listenerVerProcesso)` evita registrar
+  listeners duplicados caso `carregarDashboard()` seja chamada mais de
+  uma vez na mesma sessão (ex.: alguma futura rotina de auto-refresh).
+- Se em algum outro lugar do sistema (ex.: relatórios, alertas) o mesmo
+  padrão de botão com `{ once: true }` tiver sido copiado, procure por
+  `{ once: true }` em `frontend/js/*.js` e avalie caso a caso — nesse
+  componente específico ele está incorreto.
 
 ---
 
-## 2. Botão "Ver Processo Ativo" (dashboard)
+## 2. UI — Deixar o sistema mais compacto
 
-### Diagnóstico confirmado (atualizado após confirmação do cliente)
-- O botão é o **"Ver" da tabela "Últimos Processos Atualizados"** no
-  dashboard (`frontend/index.html`, seção com `<h2>Últimos Processos
-  Atualizados</h2>`, renderizada em `frontend/js/dashboard.js` a partir da
-  query `resRecentes`). Hoje cada linha tem um link simples:
-  ```html
-  <a href="processo-detalhe.html?id=${p.id}" class="btn-sm">Ver</a>
-  ```
-  que sempre abre exatamente o processo daquela linha, **sem considerar**
-  se o cliente daquele processo tem outros processos ativos.
-- A query atual em `dashboard.js` (`resRecentes`) seleciona
-  `id, numero_cnj, status, criado_em, clientes(nome)` — **falta
-  `cliente_id`** no `select`, que é necessário para a nova lógica.
+### Objetivo
+Reduzir espaçamentos, paddings e tamanhos de fonte redundantes em
+`frontend/css/style.css` e `frontend/css/sidebar.css`, sem remover nenhuma
+classe, variável ou breakpoint responsivo existente — apenas ajustar
+valores para uma densidade de informação maior (mais conteúdo visível por
+tela, menos rolagem), mantendo a paleta e identidade visual (dourado
+`#b49350` / azul `#0f172a`) intactas.
 
-### O que implementar
-1. Em `frontend/js/dashboard.js`, na query `resRecentes`, incluir
-   `cliente_id` no `select`:
-   ```js
-   supabase.from('processos')
-     .select('id, numero_cnj, status, criado_em, cliente_id, clientes(nome)')
-     .order('criado_em', { ascending: false })
-     .limit(7),
-   ```
-2. Trocar o link estático de cada linha por um botão com `data-*`
-   attributes e texto **"Ver Processo Ativo"**:
-   ```html
-   <button class="btn-sm btn-ver-processo-ativo" data-cliente-id="${p.cliente_id || ''}" data-processo-id="${p.id}">
-     Ver Processo Ativo
-   </button>
-   ```
-3. Adicionar um listener delegado (após `tbody.innerHTML = ...`) que, ao
-   clicar em `.btn-ver-processo-ativo`:
-   - Se não houver `cliente_id` (processo sem cliente vinculado),
-     redireciona direto para `processo-detalhe.html?id=<processo_id>`
-     (fallback, mesmo comportamento atual).
-   - Caso contrário, consulta
-     `supabase.from('processos').select('id').eq('cliente_id', clienteId).eq('status', 'ATIVO')`:
-     - **0 resultados**: exibir toast ("Este cliente não possui processo
-       ativo.") e não navegar.
-     - **1 resultado**: redirecionar direto para
-       `processo-detalhe.html?id=<id_do_processo_ativo>` (pode ser
-       diferente do `processo-id` da linha, se o processo da linha não for
-       o ativo).
-     - **2+ resultados**: redirecionar para
-       `processos.html?cliente_id=<cliente_id>`.
-4. Em `frontend/js/processos.js`, no `ProcessoController.init()` (depois de
-   `await this.loadAll()`), ler `cliente_id` da URL:
-   ```js
-   const clienteIdUrl = new URLSearchParams(window.location.search).get('cliente_id');
-   if (clienteIdUrl) {
-     const filtrados = this.data.filter(p => p.cliente_id === clienteIdUrl);
-     ProcessoView.renderizarTabela(filtrados, AuthAPI.getRole() === 'ADMIN');
-     // Opcional: preencher o campo de busca com o nome do cliente para dar contexto visual
-     const nomeCliente = filtrados[0]?.clientes?.nome;
-     if (nomeCliente) document.getElementById('busca-processo').value = nomeCliente;
-   }
-   ```
-   Isso reaproveita a renderização (`ProcessoView.renderizarTabela`) já
-   existente, sem duplicar lógica de filtro — a caixa de busca/status
-   normal continua funcionando por cima da lista já filtrada por cliente
-   caso o usuário queira refinar mais.
+### Causa raiz / diagnóstico
+O layout já usa variáveis de espaçamento consistentes
+(`--espaco-xs/sm/md/lg/xl` em `style.css`, linhas 48-52), mas vários
+componentes usam valores **fixos em rem/px acima do necessário**,
+divorciados dessas variáveis, o que infla a altura das telas:
 
----
+| Componente | Valor atual | Local |
+|---|---|---|
+| `.main-content` padding | `28px 32px` | style.css:167 |
+| `h1` margin-bottom | `24px` | style.css:199 |
+| `.page-header` margin-bottom | `2rem` | style.css:232 |
+| `.welcome-banner` padding / margin-bottom | `2.5rem` / `2.5rem` | style.css:267,270 |
+| `.welcome-banner #saudacao` font-size | `2rem` | style.css:304 |
+| `.card-section` padding (desktop) | `var(--espaco-lg)` (24px) | style.css:584 |
+| `.recent-table th/td` padding | herdado, sem compactação no desktop | style.css:631-651 |
+| `.sidebar` width | `260px` | sidebar.css:4 |
+| `.main-content` max-width | `calc(100% - 280px)` | style.css:169 (**20px de folga não usada**, pois a sidebar tem 260px) |
 
-## 3. Página exclusiva de Procurações (`/procuracoes`)
+### Correção a implementar
+Ajustar **apenas os valores abaixo**, mantendo seletores e nomes de
+variáveis:
 
-### Diagnóstico confirmado
-- Hoje, "procuração" é apenas **um dos seis templates de PDF gerados sob
-  demanda** em `frontend/js/clientes.js` (chave `'procuracao'`, geração
-  via `jsPDF` com `addMisto()`/timbrado). **Não existe tabela, status ou
-  histórico de procurações** — cada geração é um documento avulso sem
-  rastreamento de vencimento/status.
-- Isso significa que este item é uma **funcionalidade nova**, não uma
-  reorganização de UI existente.
+**`frontend/css/style.css`**
+```css
+:root {
+  /* Espaçamentos consistentes — reduzidos para layout mais compacto */
+  --espaco-xs: 4px;
+  --espaco-sm: 6px;   /* era 8px */
+  --espaco-md: 12px;  /* era 16px */
+  --espaco-lg: 18px;  /* era 24px */
+  --espaco-xl: 24px;  /* era 32px */
+}
+```
+```css
+.main-content {
+  padding: 20px 24px;              /* era 28px 32px */
+  max-width: calc(100% - 260px);   /* era 280px — alinhar com .sidebar (260px) */
+}
+```
+```css
+h1 { font-size: 24px; margin-bottom: 16px; }   /* era 28px / 24px */
+h2 { font-size: 18px; margin-bottom: 12px; }   /* era 20px / 16px */
+```
+```css
+.page-header {
+  padding-bottom: 1rem;      /* era 1.25rem */
+  margin-bottom: 1.25rem;    /* era 2rem */
+}
+```
+```css
+.welcome-banner {
+  padding: 1.75rem;          /* era 2.5rem */
+  margin-bottom: 1.5rem;     /* era 2.5rem */
+  border-radius: 16px;       /* era 20px */
+}
+.welcome-banner h1, .welcome-banner #saudacao, #saudacao {
+  font-size: 1.6rem;         /* era 2rem */
+}
+.welcome-banner p { font-size: 1rem; }   /* era 1.1rem */
+```
+```css
+.card-section { padding: var(--espaco-md); }    /* var(--espaco-lg) → var(--espaco-md), já reduzida acima */
+.card-section h2 { margin-bottom: var(--espaco-sm); padding-bottom: var(--espaco-sm); }
+```
+```css
+.recent-table th, .recent-table td {
+  padding: 10px 12px;   /* compactar também no desktop, não só no breakpoint mobile de 768px */
+}
+```
 
-### O que implementar
-1. **Nova tabela** `sql/create_procuracoes.sql`:
-   ```sql
-   create table if not exists procuracoes (
-     id uuid primary key default gen_random_uuid(),
-     cliente_id uuid references clientes(id) not null,
-     documento_id uuid references documentos(id), -- vínculo com o arquivo (PDF/upload) em Vercel Blob
-     status text not null default 'ATIVA' check (status in ('ATIVA','PENDENTE','VENCIDA')),
-     data_emissao date not null default current_date,
-     data_vencimento date,
-     criado_por uuid references usuarios(id),
-     criado_em timestamptz default now()
-   );
-   alter table procuracoes enable row level security;
-   create policy "leitura_autenticados" on procuracoes for select using (auth.role() = 'authenticated');
-   create policy "escrita_autenticados" on procuracoes for all using (auth.role() = 'authenticated');
-   ```
-   Reaproveite a tabela `documentos` (já existente) para o arquivo em si
-   via `documento_id`, evitando duplicar storage/lógica de upload.
-2. **Backend**: novo arquivo `backend/routes/procuracoes.js` com
-   `GET /`, `GET /:id`, `POST /`, `PUT /:id` (para status/vencimento) e
-   `DELETE /:id`, seguindo exatamente o padrão de
-   `backend/routes/documentos.js` (mesmo uso de `supabaseAdmin`,
-   `authMiddleware`, tratamento de erro). Registrar em `backend/index.js`:
-   ```js
-   const procuracoesRouter = require('./routes/procuracoes.js');
-   app.use('/api/procuracoes', authMiddleware, procuracoesRouter);
-   ```
-3. **Frontend**: nova página `frontend/procuracoes.html` +
-   `frontend/js/procuracoes.js`, seguindo a arquitetura MVC já usada em
-   `clientes.js` (Model/View separados). Funcionalidades:
-   - Abas ou filtros para **Ativas / Pendentes / Vencidas / Histórico**
-     (status derivado de `data_vencimento` vs. data atual, calculado no
-     backend ou no frontend na listagem).
-   - Busca por nome do cliente.
-   - Botões de **Download**, **Visualizar** (abre o PDF/URL do Blob) e
-     **Upload de nova procuração** (reaproveitar o componente de upload já
-     corrigido no item 1, adaptado para gravar também na tabela
-     `procuracoes`).
-4. **Registrar a nova rota** em `frontend/js/sidebar.js` (item de menu
-   "Procurações", ícone `fa-solid fa-scroll`) e em `frontend/js/guard.js`
-   (`'procuracoes.html': { requiresAuth: true, requiredRole: null }`).
-5. **Geração em 1 página**: no template jsPDF de procuração já existente
-   (`clientes.js`, bloco `chave === 'procuracao'`), reduzir
-   `FONT_SIZE_TEXTO_PROC` levemente (ex.: de 10.5 para 10) e os valores de
-   `depois`/`DEPOIS_PODERES_PROC`/`DEPOIS_DATA_PROC` proporcionalmente, e
-   adicionar uma verificação pós-render: se `doc.getNumberOfPages() > 1`,
-   reduzir programaticamente a margem superior/inferior e regenerar antes
-   de salvar, garantindo que o PDF final tenha sempre 1 página. Ao salvar
-   o PDF gerado, enviá-lo automaticamente para o novo endpoint de
-   procurações (upload + registro na tabela).
+**`frontend/css/sidebar.css`**
+```css
+.sidebar-nav { padding: 8px 10px; }        /* era 10px 12px */
+.sidebar-nav a, .sidebar-nav .sidebar-item { padding: 7px 10px; }  /* era 9px 12px — ajustar seletor real do link/item */
+.sidebar-header { padding: 12px 20px; }    /* era 16px 20px */
+.sidebar-footer { padding: 12px; }         /* era 16px */
+```
+
+### Cuidados ao aplicar
+- **Não** alterar `--borda-arredondada`, cores, sombras ou breakpoints
+  `@media` já existentes — o pedido é de densidade, não de redesenho.
+- Depois de aplicar, revisar visualmente (ou via captura de tela) as
+  telas de `index.html` (dashboard), `processos.html`, `clientes.html` e
+  `agenda.html`, pois todas herdam `.main-content`, `.page-header` e
+  `.card-section` do `style.css` global — a mudança é automática em todo
+  o sistema, mas vale confirmar que nenhum conteúdo ficou espremido
+  (especialmente KPIs com números grandes e a tabela de audiências).
+- Os breakpoints mobile (`@media (max-width: 768px)`, a partir da linha
+  ~1042 de `style.css`) já são compactos e **não precisam de alteração**;
+  esta correção afeta principalmente a experiência desktop/tablet, que
+  hoje tem espaçamento excessivo comparado ao mobile.
 
 ---
 
-## 4. Filtro de clientes por responsável
+## 3. BUG CRÍTICO — Upload de documentos: `Falha no upload: pacote "busboy" indisponível no runtime`
 
-### Diagnóstico confirmado (boa notícia: a base já existe)
-- A tabela de junção `responsaveis_cliente` **já existe** (ver
-  `sql/create_responsaveis_cliente.sql` e uso em
-  `ClienteModel.listarTodos()`/`buscarPorId()` em `frontend/js/clientes.js`,
-  que já faz `select('*, responsaveis_cliente(usuario_id, usuarios(nome))')`).
-- O componente `frontend/js/responsaveis-select.js` já restringe papéis
-  elegíveis a `ROLES_RESPONSAVEL = ['ADMIN','ADVOGADO','ADVOGADA','ESTAGIARIO','ESTAGIARIA']`
-  — ou seja, a regra de "somente estes cargos podem ser responsáveis" **já
-  está implementada no componente de seleção**. Falta apenas o filtro de
-  listagem.
+### Estado atual (o que já foi corrigido antes e permanece válido)
+Confirmado no código atual que **já existem** as mitigações da rodada de
+diagnóstico anterior:
+- `backend/package.json` lista `busboy: ^1.6.0`.
+- `backend/package-lock.json` tem a entrada resolvida completa de
+  `node_modules/busboy` (versão, `resolved`, `integrity`) — o lockfile
+  **não** está desatualizado.
+- `vercel.json` já usa
+  `"installCommand": "rm -rf backend/node_modules && npm install --prefix backend"`.
+- `backend/routes/documentos.js` já importa `busboy` no topo do arquivo
+  com `try/catch` e responde 500 com mensagem amigável caso falhe.
+- `backend/routes/documentos-debug.js` já expõe
+  `GET /api/documentos/debug-blob` com `blob.busboy.moduleResolved`.
+- Não há mais `package-lock.json` órfão na raiz nem `.tgz` commitado.
 
-### O que implementar
-1. Em `frontend/clientes.html`, adicionar uma barra de filtros acima da
-   tabela/lista de clientes, com um botão `[TODOS]` seguido de um botão
-   por usuário elegível (reaproveitar a mesma query de usuários elegíveis
-   já usada em `responsaveis-select.js`, filtrando `role IN
-   ('ADMIN','ADVOGADO','ADVOGADA','ESTAGIARIO','ESTAGIARIA')` e
-   `ativo = true`).
-2. Em `frontend/js/clientes.js`, adicionar estado local
-   `filtroResponsavelId` (null = TODOS). Ao clicar em um botão de
-   responsável, filtrar a lista já carregada por
-   `cliente.responsaveis_cliente.some(r => r.usuario_id === filtroResponsavelId)`
-   (client-side, já que `listarTodos()` traz o relacionamento). Isso evita
-   nova chamada de API a cada clique.
-3. A busca por texto (lupa) já existente deve operar **sobre o resultado
-   já filtrado por responsável**, não sobre a lista completa — ou seja, a
-   função de busca deve receber a lista filtrada como entrada, não a lista
-   bruta de `ClienteModel.listarTodos()`.
-4. **Regra de acesso**: usuários com papéis fora de
-   `ROLES_RESPONSAVEL` (por exemplo `SECRETARIA`) não devem:
-   - Aparecer como opção no filtro (já resolvido, pois a query de usuários
-     elegíveis usa o mesmo filtro de `role`).
-   - Receber clientes vinculados — adicionar essa validação também no
-     **backend**, em `backend/routes/clientes.js`, no endpoint que grava
-     `responsaveis_cliente` (rejeitar com `400` se o `usuario_id` enviado
-     não tiver `role` dentro de `ROLES_RESPONSAVEL`), para não depender
-     apenas da validação client-side.
+**Ou seja: a causa raiz de código já foi eliminada.** Se o erro
+`"busboy" indisponível no runtime` ainda está acontecendo em produção
+hoje, o problema **não está mais no repositório** — está em uma das
+duas frentes abaixo, que precisam ser verificadas fora do código:
 
----
+### 3.1 — Verificação obrigatória nas configurações do projeto na Vercel (fora do repositório)
+Isso **não é editável via código**, mas é a causa mais provável de o
+erro persistir mesmo com o `vercel.json` correto:
+1. No painel da Vercel → **Project Settings → Build and Deployment →
+   Install Command**: se houver um comando customizado **sobrescrito
+   manualmente** aqui (toggle "Override" ativado), ele **tem prioridade
+   sobre o `installCommand` do `vercel.json`** e pode estar rodando um
+   `npm install` antigo/incompleto (ex.: na raiz do projeto, sem o
+   `--prefix backend`). Desative o override para o `vercel.json` valer,
+   ou copie exatamente o comando do `vercel.json` para esse campo.
+2. **Project Settings → General → Root Directory**: confirme que está
+   vazio/raiz do repositório (não "frontend" nem "backend"). Se estiver
+   diferente da raiz, o `vercel.json` do repositório é ignorado.
+3. Depois de corrigir 1 e 2, force um **redeploy sem cache** ("Redeploy"
+   com a opção "Use existing Build Cache" **desmarcada**) para garantir
+   que nenhum `node_modules` antigo seja reaproveitado.
+4. Após o deploy, chamar `GET /api/documentos/debug-blob` e confirmar
+   `blob.busboy.moduleResolved: true` antes de testar upload real.
 
-## 5 e 6. Arquivamento de audiências e perícias
+### 3.2 — Correção de código: falhar de forma visível no build, não só em runtime
+Hoje, se `busboy` não resolver, o sistema só avisa o usuário **quando ele
+tenta subir um documento** (500 silencioso em produção, sem aparecer nos
+logs de build). Para um bug de infraestrutura como este, é melhor **falhar
+o build/deploy imediatamente** se uma dependência crítica não instalar,
+em vez de descobrir isso só quando um cliente tenta anexar uma petição.
 
-### Diagnóstico confirmado
-- As tabelas `audiencias` e `pericias` (ver `sql/schema.sql`) **não têm
-  coluna de status/arquivamento** hoje. É necessário adicionar a coluna
-  antes de implementar a UI.
+Adicionar um script de verificação pós-instalação:
 
-### O que implementar
-1. Nova migration `sql/add_status_arquivamento.sql`:
-   ```sql
-   alter table audiencias add column if not exists status text not null default 'ATIVA' check (status in ('ATIVA','ARQUIVADA'));
-   alter table pericias add column if not exists status text not null default 'ATIVA' check (status in ('ATIVA','ARQUIVADA'));
-   create index if not exists idx_audiencias_status on audiencias(status);
-   create index if not exists idx_pericias_status on pericias(status);
-   ```
-2. **Backend**: em `backend/routes/audiencias.js` e
-   `backend/routes/pericias.js`:
-   - `GET /` passa a aceitar `?status=ATIVA|ARQUIVADA` (default `ATIVA`,
-     para não quebrar telas existentes).
-   - Novo endpoint `PATCH /:id/arquivar` e `PATCH /:id/restaurar`, cada um
-     fazendo apenas `update({ status: 'ARQUIVADA' | 'ATIVA' })` — **nunca**
-     `delete`.
-3. **Frontend**: em `frontend/js/audiencias.js` e `frontend/js/pericias.js`,
-   no template de linha da tabela (mesmo bloco onde hoje ficam os botões de
-   ação), adicionar botão **"Arquivar"** (ícone `fa-solid fa-box-archive`)
-   que abre um modal de confirmação (reaproveitar o padrão de modal de
-   confirmação já usado em outras telas, ex. exclusão de usuários em
-   `admin.js`) e, ao confirmar, chama `PATCH /:id/arquivar` e remove a
-   linha da lista atual (já que a listagem padrão só mostra `ATIVA`).
+**Criar `backend/scripts/verificar-dependencias-criticas.js`:**
+```js
+/*
+ * Verificação de dependências críticas em tempo de build.
+ * Falha o deploy imediatamente se um pacote essencial não resolver,
+ * em vez de deixar o erro aparecer só quando um usuário tenta usar
+ * a funcionalidade (ex.: upload de documentos) em produção.
+ */
+const criticos = ['busboy', '@vercel/blob'];
+let falhou = false;
 
----
+for (const pacote of criticos) {
+  try {
+    require.resolve(pacote);
+    console.log(`[verificar-dependencias] OK: ${pacote}`);
+  } catch (e) {
+    falhou = true;
+    console.error(`[verificar-dependencias] FALHA: ${pacote} não resolvido — ${e.message}`);
+  }
+}
 
-## 7. Área de Arquivados (com restauração)
+if (falhou) {
+  console.error('[verificar-dependencias] Build abortado: dependência crítica ausente.');
+  process.exit(1);
+}
+```
 
-### O que implementar
-1. **Menu lateral** (`frontend/js/sidebar.js`): adicionar item "Arquivados"
-   (ícone `fa-solid fa-box-archive`) com submenus "Audiências Arquivadas" e
-   "Perícias Arquivadas", no mesmo padrão de agrupamento já usado para o
-   grupo "ADMINISTRAÇÃO".
-2. **Páginas**: `frontend/audiencias-arquivadas.html` e
-   `frontend/pericias-arquivadas.html` (ou uma única página
-   `arquivados.html` com abas, para reduzir duplicação de HTML/CSS — a
-   escolha entre as duas abordagens deve seguir o padrão visual já usado em
-   `frontend/audiencias.html`/`pericias.html`, reaproveitando a mesma
-   tabela/CSS e trocando apenas a chamada de API para
-   `?status=ARQUIVADA`).
-3. **JS**: reaproveitar ao máximo `frontend/js/audiencias.js` e
-   `frontend/js/pericias.js` (extrair a função de renderização de
-   tabela para ser parametrizável por status, em vez de duplicar código),
-   trocando apenas o botão de ação de "Arquivar" para **"Restaurar"**
-   (chama `PATCH /:id/restaurar`).
-4. Adicionar as novas páginas em `frontend/js/guard.js`
-   (`requiresAuth: true, requiredRole: null`, a menos que se decida
-   restringir arquivamento a `ADMIN`/`ADVOGADO` — **confirme com o
-   cliente** se estagiários podem restaurar registros arquivados antes de
-   liberar essa permissão).
+**Em `backend/package.json`, adicionar o script `postinstall`:**
+```json
+"scripts": {
+  "start": "node index.js",
+  "dev": "node --watch index.js",
+  "postinstall": "node scripts/verificar-dependencias-criticas.js"
+}
+```
 
----
+Assim, se o problema de cache/instalação voltar a ocorrer, o **deploy
+falha explicitamente nos logs da Vercel** com a mensagem
+`FALHA: busboy não resolvido`, em vez de ir para produção silenciosamente
+e só quebrar quando um usuário anexar um documento.
 
-## 8–10. Produção, testes e relatório final
+### 3.3 — Recomendação estrutural (opcional, eliminar a dependência do problema pela raiz)
+A causa de fundo de toda essa instabilidade é fazer **parsing manual de
+multipart/form-data dentro da função serverless** (via `busboy`) só para
+depois repassar o arquivo ao Vercel Blob. O próprio Vercel Blob oferece
+um fluxo de **upload direto do navegador para o Blob Storage**
+(`@vercel/blob/client`, `handleUpload`), que:
+- Elimina a necessidade de `busboy`/parsing multipart no backend por
+  completo (o arquivo nunca passa pela função serverless).
+- Remove o limite de payload da função serverless (hoje contornado com
+  `express.json({ limit: '60mb' })`, que é uma solução frágil).
+- É o padrão oficialmente recomendado pela Vercel para upload de
+  arquivos com Blob.
 
-- Após implementar os itens 1–7, testar em ambiente local
-  (`npm run dev --prefix backend` + servidor estático do frontend) os
-  fluxos completos: upload de cada tipo de arquivo permitido, geração de
-  procuração em 1 página, filtro de clientes por cada responsável
-  cadastrado, arquivamento/restauração de audiência e perícia.
-- Fazer deploy em **Preview** da Vercel antes de promover para produção, e
-  validar especificamente o endpoint `GET /api/documentos/debug-blob` para
-  confirmar que `busboy` e `@vercel/blob` resolvem corretamente no runtime
-  de produção (não apenas local).
-- Ao final, produzir um relatório listando: arquivos alterados/criados,
-  migrations SQL executadas (e em qual ambiente), e quaisquer decisões que
-  exigiram confirmação do cliente (ex.: papel de "arquivar/restaurar" para
-  estagiários, escolha entre página única de arquivados com abas vs. duas
-  páginas separadas).
+Isso é uma refatoração maior (mudar `POST /api/documentos/blob-upload`
+para gerar um token de upload assinado, e o frontend em
+`frontend/js/*.js` responsável pelo formulário de documentos para usar
+`upload()` do pacote `@vercel/blob/client` direto do navegador). **Não é
+obrigatório para resolver o erro atual** (os itens 3.1 e 3.2 já resolvem),
+mas é a recomendação de arquitetura mais robusta caso o problema volte a
+se repetir no futuro. Implementar apenas se houver tempo/orçamento para
+testar esse fluxo de ponta a ponta antes de ir para produção.
 
 ---
 
-## Observações finais para o agente de execução
-
-- **Não** apague `backend/routes/documentos-debug.js` — é a ferramenta de
-  diagnóstico usada para validar a correção do item 1 em produção.
-- **Não** reintroduza `backend/node_modules` no git.
-- Sempre que criar uma nova rota de API, registre-a em `backend/index.js`
-  com `authMiddleware`, seguindo o padrão das rotas existentes.
-- Sempre que criar uma nova página `.html`, registre-a em
-  `frontend/js/sidebar.js` **e** `frontend/js/guard.js` — esquecer o guard
-  é a causa mais comum de bugs de permissão neste projeto (já ocorreu
-  antes com os papéis ESTAGIARIO/ESTAGIARIA em audiências/perícias).
+## Ordem de execução sugerida
+1. Item 3.1 (verificação de configurações na Vercel) — **é o que
+   provavelmente já resolve o upload**, sem precisar de mais nenhuma
+   alteração de código.
+2. Item 3.2 (script de verificação em build) — rede de segurança barata.
+3. Item 1 (botão "Ver Processo Ativo") — bug de frontend, independente.
+4. Item 2 (compactação de CSS) — ajuste visual, sem risco para dados ou
+   lógica de negócio.
+5. Item 3.3 — só se houver tempo, como melhoria futura.

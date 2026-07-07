@@ -99,58 +99,30 @@ async function carregarDashboard() {
           <td><span class="status-badge status-${p.status?.toLowerCase() || 'ativo'}">${p.status || 'ATIVO'}</span></td>
           <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
           <td>
-            <button class="btn-sm btn-ver-processo-ativo" data-cliente-id="${p.cliente_id || ''}" data-processo-id="${p.id}">
-              Ver Processo Ativo
+            <button class="btn-sm btn-ver-processo-ativo" data-processo-id="${p.id}">
+              Ver Processo
             </button>
           </td>
         </tr>
       `).join('');
 
-      tbody.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.btn-ver-processo-ativo');
+      // Delegação de clique — registrar UMA vez fora do fluxo de re-render,
+      // usando o próprio tbody como referência estável (innerHTML é
+      // substituído a cada carregamento, mas o elemento <tbody> não muda).
+      if (!tbody.dataset.listenerVerProcesso) {
+        tbody.addEventListener('click', (e) => {
+          const btn = e.target.closest('.btn-ver-processo-ativo');
+          if (!btn) return;
 
-        if (!btn) return;
+          const processoId = btn.dataset.processoId;
+          if (!processoId) return;
 
-        const clienteId = btn.dataset.clienteId || '';
-        const processoIdLinha = btn.dataset.processoId;
-
-        // fallback (sem cliente vinculado)
-        if (!clienteId) {
-          window.location.href = `processo-detalhe.html?id=${processoIdLinha}`;
-          return;
-        }
-
-        try {
-          const { data: ativos, error } = await supabase
-            .from('processos')
-            .select('id')
-            .eq('cliente_id', clienteId)
-            .eq('status', 'ATIVO');
-
-          if (error) throw error;
-
-          if (!ativos || ativos.length === 0) {
-            // sem toast disponível aqui; usa alert para não quebrar UI
-if (typeof window.showToast === 'function') {
-              window.showToast('Este cliente não possui processo ativo.', 'error');
-            } else {
-              alert('Este cliente não possui processo ativo.');
-            }
-            return;
-          }
-
-          if (ativos.length === 1) {
-            window.location.href = `processo-detalhe.html?id=${ativos[0].id}`;
-            return;
-          }
-
-          // 2+ ativos: lista filtrada
-          window.location.href = `processos.html?cliente_id=${clienteId}`;
-        } catch (err) {
-          console.error(err);
-          showToast('Erro ao verificar processo ativo.', 'error');
-        }
-      }, { once: true });
+          // Vai direto para o processo exibido naquela linha —
+          // é sempre esse o processo "devido" que o usuário quer ver.
+          window.location.href = `processo-detalhe.html?id=${processoId}`;
+        });
+        tbody.dataset.listenerVerProcesso = 'true';
+      }
     } else {
       tbody.innerHTML = `
         <tr>

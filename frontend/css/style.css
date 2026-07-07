@@ -46,10 +46,10 @@
 
   /* Espaçamentos consistentes */
   --espaco-xs: 4px;
-  --espaco-sm: 8px;
-  --espaco-md: 16px;
-  --espaco-lg: 24px;
-  --espaco-xl: 32px;
+  --espaco-sm: 6px;
+  --espaco-md: 12px;
+  --espaco-lg: 18px;
+  --espaco-xl: 24px;
 
   /* Bordas arredondadas sutis */
   --borda-arredondada: 8px;
@@ -164,9 +164,9 @@ body.dark-mode .welcome-banner {
 
 .main-content {
   flex: 1;
-  padding: 28px 32px;
+  padding: 20px 24px;
   overflow-y: auto;
-  max-width: calc(100% - 280px);
+  max-width: calc(100% - 260px);
   height: 100vh;
 }
 
@@ -193,18 +193,18 @@ body.dark-mode .welcome-banner {
 
 /* Tipografia */
 h1 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   color: var(--azul-escuro);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--azul-escuro);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 h3 {
@@ -225,11 +225,11 @@ p {
    =========================== */
 .page-header {
   border-bottom: 2px solid var(--dourado-claro);
-  padding-bottom: 1.25rem;
+  padding-bottom: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   background: transparent;
   animation: fadeInUp 0.5s ease-out backwards;
   flex-wrap: wrap;
@@ -264,10 +264,10 @@ p {
    =========================== */
 .welcome-banner {
   background: linear-gradient(135deg, #1a1410 0%, #2d200e 60%, #3d2b10 100%);
-  padding: 2.5rem;
-  border-radius: 20px;
+  padding: 1.75rem;
+  border-radius: 16px;
   color: white;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
   position: relative;
   overflow: hidden;
   box-shadow: 0 10px 30px -10px rgba(30, 58, 138, 0.3);
@@ -301,13 +301,13 @@ p {
 .welcome-banner #saudacao,
 #saudacao {
   color: #ffffff !important;
-  font-size: 2rem;
+  font-size: 1.6rem;
   margin-bottom: 0.5rem;
 }
 
 .welcome-banner p {
   color: rgba(255, 255, 255, 0.8);
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin: 0;
 }
 
@@ -581,7 +581,7 @@ textarea:focus {
   background: var(--branco);
   border: none;
   border-radius: 20px;
-  padding: var(--espaco-lg);
+  padding: var(--espaco-md);
   box-shadow: var(--sombra-card);
   animation: fadeInUp 0.6s ease-out 0.3s backwards;
 }
@@ -589,7 +589,7 @@ textarea:focus {
 .card-section h2 {
   font-size: 1.15rem;
   color: var(--azul-escuro);
-  margin-bottom: var(--espaco-md);
+  margin-bottom: var(--espaco-sm);
   padding-bottom: var(--espaco-sm);
   border-bottom: 1px solid var(--cinza-borda);
 }
@@ -630,7 +630,7 @@ textarea:focus {
 
 .recent-table th {
   text-align: left;
-  padding: 10px 14px;
+  padding: 10px 12px;
   color: var(--cinza-medio);
   font-size: 0.8rem;
   font-weight: 600;
@@ -641,7 +641,7 @@ textarea:focus {
 }
 
 .recent-table td {
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--cinza-fundo);
   font-size: 0.95rem;
   color: var(--cinza-escuro);

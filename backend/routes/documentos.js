@@ -217,7 +217,7 @@ router.post('/blob-upload', async (req, res) => {
         nome: nome || 'documento',
         url,
         tipo: tipoFinal,
-        cliente_id,
+        cliente_id: clienteIdFinal,
         upload_por: req.user.id
       })
       .select()

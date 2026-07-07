@@ -17,7 +17,7 @@
 
 /* Cabeçalho da Sidebar (Logo) */
 .sidebar-header {
-  padding: 16px 20px;
+  padding: 12px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -74,7 +74,7 @@ body.dark-mode .brand-logo-text small {
 
 /* Navegação (Links) */
 .sidebar-nav {
-  padding: 10px 12px;
+  padding: 8px 10px;
   flex: 1; /* Ocupa o espaço disponível */
   overflow-y: auto;
   display: flex;
@@ -86,7 +86,7 @@ body.dark-mode .brand-logo-text small {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 12px;
+  padding: 7px 10px;
   color: var(--cinza-escuro);
   text-decoration: none;
   border-radius: 8px;
@@ -148,7 +148,7 @@ body.dark-mode .brand-logo-text small {
 
 /* Rodapé da Sidebar (Perfil do Usuário) */
 .sidebar-footer {
-  padding: 16px;
+  padding: 12px;
   border-top: 1px solid var(--cinza-borda);
   background-color: transparent; /* Remove fundo para manter consistência na troca de tema */
   display: flex;

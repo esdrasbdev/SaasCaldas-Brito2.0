@@ -407,7 +407,7 @@ const ClienteView = {
         btnUpload.addEventListener('click', () => {
           const input = document.getElementById('upload-doc-cliente');
           if (input) input.click();
-        }, { once: true });
+        });
       }
     }
 
