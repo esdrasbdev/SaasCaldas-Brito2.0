@@ -118,14 +118,28 @@ const ClienteView = {
   },
 
   init() {
-    // Renderiza estrutura base da tabela com busca
+    // Renderiza estrutura base da tabela com busca + filtro de responsável
     this.elementos.tabelaContainer.innerHTML = `
       <div class="card-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h2>Base de Clientes</h2>
-          <input type="text" id="busca-cliente" placeholder="Buscar por nome ou CPF..." style="max-width: 300px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap:12px; flex-wrap:wrap;">
+          <h2 style="margin:0;">Base de Clientes</h2>
+
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; width:100%;">
+            <input type="text" id="busca-cliente" placeholder="Buscar por nome ou CPF..." style="max-width: 300px;" />
+
+            <div style="min-width:260px;">
+              <label style="display:block; font-size:0.82rem; color: var(--cinza-medio); margin-bottom:6px;">Responsável (filtrar)</label>
+              <div class="seletor-responsaveis">
+                <input type="text" id="cli-responsaveis-filtro-busca" placeholder="Buscar responsável..." autocomplete="off" />
+                <div id="cli-responsaveis-filtro-dropdown" class="responsaveis-dropdown" style="display:none;"></div>
+                <div id="cli-responsaveis-filtro-tags" class="responsaveis-tags"></div>
+              </div>
+            </div>
+          </div>
         </div>
+
         <div class="table-responsive">
+
           <table class="recent-table">
             <thead>
               <tr>
@@ -1217,11 +1231,20 @@ const ClienteController = {
     ClienteView.init();
     this.bindEvents();
 
+    // Responsável (filtro) - exclui apenas SECRETARIA pois responsaveis-select.js só permite roles elegíveis
+    this.seletorRespFiltro = criarSeletorResponsaveis({
+      inputEl: document.getElementById('cli-responsaveis-filtro-busca'),
+      dropdownEl: document.getElementById('cli-responsaveis-filtro-dropdown'),
+      tagsEl: document.getElementById('cli-responsaveis-filtro-tags')
+    });
+    await this.seletorRespFiltro.init();
+
     this.seletorResp = criarSeletorResponsaveis({
       inputEl: document.getElementById('cli-responsaveis-busca'),
       dropdownEl: document.getElementById('cli-responsaveis-dropdown'),
       tagsEl: document.getElementById('cli-responsaveis-tags')
     });
+
 
     await this.seletorResp.init();
     await this.carregarDados();
@@ -1241,14 +1264,40 @@ const ClienteController = {
       await this.salvarCliente();
     });
 
-    ClienteView.elementos.inputBusca.addEventListener('input', (e) => {
-      const termo = e.target.value.toLowerCase();
-      const filtrados = this.dadosLocais.filter(c =>
-        c.nome.toLowerCase().includes(termo) ||
-        (c.documento && c.documento.includes(termo))
-      );
+    const aplicarFiltro = () => {
+      const termo = (document.getElementById('busca-cliente')?.value || '').toLowerCase();
+      const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
+      const usuarioIdFiltro = selecionadosResp[0]?.id || null;
+
+      const filtrados = (this.dadosLocais || []).filter(c => {
+        const matchTermo =
+          (c.nome || '').toLowerCase().includes(termo) ||
+          (c.documento && String(c.documento).includes(termo));
+
+        if (usuarioIdFiltro) {
+          const matchResp = (c.responsaveis_cliente || []).some(r => r.usuario_id === usuarioIdFiltro);
+          return matchTermo && matchResp;
+        }
+
+        return matchTermo;
+      });
+
       ClienteView.renderizarTabela(filtrados);
+    };
+
+    ClienteView.elementos.inputBusca.addEventListener('input', () => aplicarFiltro());
+
+    // Atualiza quando mudar o filtro de responsável (usa eventos nativos do input do seletor)
+    const inputRespFiltro = document.getElementById('cli-responsaveis-filtro-busca');
+    inputRespFiltro?.addEventListener('input', () => aplicarFiltro());
+    document.body.addEventListener('click', (ev) => {
+      const target = ev.target;
+      if (target?.closest?.('.tag-responsavel') || target?.closest?.('#cli-responsaveis-filtro-tags') || target?.closest?.('#cli-responsaveis-filtro-dropdown')) {
+        aplicarFiltro();
+      }
     });
+
+
 
     document.getElementById('cliente-documento').addEventListener('input', (e) => {
       document.getElementById('cliente-inss-cpf').value = e.target.value;
