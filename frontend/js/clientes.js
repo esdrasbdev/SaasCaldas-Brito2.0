@@ -124,7 +124,7 @@ const ClienteView = {
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap:12px; flex-wrap:wrap;">
           <h2 style="margin:0;">Base de Clientes</h2>
 
-          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; width:100%;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; width:80%;">
             <input type="text" id="busca-cliente" placeholder="Buscar por nome ou CPF..." style="max-width: 300px;" />
 
             <div style="min-width:260px;">

@@ -205,9 +205,15 @@ function atualizarCabecalhoTabela() {
 // ==========================================
 // 3. CONTROLLER
 // ==========================================
-function filtrarAudiencias(lista, termoBusca, tipoFiltro) {
+function filtrarAudiencias(lista, termoBusca, tipoFiltro, usuarioIdFiltro) {
   return lista.filter((a) => {
     if (tipoFiltro && a.tipo !== tipoFiltro) return false;
+
+    if (usuarioIdFiltro) {
+      const matchResp = (a.responsaveis_audiencia || []).some(r => r.usuario_id === usuarioIdFiltro);
+      if (!matchResp) return false;
+    }
+
     if (!termoBusca) return true;
 
     const cliente = (a.processos?.clientes?.nome || a.clientes?.nome || '').toLowerCase();
@@ -223,8 +229,10 @@ function filtrarAudiencias(lista, termoBusca, tipoFiltro) {
   });
 }
 
+
 const AudienciaController = {
   seletorResp: null,
+  seletorRespFiltro: null,
 
   async init() {
     AudienciaView.init();
@@ -232,13 +240,25 @@ const AudienciaController = {
     await this.loadClientes();
     await this.loadProcessos();
 
-    // Instanciar o componente de responsáveis
+    // Instanciar componente de responsáveis (modal)
     this.seletorResp = criarSeletorResponsaveis({
       inputEl: document.getElementById('aud-responsaveis-busca'),
       dropdownEl: document.getElementById('aud-responsaveis-dropdown'),
       tagsEl: document.getElementById('aud-responsaveis-tags')
     });
     await this.seletorResp.init();
+
+    // Instanciar componente de responsáveis (filtro topo)
+    const inputFiltro = document.getElementById('aud-responsaveis-filtro-busca');
+    if (inputFiltro) {
+      this.seletorRespFiltro = criarSeletorResponsaveis({
+        inputEl: inputFiltro,
+        dropdownEl: document.getElementById('aud-responsaveis-filtro-dropdown'),
+        tagsEl: document.getElementById('aud-responsaveis-filtro-tags')
+      });
+      await this.seletorRespFiltro.init();
+    }
+
 
     const lista = document.getElementById('lista-audiencias');
     if (lista && !lista.dataset.bound) {
@@ -284,8 +304,13 @@ const AudienciaController = {
       
       const termo = (buscaEl?.value || '').trim().toLowerCase();
       const tipo = filtroTipoEl?.value || '';
-      
-      AudienciaView.renderizarTabela(filtrarAudiencias(window.__listaAudienciasCompleta, termo, tipo));
+      const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
+      const usuarioIdFiltro = selecionadosResp[0]?.id || null;
+
+      AudienciaView.renderizarTabela(
+        filtrarAudiencias(window.__listaAudienciasCompleta, termo, tipo, usuarioIdFiltro)
+      );
+
     } catch (error) {
       showToast('Erro ao listar audiências', 'error');
     }
@@ -299,11 +324,23 @@ const AudienciaController = {
       const termo = (buscaEl?.value || '').trim().toLowerCase();
       const tipo = filtroTipoEl?.value || '';
       const base = window.__listaAudienciasCompleta || [];
-      AudienciaView.renderizarTabela(filtrarAudiencias(base, termo, tipo));
+
+      const selecionadosResp = this.seletorRespFiltro?.getSelecionados?.() || [];
+      const usuarioIdFiltro = selecionadosResp[0]?.id || null;
+
+      AudienciaView.renderizarTabela(
+        filtrarAudiencias(base, termo, tipo, usuarioIdFiltro)
+      );
     };
 
     buscaEl?.addEventListener('input', aplicarFiltros);
     filtroTipoEl?.addEventListener('change', aplicarFiltros);
+    document.getElementById('aud-responsaveis-filtro-busca')?.addEventListener('input', aplicarFiltros);
+    document.body.addEventListener('click', () => {
+      const ae = document.activeElement;
+      if (ae?.id === 'aud-responsaveis-filtro-busca' || ae?.closest?.('#aud-responsaveis-filtro-tags')) aplicarFiltros();
+    });
+
 
     document.getElementById('btn-nova-audiencia').onclick = () => {
       AudienciaView.modal(true);
