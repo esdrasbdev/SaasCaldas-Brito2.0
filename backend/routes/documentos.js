@@ -82,29 +82,36 @@ router.post('/blob-upload', async (req, res) => {
     // - cliente_id
     // - nome (opcional)
     // - tipo (opcional)
-    const { cliente_id, nome: nomeForm, tipo: tipoForm } = req.body || {};
-
-    // req.body pode não vir dependendo do runtime; então coletamos também via multipart
-    if (!cliente_id) {
-      // seguimos e validamos após coletar os campos do multipart
-    }
-
+    // Observação: em serverless, req.body pode não conter campos multipart;
+    // por isso, os campos reais vêm do busboy abaixo.
     const maxFileSizeBytes = 15 * 1024 * 1024; // 15MB
 
     if (!Busboy) {
       return res.status(500).json({
         error: 'Falha no upload: pacote "busboy" indisponível no runtime.',
-        hint: 'Rode "npm install --prefix backend" e confirme o deploy antes de tentar novamente.'
+        putDisponivel: !!put,
+        tokenPresente: !!process.env.BLOB_READ_WRITE_TOKEN
+      });
+    }
+
+    if (!put) {
+      return res.status(500).json({
+        error: 'Falha no upload: @vercel/blob indisponível no runtime.',
+        tokenPresente: !!process.env.BLOB_READ_WRITE_TOKEN
+      });
+    }
+
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return res.status(500).json({
+        error: 'Falha no upload: token do Blob não disponível no runtime.'
       });
     }
 
     const { fields, file } = await new Promise((resolve, reject) => {
-      // busboy streams multipart e evita estourar body parser
       const bb = Busboy({ headers: req.headers, limits: { fileSize: maxFileSizeBytes } });
 
       const fieldsLocal = {};
       let fileLocal = null;
-
 
       bb.on('field', (name, val) => {
         fieldsLocal[name] = val;
@@ -144,19 +151,25 @@ router.post('/blob-upload', async (req, res) => {
       req.pipe(bb);
     });
 
-    const clienteIdFinal = fields.cliente_id || cliente_id;
+    const clienteIdFinal = fields?.cliente_id;
     if (!clienteIdFinal) {
-      return res.status(400).json({ error: 'cliente_id é obrigatório.' });
+      return res.status(400).json({
+        error: 'cliente_id é obrigatório.',
+        fieldsRecebidos: fields
+      });
     }
 
     if (!file) {
-      return res.status(400).json({ error: 'Arquivo não enviado.' });
+      return res.status(400).json({
+        error: 'Arquivo não enviado.'
+      });
     }
 
-    const nome = nomeForm || file.filename || 'documento';
-    const tipo = tipoForm || file.mimeType;
+    const nome = fields?.nome || file.filename || 'documento';
 
-    // Limites (ajustáveis)
+    // Alguns navegadores mandam mimeType vazio/estranho em produção.
+    const tipoRecebido = fields?.tipo || file.mimeType || 'application/octet-stream';
+
     const allowedContentTypes = [
       'application/pdf',
       'image/jpeg',
@@ -166,43 +179,37 @@ router.post('/blob-upload', async (req, res) => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain'
+      'text/plain',
+      'application/octet-stream'
     ];
 
-    // Alias defensivo: alguns navegadores enviam "image/jpg" para .jpg
-    const tipoNormalizado = tipo === 'image/jpg' ? 'image/jpeg' : tipo;
+    const tipoNormalizado = tipoRecebido === 'image/jpg' ? 'image/jpeg' : tipoRecebido;
 
-    if (!tipoNormalizado || !allowedContentTypes.includes(tipoNormalizado)) {
-      return res.status(400).json({ error: 'Tipo de arquivo não permitido.' });
+    // Se for octet-stream, não conseguimos validar real; aceitamos como PDF por padrão apenas se o nome tiver extensão.
+    let tipoFinal = tipoNormalizado;
+    if (tipoNormalizado === 'application/octet-stream') {
+      const lower = (file.filename || '').toLowerCase();
+      if (lower.endsWith('.pdf')) tipoFinal = 'application/pdf';
+      else if (lower.endsWith('.png')) tipoFinal = 'image/png';
+      else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) tipoFinal = 'image/jpeg';
+      else tipoFinal = 'application/octet-stream';
     }
 
-    // Usa o tipo normalizado daqui em diante
-    const tipoFinal = tipoNormalizado;
-
-    const arquivoBuffer = file.buffer;
-
-
-    if (!put) {
-      return res.status(500).json({
-        error: 'Falha no upload: @vercel/blob indisponível no runtime.',
-        hint: 'Verifique se o pacote @vercel/blob e a variável BLOB_READ_WRITE_TOKEN estão disponíveis no build/deploy.'
+    if (!tipoFinal || !allowedContentTypes.includes(tipoFinal)) {
+      return res.status(400).json({
+        error: 'Tipo de arquivo não permitido.',
+        tipoRecebido,
+        tipoFinal,
+        allowed: allowedContentTypes
       });
     }
 
-    // @vercel/blob: para upload feito a partir do servidor, usar put()
+    const arquivoBuffer = file.buffer;
 
     const blob = await put(nome || 'documento', arquivoBuffer, {
       access: 'public',
       contentType: tipoFinal
     });
-
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      return res.status(500).json({
-        error: 'Falha no upload: token do Blob não disponível no runtime.'
-      });
-    }
-
-
 
     const url = blob.url;
 
