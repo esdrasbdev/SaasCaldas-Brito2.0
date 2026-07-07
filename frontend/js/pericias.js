@@ -536,26 +536,87 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   });
 
-  // Listener genérico (delegação) para garantir que o botão restaurar funcione
-  document.addEventListener('click', async (e) => {
+  const modalOverlayEl = document.getElementById('form-container');
+  const modalFormEl = document.getElementById('form-pericia');
+  const modalHeaderTitleEl = modalFormEl?.querySelector('.modal-header h2');
+  const modalBodyEl = modalFormEl?.querySelector('.modal-body');
+  const modalFooter = modalFormEl?.querySelector('.modal-footer');
+  const modalCancelBtn = modalFooter?.querySelector('#btn-cancelar');
+  const modalSubmitBtn = modalFooter?.querySelector('button[type="submit"]');
+
+  let _periciaModalBodyOriginalHTML = null;
+
+  function openConfirmRestoreModal({ title, message, confirmText, onConfirm }) {
+    if (!modalOverlayEl || !modalFormEl || !modalBodyEl || !modalHeaderTitleEl) return;
+
+    if (_periciaModalBodyOriginalHTML === null) {
+      _periciaModalBodyOriginalHTML = modalBodyEl.innerHTML;
+    }
+
+    // Hide actual form fields visually
+    modalBodyEl.querySelectorAll('input, select, textarea').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    modalHeaderTitleEl.textContent = title;
+
+    // Use only textContent to avoid injecting HTML
+    modalBodyEl.textContent = message;
+
+    modalOverlayEl.style.display = 'flex';
+
+    if (modalCancelBtn) {
+      modalCancelBtn.textContent = 'Cancelar';
+      modalCancelBtn.onclick = () => {
+        modalOverlayEl.style.display = 'none';
+        // Restore original modal body
+        if (_periciaModalBodyOriginalHTML !== null) {
+          modalBodyEl.innerHTML = _periciaModalBodyOriginalHTML;
+        }
+        onConfirm && (onConfirm._noop = true);
+      };
+    }
+
+    if (modalSubmitBtn) {
+      modalSubmitBtn.textContent = confirmText || 'Confirmar';
+      modalSubmitBtn.onclick = async (ev) => {
+        ev?.preventDefault?.();
+        try {
+          await onConfirm();
+        } finally {
+          modalOverlayEl.style.display = 'none';
+          if (_periciaModalBodyOriginalHTML !== null) {
+            modalBodyEl.innerHTML = _periciaModalBodyOriginalHTML;
+          }
+        }
+      };
+    }
+  }
+
+  // Listener somente para ARQUIVADAS (evita interferência com outros modais/handlers)
+  document.getElementById('lista-pericias-arquivadas')?.addEventListener('click', async (e) => {
     const btnRestaurar = e.target.closest?.('.btn-restaurar');
     if (!btnRestaurar) return;
 
-    // Debug hard: se isso não aparecer, o clique não está chegando no DOM do botão
-    console.log('[pericias] RESTAURAR clicado', { id: btnRestaurar.dataset?.id, target: e.target?.tagName });
-    alert(`RESTaurar clicado! id=${btnRestaurar.dataset?.id || ''}`);
+    const id = btnRestaurar.dataset.id;
+    if (!id) return;
 
-    const ok = confirm('Restaurar esta perícia para a lista de ativas?');
-    if (!ok) return;
-
-    try {
-      await PericiaModel.restaurar(btnRestaurar.dataset.id);
-      showToast('Perícia restaurada!', 'success');
-      await carregarPericiasPorStatus();
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
-    }
+    openConfirmRestoreModal({
+      title: 'Restaurar Perícia',
+      message: 'Restaurar esta perícia para a lista de ativas?',
+      confirmText: 'Restaurar',
+      onConfirm: async () => {
+        try {
+          await PericiaModel.restaurar(id);
+          showToast('Perícia restaurada!', 'success');
+          await carregarPericiasPorStatus();
+        } catch (err) {
+          console.error(err);
+          showToast('Erro ao restaurar perícia: ' + (err?.message || err), 'error');
+          throw err;
+        }
+      }
+    });
   });
 
 });
