@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audiências Arquivadas - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Audiências Arquivadas</h1>
+          <p>Registros arquivados com possibilidade de restauração.</p>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div class="busca-filtros-row">
+          <div style="flex: 1; min-width: 220px; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="audiencias-busca" type="text" placeholder="Buscar audiências (cliente, tipo, local, data)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+          <select id="audiencias-filtro-tipo" style="min-width:180px;">
+            <option value="">Todos os tipos</option>
+            <option value="Conciliação">Conciliação</option>
+            <option value="Instrução">Instrução</option>
+            <option value="Una">Una</option>
+            <option value="Julgamento">Julgamento</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Data / Hora</th>
+                <th>Cliente / Processo</th>
+                <th>Local</th>
+                <th style="width: 110px;">Tipo</th>
+                <th style="width: 110px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-audiencias">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/audiencias.js"></script>
+</body>
+</html>
+

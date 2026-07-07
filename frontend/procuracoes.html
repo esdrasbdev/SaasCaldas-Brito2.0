@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procurações - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Procurações</h1>
+          <p>Controle de procurações com status e vencimento.</p>
+        </div>
+      </div>
+
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div class="busca-filtros-row">
+          <div style="flex: 1; min-width: 220px; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="procuracoes-busca" type="text" placeholder="Buscar por cliente ou CNJ..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+
+          <select id="procuracoes-filtro-status" style="min-width:180px;">
+            <option value="">Todas</option>
+            <option value="ATIVA">Ativas</option>
+            <option value="PENDENTE">Pendentes</option>
+            <option value="VENCIDA">Vencidas</option>
+            <option value="HISTORICO">Histórico</option>
+          </select>
+
+          <button id="btn-nova-procuracao" class="btn-primary" style="white-space:nowrap;">
+            <i class="fa-solid fa-plus"></i> Nova Procuração
+          </button>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Emissão</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-procuracoes">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal reuso de clientes.js não é trivial, então implementamos modal simples aqui -->
+  <div id="modal-container" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <form id="form-procuracao">
+        <div class="modal-header">
+          <h2 id="modal-titulo">Nova Procuração</h2>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="proc-id" />
+
+          <div class="form-group">
+            <label for="proc-cliente-id">Cliente</label>
+            <select id="proc-cliente-id" required></select>
+          </div>
+
+          <div class="form-grid-main" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
+            <div class="form-group">
+              <label for="proc-data-emissao">Data de emissão</label>
+              <input type="date" id="proc-data-emissao" />
+            </div>
+            <div class="form-group">
+              <label for="proc-data-vencimento">Data de vencimento</label>
+              <input type="date" id="proc-data-vencimento" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label for="proc-upload-arq">Arquivo (PDF)</label>
+            <input type="file" id="proc-upload-arq" accept=".pdf,application/pdf" />
+            <p class="form-note"><i class="fa-solid fa-circle-info"></i> Por padrão, o documento pode ser enviado via upload para registro em `procuracoes`.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/procuracoes.js"></script>
+</body>
+</html>
+

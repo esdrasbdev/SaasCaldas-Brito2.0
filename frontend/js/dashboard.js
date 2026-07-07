@@ -53,7 +53,7 @@ async function carregarDashboard() {
       
       // Lista: Últimos 7 Processos para uma visão mais ampla
       supabase.from('processos')
-        .select('id, numero_cnj, status, criado_em, clientes(nome)')
+        .select('id, numero_cnj, status, criado_em, cliente_id, clientes(nome)')
         .order('criado_em', { ascending: false })
         .limit(7),
 
@@ -98,9 +98,59 @@ async function carregarDashboard() {
           </td>
           <td><span class="status-badge status-${p.status?.toLowerCase() || 'ativo'}">${p.status || 'ATIVO'}</span></td>
           <td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td>
-          <td><a href="processo-detalhe.html?id=${p.id}" class="btn-sm">Ver</a></td>
+          <td>
+            <button class="btn-sm btn-ver-processo-ativo" data-cliente-id="${p.cliente_id || ''}" data-processo-id="${p.id}">
+              Ver Processo Ativo
+            </button>
+          </td>
         </tr>
       `).join('');
+
+      tbody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-ver-processo-ativo');
+
+        if (!btn) return;
+
+        const clienteId = btn.dataset.clienteId || '';
+        const processoIdLinha = btn.dataset.processoId;
+
+        // fallback (sem cliente vinculado)
+        if (!clienteId) {
+          window.location.href = `processo-detalhe.html?id=${processoIdLinha}`;
+          return;
+        }
+
+        try {
+          const { data: ativos, error } = await supabase
+            .from('processos')
+            .select('id')
+            .eq('cliente_id', clienteId)
+            .eq('status', 'ATIVO');
+
+          if (error) throw error;
+
+          if (!ativos || ativos.length === 0) {
+            // sem toast disponível aqui; usa alert para não quebrar UI
+if (typeof window.showToast === 'function') {
+              window.showToast('Este cliente não possui processo ativo.', 'error');
+            } else {
+              alert('Este cliente não possui processo ativo.');
+            }
+            return;
+          }
+
+          if (ativos.length === 1) {
+            window.location.href = `processo-detalhe.html?id=${ativos[0].id}`;
+            return;
+          }
+
+          // 2+ ativos: lista filtrada
+          window.location.href = `processos.html?cliente_id=${clienteId}`;
+        } catch (err) {
+          console.error(err);
+          showToast('Erro ao verificar processo ativo.', 'error');
+        }
+      }, { once: true });
     } else {
       tbody.innerHTML = `
         <tr>
@@ -242,7 +292,7 @@ function renderizarCargaTrabalho(container, stats, total) {
   `;
 }
 
-// Carrega apenas se estiver na página de dashboard
+  // Carrega apenas se estiver na página de dashboard
 // (DOMContentLoaded pode já ter ocorrido quando o script é carregado no fim do body)
 if (document.getElementById('kpi-processos')) {
   if (document.readyState === 'loading') {

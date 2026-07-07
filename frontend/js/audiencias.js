@@ -154,6 +154,12 @@ const AudienciaView = {
         <button class="btn-sm btn-delete" data-id="${a.id}" style="color:#ef4444;" title="Excluir">
           <i class="fa-solid fa-trash"></i>
         </button>
+        ${a.status === 'ATIVA' ? `
+        <button class="btn-sm btn-arquivar" data-id="${a.id}" title="Arquivar" style="color: var(--cinza-medio);">
+          <i class="fa-solid fa-box-archive"></i>
+        </button>
+      ` : ''}
+
       </div>
     </td>
   </tr>

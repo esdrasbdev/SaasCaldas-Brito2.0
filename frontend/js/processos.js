@@ -231,6 +231,18 @@ const ProcessoController = {
     await this.initResponsaveis();
     this.bindEvents();
     await this.loadAll();
+
+    const clienteIdUrl = new URLSearchParams(window.location.search).get('cliente_id');
+    if (clienteIdUrl) {
+      const filtrados = this.data.filter(p => String(p.cliente_id || p.clientes?.id || '') === String(clienteIdUrl));
+      const isAdmin = AuthAPI.getRole() === 'ADMIN';
+      ProcessoView.renderizarTabela(filtrados, isAdmin);
+      const nomeCliente = filtrados[0]?.clientes?.nome;
+      if (nomeCliente) {
+        const buscaEl = document.getElementById('busca-processo');
+        if (buscaEl) buscaEl.value = nomeCliente;
+      }
+    }
   },
 
   async initResponsaveis() {

@@ -38,11 +38,19 @@ router.get('/debug-blob', async (req, res) => {
       moduleResolved: !!put,
       tokenPresent: !!process.env.BLOB_READ_WRITE_TOKEN,
       environment: process.env.NODE_ENV || 'production',
-      error: blobImportError ? safeMessage(blobImportError) : null
+      error: blobImportError ? safeMessage(blobImportError) : null,
+      busboy: {
+        moduleResolved: (() => {
+          try {
+            require('busboy');
+            return true;
+          } catch (e) {
+            return false;
+          }
+        })()
+      },
+      busboyError: null
     },
-
-
-
 
     auth: {
       userId: req.user?.id || null,

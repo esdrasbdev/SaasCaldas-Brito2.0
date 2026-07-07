@@ -21,7 +21,16 @@ try {
   console.error('[documentos] Pacote @vercel/blob não encontrado no runtime:', e?.message || e);
 }
 
+// IMPORT Opcional para evitar falha do deployment caso o pacote não exista no runtime.
+let Busboy = null;
+try {
+  Busboy = require('busboy');
+} catch (e) {
+  console.error('[documentos] Pacote "busboy" não encontrado no runtime:', e?.message || e);
+}
+
 router.use(auth);
+
 
 
 // GET /api/documentos
@@ -68,8 +77,6 @@ router.post('/blob-upload', async (req, res) => {
       return res.status(401).json({ error: 'Não autenticado.' });
     }
 
-    const Busboy = require('busboy');
-
     // Espera multipart/form-data com:
     // - file (campo 'file')
     // - cliente_id
@@ -83,6 +90,13 @@ router.post('/blob-upload', async (req, res) => {
     }
 
     const maxFileSizeBytes = 15 * 1024 * 1024; // 15MB
+
+    if (!Busboy) {
+      return res.status(500).json({
+        error: 'Falha no upload: pacote "busboy" indisponível no runtime.',
+        hint: 'Rode "npm install --prefix backend" e confirme o deploy antes de tentar novamente.'
+      });
+    }
 
     const { fields, file } = await new Promise((resolve, reject) => {
       // busboy streams multipart e evita estourar body parser
@@ -155,9 +169,15 @@ router.post('/blob-upload', async (req, res) => {
       'text/plain'
     ];
 
-    if (!tipo || !allowedContentTypes.includes(tipo)) {
+    // Alias defensivo: alguns navegadores enviam "image/jpg" para .jpg
+    const tipoNormalizado = tipo === 'image/jpg' ? 'image/jpeg' : tipo;
+
+    if (!tipoNormalizado || !allowedContentTypes.includes(tipoNormalizado)) {
       return res.status(400).json({ error: 'Tipo de arquivo não permitido.' });
     }
+
+    // Usa o tipo normalizado daqui em diante
+    const tipoFinal = tipoNormalizado;
 
     const arquivoBuffer = file.buffer;
 
@@ -173,8 +193,14 @@ router.post('/blob-upload', async (req, res) => {
 
     const blob = await put(nome || 'documento', arquivoBuffer, {
       access: 'public',
-      contentType: tipo
+      contentType: tipoFinal
     });
+
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return res.status(500).json({
+        error: 'Falha no upload: token do Blob não disponível no runtime.'
+      });
+    }
 
 
 
@@ -188,10 +214,9 @@ router.post('/blob-upload', async (req, res) => {
     const { data: dbData, error: dbError } = await supabaseAdmin
       .from('documentos')
       .insert({
-
         nome: nome || 'documento',
         url,
-        tipo,
+        tipo: tipoFinal,
         cliente_id,
         upload_por: req.user.id
       })
@@ -202,8 +227,8 @@ router.post('/blob-upload', async (req, res) => {
 
     res.json(dbData);
   } catch (error) {
-    console.error('Erro blob-upload:', error);
-    res.status(500).json({ error: error.message });
+    console.error('[documentos] Erro blob-upload:', error);
+    res.status(500).json({ error: error?.message || 'Erro interno no upload.' });
   }
 });
 

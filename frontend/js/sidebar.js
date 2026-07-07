@@ -83,7 +83,15 @@ const Sidebar = {
         <li class="sidebar-header-group">JURÍDICO</li>
         <li><a href="audiencias.html" class="nav-item"><i class="fa-solid fa-user-tie"></i> Audiências</a></li>
         <li><a href="pericias.html" class="nav-item"><i class="fa-solid fa-magnifying-glass"></i> Perícias</a></li>
+        <li><a href="procuracoes.html" class="nav-item"><i class="fa-solid fa-scroll"></i> Procurações</a></li>
+
+        <li class="sidebar-header-group">ARQUIVADOS</li>
+        <li><a href="audiencias-arquivadas.html" class="nav-item"><i class="fa-solid fa-box-archive"></i> Audiências Arquivadas</a></li>
+        <li><a href="pericias-arquivadas.html" class="nav-item"><i class="fa-solid fa-box-archive"></i> Perícias Arquivadas</a></li>
+
+
         <li><a href="atendimentos.html" class="nav-item"><i class="fa-solid fa-comments"></i> Atendimentos</a></li>
+
         
         <li class="sidebar-header-group admin-group-label">ADMINISTRAÇÃO</li>
 
@@ -130,8 +138,13 @@ const Sidebar = {
       'agenda.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'audiencias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
       'pericias.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+      'audiencias-arquivadas.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+      'pericias-arquivadas.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+      'procuracoes.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+
 
       'atendimentos.html': ['ADMIN', 'ADVOGADO', 'ADVOGADA', 'SECRETARIA', 'ESTAGIARIO', 'ESTAGIARIA'],
+
 
       'admin.html': ['ADMIN']
     };

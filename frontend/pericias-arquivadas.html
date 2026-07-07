@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perícias Arquivadas - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Perícias Arquivadas</h1>
+          <p>Registros arquivados com possibilidade de restauração.</p>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div class="busca-filtros-row">
+          <div style="flex: 1; min-width: 220px; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="pericias-busca" type="text" placeholder="Buscar perícias (cliente, tipo, local, perito, data)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+          <select id="pericias-filtro-tipo" style="min-width:180px;">
+            <option value="">Todos os tipos</option>
+            <option value="Judicial">Judicial</option>
+            <option value="Administrativa">Administrativa</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Data</th>
+                <th>Local</th>
+                <th>Perito</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-pericias">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/pericias.js"></script>
+</body>
+</html>
+

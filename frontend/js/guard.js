@@ -16,13 +16,21 @@ const ROUTE_CONFIG = {
   'processos.html': { requiresAuth: true, requiredRole: null },
   'agenda.html': { requiresAuth: true, requiredRole: null },
   'audiencias.html': { requiresAuth: true, requiredRole: null },
+  
   'pericias.html': { requiresAuth: true, requiredRole: null },
+  
+  'audiencias-arquivadas.html': { requiresAuth: true, requiredRole: null },
+  'pericias-arquivadas.html': { requiresAuth: true, requiredRole: null },
+
 
   'atendimentos.html': { requiresAuth: true, requiredRole: null },
   'documentos.html': { requiresAuth: true, requiredRole: null },
   'publicacoes.html': { requiresAuth: true, requiredRole: 'ADMIN' },
-  'admin.html': { requiresAuth: true, requiredRole: 'ADMIN' }
+  'admin.html': { requiresAuth: true, requiredRole: 'ADMIN' },
+
+  'procuracoes.html': { requiresAuth: true, requiredRole: null }
 };
+
 
 // Página atual (baseado em location.pathname)
 const currentPage = window.location.pathname.split('/').pop() || 'index.html';

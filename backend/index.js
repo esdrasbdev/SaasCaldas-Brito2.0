@@ -111,6 +111,10 @@ app.use('/api/atendimentos', authMiddleware, atendimentosRouter);
 const usuariosRouter = require('./routes/usuarios.js');
 app.use('/api/usuarios', authMiddleware, usuariosRouter);
 
+const procuracoesRouter = require('./routes/procuracoes.js');
+app.use('/api/procuracoes', authMiddleware, procuracoesRouter);
+
+
 
 
 // Rota de Webhook do Escavador (Sem authMiddleware pois vem da API externa)

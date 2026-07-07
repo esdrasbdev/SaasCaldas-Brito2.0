@@ -102,20 +102,83 @@ const DocumentosUI = {
         // Por enquanto deixamos opcional (vai falhar com 400 se cliente_id não vier).
         // Exemplo: formData.append('cliente_id', clienteId);
 
-        const res = await fetch(`${getApiUrl()}/documentos/blob-upload`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData
-        });
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${getApiUrl()}/documentos/blob-upload`, true);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
-        if (res.ok) {
-          showToast('Documento enviado!', 'success');
-          this.carregarDocumentos();
-          return;
-        }
+        const criarBarProgresso = () => {
+          const container = document.getElementById('upload-progresso-container');
+          if (container) return;
 
-        const err = await res.json().catch(() => null);
-        showToast(err?.error || 'Erro ao enviar documento', 'error');
+          const el = document.createElement('div');
+          el.id = 'upload-progresso-container';
+          el.style.marginTop = '12px';
+          el.style.padding = '10px 12px';
+          el.style.borderRadius = '10px';
+          el.style.background = 'rgba(99, 102, 241, 0.08)';
+          el.innerHTML = `
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="flex:1; height:10px; background:rgba(0,0,0,0.08); border-radius:999px; overflow:hidden;">
+                <div id="upload-progresso-bar" style="width:0%; height:100%; background:var(--azul-medio);"></div>
+              </div>
+              <div id="upload-progresso-text" style="min-width:60px; text-align:right; color: var(--cinza-medio);">0%</div>
+            </div>
+          `;
+          document.querySelector('#view-documentos-container')?.appendChild(el);
+        };
+
+        const atualizarBarProgresso = (percent) => {
+          criarBarProgresso();
+          const bar = document.getElementById('upload-progresso-bar');
+          const text = document.getElementById('upload-progresso-text');
+          if (bar) bar.style.width = `${percent}%`;
+          if (text) text.textContent = `${percent}%`;
+        };
+
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable) return;
+          const percent = Math.round((event.loaded / event.total) * 100);
+          atualizarBarProgresso(Math.min(100, Math.max(0, percent)));
+        };
+
+        xhr.onload = async () => {
+          try {
+            const res = { ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status };
+            let payload = null;
+            try {
+              payload = JSON.parse(xhr.responseText);
+            } catch (_) {
+              payload = null;
+            }
+
+            if (res.ok) {
+              showToast('Documento enviado!', 'success');
+              const container = document.getElementById('upload-progresso-container');
+              if (container) container.remove();
+              this.carregarDocumentos();
+              return;
+            }
+
+            const err = payload || {};
+            const map = {
+              400: err.error || 'Tipo/entrada inválida.',
+              401: 'Sessão inválida. Faça login novamente.',
+              413: 'Arquivo muito grande.',
+              500: err.error || 'Falha ao enviar documento.'
+            };
+            const msg = map[res.status] || err.error || 'Falha ao enviar documento.';
+            showToast(msg, 'error');
+          } catch (e2) {
+            console.error(e2);
+            showToast('Erro ao processar resposta do servidor.', 'error');
+          }
+        };
+
+        xhr.onerror = () => {
+          showToast('Erro de conexão com o servidor', 'error');
+        };
+
+        xhr.send(formData);
       } catch (err) {
         console.error(err);
         showToast('Erro de conexão com o servidor', 'error');
