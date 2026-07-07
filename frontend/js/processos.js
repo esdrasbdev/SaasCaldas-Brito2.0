@@ -386,6 +386,10 @@ const ProcessoController = {
     const termo = document.getElementById('busca-processo').value.toLowerCase();
     const status = document.getElementById('filtro-status').value;
 
+    // Filtro por responsável (pelo seletor do modal: usa primeiro responsável selecionado)
+    const selecionadosResp = this.seletorResp?.getSelecionados?.() || [];
+    const usuarioIdFiltro = selecionadosResp[0]?.id || null;
+
     const filtered = this.data.filter(p => {
       const matchTerm =
         p.numero_cnj?.toLowerCase().includes(termo) ||
@@ -394,11 +398,18 @@ const ProcessoController = {
         (p.vara || '').toLowerCase().includes(termo);
 
       const matchStatus = !status || p.status === status;
+
+      if (usuarioIdFiltro) {
+        const matchResp = (p.responsaveis_processo || []).some(r => r.usuario_id === usuarioIdFiltro);
+        return matchTerm && matchStatus && matchResp;
+      }
+
       return matchTerm && matchStatus;
     });
 
     ProcessoView.renderizarTabela(filtered, AuthAPI.getRole() === 'ADMIN');
   },
+
 
   async loadClientes() {
     const { data } = await supabase.from('clientes').select('id, nome').order('nome');
