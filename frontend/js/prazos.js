@@ -492,6 +492,7 @@ formPrazo?.addEventListener('submit', async (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[prazos.js] DOMContentLoaded');
   await initSupabase();
 
   await carregarClientes();
@@ -540,6 +541,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   tipoFiltroEl?.addEventListener('change', aplicarFiltros);
 
   document.getElementById('lista-prazos')?.addEventListener('click', async (e) => {
+    console.log('[prazos.js] click lista-prazos', e.target);
     const btnView = e.target.closest('.btn-view');
     const btnDelete = e.target.closest('.btn-delete');
     const btnCumprir = e.target.closest('.btn-cumprir');
@@ -663,6 +665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Eventos para tabela de Prazos Cumpridos
   document.getElementById('lista-prazos-cumpridos')?.addEventListener('click', async (e) => {
+    console.log('[prazos.js] click lista-prazos-cumpridos', e.target);
     const btnView = e.target.closest('.btn-view');
     const btnDelete = e.target.closest('.btn-delete');
     const btnArquivar = e.target.closest('.btn-arquivar');
