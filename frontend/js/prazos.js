@@ -54,7 +54,7 @@ async function carregarClientes() {
 async function carregarProcessos() {
   const { data, error } = await supabase
     .from('processos')
-    .select('id, numero_cnj, cliente_id')
+    .select('id, numero_cnj, cliente_id, clientes(nome)')
     .order('numero_cnj', { ascending: true });
 
   if (error) {
@@ -69,8 +69,10 @@ async function carregarProcessos() {
   processosCache.forEach(p => {
     const option = document.createElement('option');
     option.value = p.id;
+
     const clienteNome = p.clientes?.nome;
     option.textContent = `${p.numero_cnj}${clienteNome ? ` — ${clienteNome}` : ''}`;
+
     processoSelect.appendChild(option);
   });
 }

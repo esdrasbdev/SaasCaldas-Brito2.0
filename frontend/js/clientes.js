@@ -967,32 +967,35 @@ const ClienteView = {
     addTexto(`Várzea Alegre, ${data}.`, { depois: DEPOIS_DATA_PROC });
 
     // Variante compacta local de assinatura APENAS para procuração
+    // Ajuste adicional para garantir que caiba em 1 página (reduz espaçamentos verticais)
     const addAssinaturaCentroCompacta = (nome, sublabel) => {
       // prompt: checarPagina(30) -> checarPagina(24)
       checarPagina(24);
-      // prompt: y += 12 -> y += 8
-      y += 8;
+
+      // prompt: y += 12 -> y += 8 (redução adicional)
+      y += 5;
 
       const cx = PW / 2;
       pdf.setDrawColor(30, 30, 30);
       pdf.line(cx - 50, y, cx + 50, y);
-      y += 5;
+      y += 3;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(15, 23, 42);
       pdf.text(nome, cx, y, { align: 'center' });
-      y += 5;
+      y += 3;
 
       if (sublabel) {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         pdf.setTextColor(100, 116, 139);
         pdf.text(sublabel, cx, y, { align: 'center' });
-        y += 5;
+        y += 3;
       }
 
-      y += 8;
+      // prompt: y += 8 (redução adicional)
+      y += 4;
     };
 
     addAssinaturaCentroCompacta(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
