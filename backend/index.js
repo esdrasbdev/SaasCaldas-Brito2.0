@@ -105,6 +105,9 @@ app.use('/api/audiencias', authMiddleware, audienciasRouter);
 const periciasRouter = require('./routes/pericias.js');
 app.use('/api/pericias', authMiddleware, periciasRouter);
 
+const prazosRouter = require('./routes/prazos.js');
+app.use('/api/prazos', authMiddleware, prazosRouter);
+
 const atendimentosRouter = require('./routes/atendimentos.js');
 app.use('/api/atendimentos', authMiddleware, atendimentosRouter);
 

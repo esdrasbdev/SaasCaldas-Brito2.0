@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prazos - Sistema Jurídico</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&display=swap"></noscript>
+  <script src="js/env.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <nav id="sidebar" class="sidebar"></nav>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <h1>Gestão de Prazos</h1>
+          <p>Controle de prazos manuais por cliente/processo e responsáveis.</p>
+        </div>
+        <button id="btn-novo-prazo" class="btn-primary">
+          <i class="fa-solid fa-plus"></i> Novo Prazo
+        </button>
+      </div>
+
+      <!-- Modal -->
+      <div id="form-container" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <form id="form-prazo">
+            <div class="modal-header">
+              <h2>Novo Prazo</h2>
+            </div>
+
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="prazo-descricao">Descrição *</label>
+                <input type="text" id="prazo-descricao" required />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prazo-tipo">Tipo *</label>
+                  <select id="prazo-tipo" required>
+                    <option value="FATAL">Fatal</option>
+                    <option value="RECURSAL">Recursal</option>
+                    <option value="OUTRO">Outro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="prazo-data">Data *</label>
+                  <input type="date" id="prazo-data" required />
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top: 12px;">
+                <div class="form-group">
+                  <label for="prazo-hora">Hora (opcional)</label>
+                  <input type="time" id="prazo-hora" />
+                </div>
+                <div class="form-group">
+                  <label for="cliente-select">Cliente (Opcional)</label>
+                  <select id="cliente-select">
+                    <option value="">Selecione...</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 12px;">
+                <label for="processo-select">Processo (Opcional)</label>
+                <select id="processo-select">
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-top: 16px;">
+                <label>Responsáveis * (ADMIN, Advogados ou Estagiários)</label>
+                <input type="text" id="prazo-responsaveis-busca" placeholder="Buscar por nome..." autocomplete="off">
+                <div id="prazo-responsaveis-dropdown" style="display:none; position:relative; z-index:20; background:#fff; border:1px solid #e2e8f0; border-radius:8px; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+                <div id="prazo-responsaveis-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="prazo-observacoes">Observações (Opcional)</label>
+                <textarea id="prazo-observacoes" rows="3"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+              <button type="submit" class="btn-primary">Salvar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div class="card-section" style="margin-bottom: 16px;">
+        <div class="busca-filtros-row">
+          <div style="flex: 1; min-width: 220px; position: relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left: 12px; top: 11px; color: #94a3b8; pointer-events:none;"></i>
+            <input id="prazos-busca" type="text" placeholder="Buscar prazos (descrição, tipo, cliente/processo, responsáveis)..." autocomplete="off" style="padding-left: 40px;" />
+          </div>
+
+          <select id="prazos-filtro-tipo" style="min-width:180px;">
+            <option value="">Todos os tipos</option>
+            <option value="FATAL">Fatal</option>
+            <option value="RECURSAL">Recursal</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabela (Ativas) -->
+      <div class="card-section">
+        <div class="table-responsive">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Prazo</th>
+                <th style="width: 160px;">Data</th>
+                <th style="width: 220px;">Cliente/Processo</th>
+                <th style="width: 230px;">Responsáveis</th>
+                <th style="width: 130px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody id="lista-prazos">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Seção: Prazos Arquivados -->
+      <div class="card-section" style="margin-top: 16px;">
+        <button type="button" id="toggle-arquivadas" class="card-section-toggle">
+          <h2 style="margin:0;"><i class="fa-solid fa-box-archive"></i> Prazos Arquivados</h2>
+          <i class="fa-solid fa-chevron-down" id="icone-toggle-arquivadas"></i>
+        </button>
+
+        <div id="bloco-arquivadas" class="table-responsive" style="display:none; margin-top: 12px;">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Prazo</th>
+                <th style="width: 160px;">Data</th>
+                <th style="width: 220px;">Cliente/Processo</th>
+                <th style="width: 230px;">Responsáveis</th>
+                <th style="width: 90px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody id="lista-prazos-arquivados">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="js/supabase.js"></script>
+  <script type="module" src="js/auth.js"></script>
+  <script type="module" src="js/guard.js"></script>
+  <script type="module" src="js/sidebar.js"></script>
+  <script type="module" src="js/prazos.js"></script>
+</body>
+</html>

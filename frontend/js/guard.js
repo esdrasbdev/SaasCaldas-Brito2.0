@@ -17,10 +17,8 @@ const ROUTE_CONFIG = {
   'agenda.html': { requiresAuth: true, requiredRole: null },
   'audiencias.html': { requiresAuth: true, requiredRole: null },
   
+  'prazos.html': { requiresAuth: true, requiredRole: null },
   'pericias.html': { requiresAuth: true, requiredRole: null },
-  
-
-
 
   'atendimentos.html': { requiresAuth: true, requiredRole: null },
   'documentos.html': { requiresAuth: true, requiredRole: null },

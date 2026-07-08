@@ -41,7 +41,7 @@ async function carregarDashboard() {
     const daqui7DiasStr = daqui7Dias.toISOString().split('T')[0];
 
     // Carregamento paralelo de KPIs e Listas
-    const [resProcessos, resClientes, resAudienciasHoje, resRecentes, resPrazos, resAudiencias7Dias, resPericias7Dias, resAtendimentos7Dias, resStatusProcessos] = await Promise.all([
+    const [resProcessos, resClientes, resAudienciasHoje, resRecentes, resPrazos, resPrazosManuais, resAudiencias7Dias, resPericias7Dias, resAtendimentos7Dias, resPrazosManuais7Dias, resStatusProcessos] = await Promise.all([
       // KPI Processos Ativos
       supabase.from('processos').select('*', { count: 'exact', head: true }).eq('status', 'ATIVO'),
 
@@ -63,6 +63,12 @@ async function carregarDashboard() {
         .not('prazo_data', 'is', null)
         .gte('prazo_data', hojeStr),
 
+      // KPI Prazos manuais: conta prazos ativos com vencimento hoje ou futuro
+      supabase.from('prazos')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'ATIVO')
+        .gte('data_prazo', hojeStr),
+
       // Proximas Audiencias (7 dias)
       supabase.from('audiencias').select('*, clientes(nome), processos(numero_cnj)').gte('data', inicioDia).lte('data', daqui7DiasStr).order('data', { ascending: true }),
 
@@ -71,6 +77,14 @@ async function carregarDashboard() {
 
       // Proximos Atendimentos/Reunioes (7 dias)
       supabase.from('atendimentos').select('*, clientes(nome)').gte('data', inicioDia).lte('data', daqui7DiasStr).order('data', { ascending: true }),
+
+      // Proximos Prazos manuais (7 dias)
+      supabase.from('prazos')
+        .select('*, clientes(nome), processos(numero_cnj)')
+        .eq('status', 'ATIVO')
+        .gte('data_prazo', hojeStr)
+        .lte('data_prazo', daqui7DiasStr)
+        .order('data_prazo', { ascending: true }),
 
       // Estatisticas de Processos para Carga de Trabalho
       supabase.from('processos').select('status')
@@ -85,7 +99,7 @@ async function carregarDashboard() {
     atualizarKPI('kpi-processos', resProcessos.count || 0);
     atualizarKPI('kpi-clientes', resClientes.count || 0);
     atualizarKPI('kpi-audiencias', resAudienciasHoje.count || 0);
-    atualizarKPI('kpi-prazos', resPrazos.count || 0);
+    atualizarKPI('kpi-prazos', (resPrazos.count || 0) + (resPrazosManuais.count || 0));
 
     // 3. Prazos próximos (entrega HOJE) - qualquer setor
     // Conta prazos com prazo_data = hojeStr e contabiliza na área “Prazos Próximos” (kpi-prazos).
@@ -100,8 +114,24 @@ async function carregarDashboard() {
 
         // Quando usamos select com count, prazosHoje pode vir null, então confiamos no count.
         const total = errPrazosHoje ? 0 : (prazosHoje?.length ?? 0);
+        let totalManuais = 0;
+
+        try {
+          const { data: prazosManuaisHoje, error: errPrazosManuaisHoje } = await supabase
+            .from('prazos')
+            .select('id', { count: 'exact' })
+            .eq('status', 'ATIVO')
+            .eq('data_prazo', hojeStr);
+
+          const totalM = errPrazosManuaisHoje ? 0 : (prazosManuaisHoje?.length ?? 0);
+          totalManuais = totalM;
+        } catch (e) {
+          console.error('Erro ao contar prazos manuais de hoje:', e);
+          totalManuais = 0;
+        }
+
         if (!errPrazosHoje && (typeof total === 'number')) {
-          elPrazos.textContent = total;
+          elPrazos.textContent = total + totalManuais;
         } else if (errPrazosHoje) {
           console.error('Erro ao contar prazos de hoje:', errPrazosHoje);
           elPrazos.textContent = '—';
@@ -216,6 +246,17 @@ async function carregarDashboard() {
         }));
       }
 
+      // Proximos Prazos manuais (7 dias)
+      if (resPrazosManuais7Dias.data) {
+        resPrazosManuais7Dias.data.forEach(pr => eventos7Dias.push({
+          tipo: pr.tipo === 'FATAL' ? 'PRAZO FATAL' : (pr.tipo === 'RECURSAL' ? 'PRAZO RECURSAL' : 'PRAZO'),
+          data: pr.hora ? `${pr.data_prazo}T${pr.hora}` : `${pr.data_prazo}T00:00:00`,
+          titulo: pr.descricao || 'Prazo',
+          cliente: pr.clientes?.nome || 'N/A',
+          processo: pr.processos?.numero_cnj || 'N/A'
+        }));
+      }
+
       // Ordena por data
       eventos7Dias.sort((a, b) => new Date(a.data) - new Date(b.data));
 
@@ -234,7 +275,7 @@ async function carregarDashboard() {
                 ${eventos7Dias.map(evt => `
                   <tr>
                     <td>${new Date(evt.data).toLocaleDateString('pt-BR')} ${new Date(evt.data).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
-                    <td><span class="status-badge ${evt.tipo === 'AUDIÊNCIA' ? 'icon-blue' : (evt.tipo === 'REUNIÃO' ? 'icon-green' : 'icon-purple')}">${evt.tipo}</span> ${evt.titulo}</td>
+                    <td><span class="status-badge ${evt.tipo === 'AUDIÊNCIA' ? 'icon-blue' : (evt.tipo === 'REUNIÃO' ? 'icon-green' : (evt.tipo === 'PRAZO FATAL' ? 'icon-orange' : (evt.tipo === 'PRAZO RECURSAL' ? 'icon-orange' : 'icon-purple')))}">${evt.tipo}</span> ${evt.titulo}</td>
                     <td>${evt.cliente} ${evt.processo !== 'N/A' ? `(${evt.processo})` : ''}</td>
                   </tr>
                 `).join('')}

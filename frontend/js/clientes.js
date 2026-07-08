@@ -917,8 +917,9 @@ const ClienteView = {
   novaLinha(4);
 
   if (chave === 'procuracao') {
+    // Compactação APENAS para a procuração (sem alterar o texto jurídico)
     addTexto('INSTRUMENTO PARTICULAR DE PROCURAÇÃO', { fontSize: 13, bold: true, align: 'center', depois: 1 });
-    addTexto('"Ad-judícia et extra"',                 { fontSize: 10, italic: true, align: 'center', depois: 8 });
+    addTexto('"Ad-judícia et extra"',                 { fontSize: 10, italic: true, align: 'center', depois: 5 });
 
     addMisto([
       { texto: 'OUTORGANTE(S): ', bold: true },
@@ -927,7 +928,7 @@ const ClienteView = {
                (d.rg ? ` portador(a) da Cédula de Identidade RG nº ${s(d.rg)},` : '') +
                ` inscrito(a) no CPF/MF sob o nº ${s(d.cpf)},` +
                ` residente e domiciliado(a) ${endCliente ? 'em ' + endCliente : '—'}.` }
-    ], { antes: 0, depois: 6 });
+    ], { antes: 0, depois: 4 });
 
     addMisto([
       { texto: 'OUTORGADO(S): ', bold: true },
@@ -941,10 +942,10 @@ const ClienteView = {
       { texto: ', brasileiro, solteiro, advogado, CPF nº 060.761.513-31, OAB/CE nº 51.067,' +
                ' com escritório profissional na Rua Antonio Alves de Lima, nº 563, Juremal,' +
                ' Edifício Timbaúba (Apartamento 04), Várzea Alegre/CE.' }
-    ], { antes: 0, depois: 6 });
+    ], { antes: 0, depois: 4 });
 
-    const DEPOIS_PODERES_PROC = 6;
-    const DEPOIS_DATA_PROC = 12;
+    const DEPOIS_PODERES_PROC = 4;
+    const DEPOIS_DATA_PROC = 8;
 
     const FONT_SIZE_TEXTO_PROC = 10.5;
 
@@ -965,8 +966,36 @@ const ClienteView = {
 
     addTexto(`Várzea Alegre, ${data}.`, { depois: DEPOIS_DATA_PROC });
 
+    // Variante compacta local de assinatura APENAS para procuração
+    const addAssinaturaCentroCompacta = (nome, sublabel) => {
+      // prompt: checarPagina(30) -> checarPagina(24)
+      checarPagina(24);
+      // prompt: y += 12 -> y += 8
+      y += 8;
 
-    addAssinaturaCentro(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
+      const cx = PW / 2;
+      pdf.setDrawColor(30, 30, 30);
+      pdf.line(cx - 50, y, cx + 50, y);
+      y += 5;
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(nome, cx, y, { align: 'center' });
+      y += 5;
+
+      if (sublabel) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(sublabel, cx, y, { align: 'center' });
+        y += 5;
+      }
+
+      y += 8;
+    };
+
+    addAssinaturaCentroCompacta(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
     addRodapeEscritorio();
   }
 
