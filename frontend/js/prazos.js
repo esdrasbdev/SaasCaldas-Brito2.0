@@ -1,4 +1,4 @@
-/*
+ /*
  * Lógica para a página de Prazos
  * - Carrega prazos do banco (ATIVO / ARQUIVADO)
  * - Popula select de clientes e processos
@@ -577,12 +577,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('prazo-observacoes').value = data.observacoes || '';
 
       // Cliente / Processo
-      // Ordem importante: carregar options do processo (via cliente) antes de setar o value do processo
       clienteSelect.value = data.cliente_id || '';
       if (clienteSelect.value) {
         atualizarProcessosPorCliente();
       } else {
-        // se não tem cliente, ainda assim garante que o select de processos está limpo
         processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
       }
 
@@ -604,6 +602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnDelete) {
       const id = btnDelete.dataset.id;
       if (!confirm('Excluir este prazo?')) return;
+
       try {
         await PrazoModel.deletar(id);
         showToast('Prazo excluído!', 'success');
@@ -641,6 +640,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnArquivar) {
       if (!confirm('Arquivar este prazo?')) return;
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const apiUrl = `${getApiUrl()}/prazos/${id}/arquivar`;
+        const resp = await fetch(apiUrl, {
+          method: 'PATCH',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+
+        if (!resp.ok) throw new Error('Falha ao arquivar.');
+        showToast('Prazo arquivado!', 'success');
+        await carregarPrazosPorStatus();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao arquivar prazo.', 'error');
+      }
+    }
+  });
+
+  // Eventos para tabela de Prazos Cumpridos
+  document.getElementById('lista-prazos-cumpridos')?.addEventListener('click', async (e) => {
+    const btnView = e.target.closest('.btn-view');
+    const btnDelete = e.target.closest('.btn-delete');
+    const btnArquivar = e.target.closest('.btn-arquivar');
+
+    if (btnView) {
+      const id = btnView.dataset.id;
+      const { data, error } = await supabase
+        .from('prazos')
+        .select(`
+          *,
+          responsaveis_prazo(usuario_id, usuarios(nome))
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        showToast('Erro ao carregar prazo.', 'error');
+        return;
+      }
+
+      // Hidden id
+      if (!document.getElementById('prazo-id')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'prazo-id';
+        document.getElementById('form-prazo').insertBefore(hidden, document.getElementById('form-prazo').firstChild);
+      }
+      document.getElementById('prazo-id').value = id;
+
+      document.getElementById('prazo-descricao').value = data.descricao || '';
+      document.getElementById('prazo-tipo').value = data.tipo || 'OUTRO';
+      document.getElementById('prazo-data').value = data.data_prazo || '';
+      document.getElementById('prazo-hora').value = data.hora || '';
+      document.getElementById('prazo-observacoes').value = data.observacoes || '';
+
+      // Cliente / Processo
+      clienteSelect.value = data.cliente_id || '';
+      if (clienteSelect.value) {
+        atualizarProcessosPorCliente();
+      } else {
+        processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+      }
+
+      processoSelect.value = data.processo_id || '';
+
+      const responsaveisSelecionados = (data.responsaveis_prazo || []).map(r => ({
+        id: r.usuario_id,
+        nome: r.usuarios?.nome || ''
+      }));
+
+      seletorResp?.setSelecionados?.(responsaveisSelecionados);
+
+      formContainer.style.display = 'flex';
+      document.querySelector('.modal-header h2').textContent = 'Editar Prazo';
+      return;
+    }
+
+    if (btnDelete) {
+      const id = btnDelete.dataset.id;
+      if (!confirm('Excluir este prazo?')) return;
+      try {
+        await PrazoModel.deletar(id);
+        showToast('Prazo excluído!', 'success');
+        await carregarPrazosPorStatus();
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao excluir prazo.', 'error');
+      }
+      return;
+    }
+
+    if (btnArquivar) {
+      const id = btnArquivar.dataset.id;
+      if (!id) return;
+      if (!confirm('Arquivar este prazo?')) return;
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
@@ -662,7 +760,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('lista-prazos-arquivados')?.addEventListener('click', async (e) => {
-    const btnRestaurar = e.target.closest('.btn-restaurar');
     if (!btnRestaurar) return;
 
     const id = btnRestaurar.dataset.id;
