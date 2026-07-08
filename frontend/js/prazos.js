@@ -358,12 +358,14 @@ async function salvarPrazo() {
 }
 
 async function carregarPrazosPorStatus() {
-  const [ativas, arquivadas] = await Promise.all([
+  const [ativas, cumpridas, arquivadas] = await Promise.all([
     PrazoModel.listarPorStatus('ATIVO'),
+    PrazoModel.listarPorStatus('CUMPRIDO'),
     PrazoModel.listarPorStatus('ARQUIVADO')
   ]);
 
   window.__listaPrazosCompleta = ativas;
+  window.__listaPrazosCumpridasCompleta = cumpridas;
   window.__listaPrazosArquivadasCompleta = arquivadas;
 
   aplicarFiltros();
@@ -377,9 +379,11 @@ const aplicarFiltros = () => {
   const tipo = tipoFiltroEl ? tipoFiltroEl.value : '';
 
   const baseAtivas = window.__listaPrazosCompleta || [];
+  const baseCumpridas = window.__listaPrazosCumpridasCompleta || [];
   const baseArquivadas = window.__listaPrazosArquivadasCompleta || [];
 
   renderizarTabelaAtivas(filtrarPrazos(baseAtivas, termo, tipo));
+  renderizarTabelaCumpridas(filtrarPrazos(baseCumpridas, termo, tipo));
   renderizarTabelaArquivadas(filtrarPrazos(baseArquivadas, termo, tipo));
 };
 
@@ -445,6 +449,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   await seletorResp.init();
 
   await carregarPrazosPorStatus();
+
+  // Toggles: abrir/fechar listas de cumpridos/arquivados
+  const toggleCumpridos = document.getElementById('toggle-cumpridos');
+  const blocoCumpridos = document.getElementById('bloco-cumpridos');
+  const toggleArquivadas = document.getElementById('toggle-arquivadas');
+  const blocoArquivadas = document.getElementById('bloco-arquivadas');
+
+  if (toggleCumpridos && blocoCumpridos) {
+    toggleCumpridos.addEventListener('click', () => {
+      const estaVisivel = blocoCumpridos.style.display !== 'none';
+      blocoCumpridos.style.display = estaVisivel ? 'none' : 'block';
+    });
+  }
+
+  if (toggleArquivadas && blocoArquivadas) {
+    toggleArquivadas.addEventListener('click', () => {
+      const estaVisivel = blocoArquivadas.style.display !== 'none';
+      blocoArquivadas.style.display = estaVisivel ? 'none' : 'block';
+    });
+  }
 
   // Busca local
   const termoBuscaEl = document.getElementById('prazos-busca');
