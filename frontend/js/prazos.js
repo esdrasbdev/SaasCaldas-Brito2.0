@@ -210,6 +210,68 @@ function renderizarTabelaAtivas(lista) {
   }).join('');
 }
 
+function renderizarTabelaCumpridas(lista) {
+  const tbody = document.getElementById('lista-prazos-cumpridos');
+  if (!tbody) return;
+
+  const isAdmin = AuthAPI.getRole() === 'ADMIN';
+
+  if (!lista || lista.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center">Nenhum prazo cumprido.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = lista.map(p => {
+    const clienteProc = `${p.clientes?.nome || 'N/A'}${p.processos?.numero_cnj ? ` (${p.processos.numero_cnj})` : ''}`;
+
+    const responsaveis = (p.responsaveis_prazo || [])
+      .map(r => r.usuarios?.nome?.split(' ')[0])
+      .filter(Boolean)
+      .join(', ') || '—';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700; color:var(--azul-escuro); font-size:0.9rem; word-break:break-word;">${p.descricao || '-'}</div>
+          <div style="margin-top:6px;">
+            <span class="status-badge status-cumprido" style="display:inline-block; background:#22c55e; color:#fff; padding:3px 10px; border-radius:999px; font-size:0.75rem;">Cumprido</span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--cinza-medio); margin-top:2px;">
+            ${p.tipo || ''}
+          </div>
+        </td>
+        <td style="white-space:nowrap;">
+          <div style="font-size:0.9rem; font-weight:700;">${p.data_prazo ? formatarData(p.data_prazo) : '-'}</div>
+          ${p.hora ? `<div style="font-size:0.8rem; color:var(--cinza-medio); margin-top:2px;">${formatarHora24h(p.hora)}</div>` : ''}
+        </td>
+        <td style="font-size:0.9rem;">${clienteProc}</td>
+        <td style="font-size:0.9rem;">${responsaveis}</td>
+        <td style="text-align:right; width:130px;">
+          <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+            <button class="btn-sm btn-view" data-id="${p.id}" title="Editar">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+
+            <button class="btn-sm btn-arquivar" data-id="${p.id}" title="Arquivar" style="color: var(--cinza-medio);">
+              <i class="fa-solid fa-box-archive"></i>
+            </button>
+
+            ${isAdmin ? `
+              <button class="btn-sm btn-delete" data-id="${p.id}" title="Excluir" style="color:#ef4444;">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
 function renderizarTabelaArquivadas(lista) {
   const tbody = document.getElementById('lista-prazos-arquivados');
   if (!tbody) return;
