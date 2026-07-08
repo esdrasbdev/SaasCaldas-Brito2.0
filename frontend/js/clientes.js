@@ -945,7 +945,7 @@ const ClienteView = {
     ], { antes: 0, depois: 4 });
 
     const DEPOIS_PODERES_PROC = 4;
-    const DEPOIS_DATA_PROC = 8;
+    const DEPOIS_DATA_PROC = 6;
 
     const FONT_SIZE_TEXTO_PROC = 10.5;
 
@@ -973,29 +973,29 @@ const ClienteView = {
       checarPagina(24);
 
       // prompt: y += 12 -> y += 8 (redução adicional)
-      y += 5;
+      y += 4;
 
       const cx = PW / 2;
       pdf.setDrawColor(30, 30, 30);
       pdf.line(cx - 50, y, cx + 50, y);
-      y += 3;
+      y += 2;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(15, 23, 42);
       pdf.text(nome, cx, y, { align: 'center' });
-      y += 3;
+      y += 2;
 
       if (sublabel) {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         pdf.setTextColor(100, 116, 139);
         pdf.text(sublabel, cx, y, { align: 'center' });
-        y += 3;
+        y += 2;
       }
 
       // prompt: y += 8 (redução adicional)
-      y += 4;
+      y += 2;
     };
 
     addAssinaturaCentroCompacta(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);

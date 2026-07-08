@@ -491,9 +491,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('prazo-observacoes').value = data.observacoes || '';
 
       // Cliente / Processo
+      // Ordem importante: carregar options do processo (via cliente) antes de setar o value do processo
       clienteSelect.value = data.cliente_id || '';
+      if (clienteSelect.value) {
+        atualizarProcessosPorCliente();
+      } else {
+        // se não tem cliente, ainda assim garante que o select de processos está limpo
+        processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+      }
+
+      // setar somente depois do option existir
       processoSelect.value = data.processo_id || '';
-      if (clienteSelect.value) atualizarProcessosPorCliente();
 
       const responsaveisSelecionados = (data.responsaveis_prazo || []).map(r => ({
         id: r.usuario_id,
