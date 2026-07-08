@@ -1051,6 +1051,17 @@ body.dark-mode .sidebar-search input {
 body.dark-mode .form-note  { color: var(--cinza-claro); }
 body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: var(--cinza-borda); }
 
+/* Dark mode modais (arquivar/restaurar) */
+body.dark-mode .modal-content,
+body.dark-mode .modal-body,
+body.dark-mode #form-container,
+body.dark-mode #form-pericia,
+body.dark-mode #form-audiencia,
+body.dark-mode #form-container * {
+  color: #ffffff !important;
+}
+
+
 .modal-cliente .mode-view input:disabled,
 .modal-cliente .mode-view select:disabled {
   background: #f8fafc;
