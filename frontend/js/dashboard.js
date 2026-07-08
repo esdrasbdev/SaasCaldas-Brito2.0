@@ -119,7 +119,7 @@ async function carregarDashboard() {
 
           // Vai direto para o processo exibido naquela linha —
           // é sempre esse o processo "devido" que o usuário quer ver.
-          window.location.href = `processo-detalhe.html?id=${processoId}`;
+          window.location.href = `processos.html?id=${processoId}`;
         });
         tbody.dataset.listenerVerProcesso = 'true';
       }

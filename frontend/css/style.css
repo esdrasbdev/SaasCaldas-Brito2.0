@@ -4,8 +4,8 @@
  * Hierarquia clara, espaçamentos consistentes, sem exageros
  */
 
-/* Importar fonte moderna (Inter) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Fonte Inter carregada via <link rel="preload"> nos HTMLs (evita @import serial) */
+
 
 /* Login Split Panel carregado exclusivamente em frontend/login.html */
 
@@ -97,6 +97,13 @@ body.dark-mode #atend-titulo::placeholder {
   opacity: 0.7;
   color: rgba(11, 18, 32, 0.65) !important;
 }
+
+/* Dark mode — ajustar cores de KPIs para contraste */
+body.dark-mode .icon-blue { background: linear-gradient(135deg, #1e3a8a 0%, #0b1220 100%); color: #60a5fa; }
+body.dark-mode .icon-green { background: linear-gradient(135deg, #166534 0%, #0b1220 100%); color: #34d399; }
+body.dark-mode .icon-orange { background: linear-gradient(135deg, #9a3412 0%, #0b1220 100%); color: #fb923c; }
+body.dark-mode .icon-purple { background: linear-gradient(135deg, #6d28d9 0%, #0b1220 100%); color: #c084fc; }
+
 
 body.dark-mode #atend-titulo:disabled,
 body.dark-mode #atend-titulo[disabled] {
@@ -874,6 +881,16 @@ body.dark-mode .toast {
 .toast-warning i { color: #d97706; font-size: 1.4rem; animation: pulseWarning 1.5s infinite; }
 .toast-warning span { color: #92400e; font-weight: 700; }
 
+body.dark-mode .toast-warning {
+  background: #3b2f05;
+  border-color: #fbbf24;
+}
+
+body.dark-mode .toast-warning span {
+  color: #fcd34d;
+}
+
+
 .toast-info { border-left-color: var(--azul-medio); }
 .toast-info i { color: var(--cinza-medio); font-size: 1.2rem; }
 
@@ -1190,10 +1207,29 @@ body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: 
   margin-bottom: 16px;
 }
 
+/* Compatibilidade com versões antigas (quando existia filtro com id plural) */
 .filtros-section #busca-processos {
   flex: 1;
   min-width: 200px;
 }
+
+/* ========
+   PROCESSOS — barra de filtros (MVC)
+   ======== */
+.processos-filtros-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.processos-filtros-item.status,
+.processos-filtros-item.resp-filtro {
+  flex: 0 0 auto;
+}
+
+.processos-filtros-item.resp-filtro {
+  width: 100%;
+}
+
 
 /* Mobile Portrait Pequeno */
 @media (max-width: 480px) {
@@ -1206,7 +1242,22 @@ body.dark-mode .section-title { color: var(--azul-escuro); border-bottom-color: 
   .filtros-section #busca-processos {
     width: 100%;
   }
+
+  /* Processos — garante empilhamento sem overflow horizontal */
+  .processos-filtros-item {
+    width: 100%;
+    flex: 0 0 100%;
+    min-width: 0;
+  }
+
+  .processos-filtros-item.status,
+  .processos-filtros-item.resp-filtro {
+    width: 100%;
+    flex: 0 0 100%;
+    min-width: 0;
+  }
 }
+
 
 /* ===========================
    SELETOR DE RESPONSÁVEIS (multi-seleção)

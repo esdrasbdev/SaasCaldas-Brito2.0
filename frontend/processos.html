@@ -8,7 +8,12 @@
   <link rel="stylesheet" href="css/reset.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/sidebar.css">
-  <script src="js/env.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&display=swap"></noscript>
+  <script src="js/env.js" defer></script>
 
 </head>
 <body>
@@ -126,34 +131,11 @@
     </main>
   </div>
 
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/auth.js"></script>
-  <script type="module" src="js/guard.js"></script>
-  <script type="module" src="js/sidebar.js"></script>
-  <script type="module" src="js/processos.js"></script>
+  <script type="module" src="js/supabase.js" defer></script>
+  <script type="module" src="js/auth.js" defer></script>
+  <script type="module" src="js/guard.js" defer></script>
+  <script type="module" src="js/sidebar.js" defer></script>
+  <script type="module" src="js/processos.js" defer></script>
 </body>
 </html>
-        </div>
-        
-        <div class="filtros-section">
-          <select id="filtro-status">
-            <option value="">Todos Status</option>
-            <option value="ATIVO">Ativo</option>
-            <option value="ARQUIVADO">Arquivado</option>
-          </select>
-          <input type="text" id="busca-processos" placeholder="Buscar por CNJ ou cliente...">
-        </div>
-        
-        <div id="lista-processos" class="processos-grid"></div>
-      </div>
-    </main>
-  </div>
 
-  <script type="module" src="js/supabase.js"></script>
-  <script type="module" src="js/auth.js"></script>
-  <script type="module" src="js/guard.js"></script>
-  <script type="module" src="js/sidebar.js"></script>
-  <script type="module" src="js/processos.js"></script>
-
-</body>
-</html>

@@ -47,21 +47,23 @@ async function pageGuard() {
     }
   
     // 1. Verificação Rápida e Liberação (Cache Local)
-    // Se tem role no cache, libera a UI imediatamente para não ficar "em branco"
+    // Mantém segurança: só libera UI após confirmação OU em modo otimista, mas SEM buscar dados sensíveis aqui.
     const cachedRole = localStorage.getItem('userRole');
-    if (cachedRole) {
-      // showPageContent(); // Comentado para evitar flash de conteúdo se o token for inválido
-    }
+
+    // Mostra conteúdo imediatamente apenas quando há cache de role e não há necessidade de role específica.
+    // Isso reduz a sensação de "tela presa" sem expor dados reais antes da validação.
+    const shouldShowOptimistic = !!cachedRole && !requiredRole;
+    if (shouldShowOptimistic) showPageContent();
 
     // Verifica autenticação (espera o Supabase restaurar sessão via onAuthStateChange)
     let session;
     try {
       session = await requireAuth({ timeoutMs: 2500 });
-
     } catch (e) {
       // requireAuth já redireciona
       return;
     }
+
 
     // Verifica role específica
     if (requiredRole && !AuthAPI.hasPermission(requiredRole)) {

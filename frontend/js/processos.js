@@ -97,13 +97,14 @@ const ProcessoView = {
     container.innerHTML = `
       <div class="card-section">
         <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
-          <div style="flex:1; min-width:240px; position: relative;">
+          <div class="processos-filtros-item busca">
             <input id="busca-processo" placeholder="Buscar CNJ/Cliente/Vara..." style="width:100%; padding-right:12px;">
           </div>
 
-          <div style="min-width:190px;">
+          <div class="processos-filtros-item status">
             <label style="display:block; font-size:0.82rem; color: var(--cinza-medio); margin-bottom:6px;">Status</label>
             <select id="filtro-status" style="width:100%;">
+
               <option value="">Todos</option>
               <option value="ATIVO">Ativo</option>
               <option value="ARQUIVADO">Arquivado</option>
@@ -111,7 +112,7 @@ const ProcessoView = {
             </select>
           </div>
 
-          <div style="min-width:260px;">
+          <div style="min-width:260px;" class="processos-filtros-item resp-filtro">
             <label style="display:block; font-size:0.82rem; color: var(--cinza-medio); margin-bottom:6px;">Responsável (filtrar)</label>
             <div class="seletor-responsaveis">
               <input type="text" id="proc-responsaveis-filtro-busca" placeholder="Buscar responsável..." autocomplete="off" />
@@ -245,10 +246,14 @@ const ProcessoController = {
 
   async init() {
     ProcessoView.init();
-    await this.initResponsaveis();
-    this.bindEvents();
-    await this.loadAll();
 
+    // Paraleliza inicializações independentes para reduzir tempo de carregamento
+    const initResponsaveisPromise = this.initResponsaveis();
+    const loadAllPromise = this.loadAll();
+    this.bindEvents();
+    await Promise.all([initResponsaveisPromise, loadAllPromise]);
+
+    // Filtro por cliente (legado do sistema)
     const clienteIdUrl = new URLSearchParams(window.location.search).get('cliente_id');
     if (clienteIdUrl) {
       const filtrados = this.data.filter(p => String(p.cliente_id || p.clientes?.id || '') === String(clienteIdUrl));
@@ -260,7 +265,42 @@ const ProcessoController = {
         if (buscaEl) buscaEl.value = nomeCliente;
       }
     }
+
+    // Suporte ao modo "view" ao abrir diretamente um processo via dashboard
+    const processoIdUrl = new URLSearchParams(window.location.search).get('id');
+    if (processoIdUrl) {
+      const id = processoIdUrl;
+      try {
+        const processo = await ProcessoModel.buscarPorId(id);
+        ProcessoView.abrirModal(processo, true);
+
+        // Popular responsáveis (mesma lógica do clique em `.btn-view`/`.btn-edit`)
+        const responsaveis = (processo.responsaveis_processo || []).map(r => ({
+          id: r.usuario_id,
+          nome: r.usuarios?.nome || ''
+        }));
+        this.seletorResp?.setSelecionados(responsaveis);
+        this.seletorResp?.setDisabled(true);
+
+        // Desabilita submit e inputs no modo view
+        const form = document.getElementById('form-processo');
+        Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
+        form.classList.add('mode-view');
+
+        // Limpa a query string após abrir para evitar reabrir no refresh
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        history.replaceState({}, '', url.toString());
+      } catch (err) {
+        console.error(err);
+        showToast('Processo não encontrado ou indisponível.', 'error');
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        history.replaceState({}, '', url.toString());
+      }
+    }
   },
+
 
   async initResponsaveis() {
     this.seletorResp = criarSeletorResponsaveis({

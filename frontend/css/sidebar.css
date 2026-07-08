@@ -182,8 +182,9 @@ body.dark-mode .brand-logo-text small {
 .user-avatar {
   width: 40px;
   height: 40px;
-  background: var(--azul-escuro);
-  color: white;
+  background: var(--dourado-escuro);
+  color: #ffffff;
+
   border-radius: 50%;
   display: flex;
   align-items: center;
