@@ -87,7 +87,33 @@ async function carregarDashboard() {
     atualizarKPI('kpi-audiencias', resAudienciasHoje.count || 0);
     atualizarKPI('kpi-prazos', resPrazos.count || 0);
 
+    // 3. Prazos próximos (entrega HOJE) - qualquer setor
+    // Conta prazos com prazo_data = hojeStr e contabiliza na área “Prazos Próximos” (kpi-prazos).
+    // Mantém compatibilidade: se algum elemento/consulta falhar, não quebra o dashboard.
+    try {
+      const elPrazos = document.getElementById('kpi-prazos');
+      if (elPrazos) {
+        const { data: prazosHoje, error: errPrazosHoje } = await supabase
+          .from('publicacoes')
+          .select('id, prazo_data', { count: 'exact' })
+          .eq('prazo_data', hojeStr);
+
+        // Quando usamos select com count, prazosHoje pode vir null, então confiamos no count.
+        const total = errPrazosHoje ? 0 : (prazosHoje?.length ?? 0);
+        if (!errPrazosHoje && (typeof total === 'number')) {
+          elPrazos.textContent = total;
+        } else if (errPrazosHoje) {
+          console.error('Erro ao contar prazos de hoje:', errPrazosHoje);
+          elPrazos.textContent = '—';
+        }
+      }
+    } catch (e) {
+      console.error('Erro no bloco Prazos próximos:', e);
+    }
+
     // Atualiza Tabela de Recentes
+
+
     const tbody = document.getElementById('lista-recentes');
     if (resRecentes.data && resRecentes.data.length > 0) {
       tbody.innerHTML = resRecentes.data.map(p => `

@@ -1061,6 +1061,32 @@ body.dark-mode #form-container * {
   color: #ffffff !important;
 }
 
+/* Dark mode: seletor de responsáveis (tags) dentro de modais */
+body.dark-mode #form-audiencia #aud-responsaveis-tags,
+body.dark-mode #form-pericia #pericia-responsaveis-tags,
+body.dark-mode #form-container #aud-responsaveis-tags,
+body.dark-mode #form-container #pericia-responsaveis-tags {
+  color: #000000 !important;
+}
+
+body.dark-mode #form-audiencia #aud-responsaveis-tags .tag-responsavel,
+body.dark-mode #form-pericia #pericia-responsaveis-tags .tag-responsavel,
+body.dark-mode #form-container #aud-responsaveis-tags .tag-responsavel,
+body.dark-mode #form-container #pericia-responsaveis-tags .tag-responsavel {
+  color: #000000 !important;
+  background: #ffffff !important;
+  border-color: var(--cinza-borda);
+}
+
+body.dark-mode #form-audiencia #aud-responsaveis-tags .tag-responsavel .fa-times,
+body.dark-mode #form-pericia #pericia-responsaveis-tags .tag-responsavel .fa-times,
+body.dark-mode #form-container #aud-responsaveis-tags .tag-responsavel .fa-times,
+body.dark-mode #form-container #pericia-responsaveis-tags .tag-responsavel .fa-times {
+  color: #000000 !important;
+}
+
+
+
 
 .modal-cliente .mode-view input:disabled,
 .modal-cliente .mode-view select:disabled {
