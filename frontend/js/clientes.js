@@ -998,7 +998,7 @@ const ClienteView = {
     };
 
     addAssinaturaCentroCompacta(s(d.nomeCompleto), `CPF: ${s(d.cpf)}`);
-    addRodapeEscritorio();
+    // Não chamar addRodapeEscritorio() aqui: o timbrado (aplicarTimbrado) já desenha o rodapé do escritório.
   }
 
   else if (chave === 'contrato-honorarios') {

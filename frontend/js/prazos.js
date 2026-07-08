@@ -561,7 +561,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
-        const resp = await fetch(`/api/prazos/${id}/cumprir`, {
+        const apiUrl = `${getApiUrl()}/prazos/${id}/cumprir`;
+        const resp = await fetch(apiUrl, {
           method: 'PATCH',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
@@ -579,7 +580,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnArquivar) {
       if (!confirm('Arquivar este prazo?')) return;
       try {
-        const resp = await fetch(`/api/prazos/${id}/arquivar`, { method: 'PATCH' });
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const apiUrl = `${getApiUrl()}/prazos/${id}/arquivar`;
+        const resp = await fetch(apiUrl, {
+          method: 'PATCH',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+
         if (!resp.ok) throw new Error('Falha ao arquivar.');
         showToast('Prazo arquivado!', 'success');
         await carregarPrazosPorStatus();
@@ -598,7 +607,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!id) return;
 
     try {
-      const resp = await fetch(`/api/prazos/${id}/restaurar`, { method: 'PATCH' });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const apiUrl = `${getApiUrl()}/prazos/${id}/restaurar`;
+      const resp = await fetch(apiUrl, {
+        method: 'PATCH',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+
       if (!resp.ok) throw new Error('Falha ao restaurar.');
       showToast('Prazo restaurado!', 'success');
       await carregarPrazosPorStatus();
