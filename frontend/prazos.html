@@ -138,6 +138,32 @@
         </div>
       </div>
 
+      <!-- Seção: Prazos Cumpridos -->
+      <div class="card-section" style="margin-top: 16px;">
+        <button type="button" id="toggle-cumpridos" class="card-section-toggle">
+          <h2 style="margin:0;"><i class="fa-solid fa-check-double"></i> Prazos Cumpridos</h2>
+          <i class="fa-solid fa-chevron-down" id="icone-toggle-cumpridos"></i>
+        </button>
+
+        <div id="bloco-cumpridos" class="table-responsive" style="display:none; margin-top: 12px;">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>Prazo</th>
+                <th style="width: 160px;">Data</th>
+                <th style="width: 220px;">Cliente/Processo</th>
+                <th style="width: 230px;">Responsáveis</th>
+                <th style="width: 90px; text-align: right;">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody id="lista-prazos-cumpridos">
+              <tr><td colspan="5" class="text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Seção: Prazos Arquivados -->
       <div class="card-section" style="margin-top: 16px;">
         <button type="button" id="toggle-arquivadas" class="card-section-toggle">

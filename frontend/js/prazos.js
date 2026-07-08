@@ -534,7 +534,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnCumprir) {
       try {
-        const resp = await fetch(`/api/prazos/${id}/cumprir`, { method: 'PATCH' });
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const resp = await fetch(`/api/prazos/${id}/cumprir`, {
+          method: 'PATCH',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+
         if (!resp.ok) throw new Error('Falha ao marcar como cumprido.');
         showToast('Prazo marcado como cumprido!', 'success');
         await carregarPrazosPorStatus();
