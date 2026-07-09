@@ -6,10 +6,69 @@
  * - Suporta arquivar/restaurar, editar e excluir
  */
 
-import { supabase, initSupabase } from './supabase.js';
+import { supabase, initSupabase, getApiUrl } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast, formatarData, formatarHora24h } from './utils.js';
 import { criarSeletorResponsaveis } from './responsaveis-select.js';
+
+const getApiUrlSafe = () => {
+  try {
+    return typeof getApiUrl === 'function'
+      ? getApiUrl()
+      : `${window.location.origin}/api`;
+  } catch {
+    return `${window.location.origin}/api`;
+  }
+};
+
+const openConfirmModalPrazo = (() => {
+  const modalOverlayEl = document.getElementById('form-container');
+  const modalFormEl = document.getElementById('form-prazo');
+  const modalHeaderTitleEl = modalFormEl?.querySelector('.modal-header h2');
+  const modalBodyEl = modalFormEl?.querySelector('.modal-body');
+  const modalFooterEl = modalFormEl?.querySelector('.modal-footer');
+  const modalCancelBtn = modalFooterEl?.querySelector('#btn-cancelar');
+  const modalSubmitBtn = modalFooterEl?.querySelector('button[type="submit"]');
+
+  let _originalBodyHTML = null;
+
+  return ({ title, message, confirmText, onConfirm }) => {
+    if (!modalOverlayEl || !modalFormEl || !modalBodyEl || !modalHeaderTitleEl) return;
+
+    if (_originalBodyHTML === null) _originalBodyHTML = modalBodyEl.innerHTML;
+
+    // Esconde campos do formulário (mantém layout/modal)
+    modalBodyEl.querySelectorAll('input, select, textarea').forEach(el => {
+      el.style.display = 'none';
+    });
+
+    modalHeaderTitleEl.textContent = title;
+    modalBodyEl.textContent = message;
+
+    modalOverlayEl.style.display = 'flex';
+
+    if (modalCancelBtn) {
+      modalCancelBtn.textContent = 'Cancelar';
+      modalCancelBtn.onclick = () => {
+        modalOverlayEl.style.display = 'none';
+        if (_originalBodyHTML !== null) modalBodyEl.innerHTML = _originalBodyHTML;
+      };
+    }
+
+    if (modalSubmitBtn) {
+      modalSubmitBtn.textContent = confirmText || 'Confirmar';
+      modalSubmitBtn.onclick = async (ev) => {
+        ev?.preventDefault?.();
+        try {
+          await onConfirm();
+        } finally {
+          modalOverlayEl.style.display = 'none';
+          if (_originalBodyHTML !== null) modalBodyEl.innerHTML = _originalBodyHTML;
+        }
+      };
+    }
+  };
+})();
 
 const formContainer = document.getElementById('form-container');
 const btnNovaPrazo = document.getElementById('btn-novo-prazo');
@@ -603,16 +662,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnDelete) {
       const id = btnDelete.dataset.id;
-      if (!confirm('Excluir este prazo?')) return;
 
-      try {
-        await PrazoModel.deletar(id);
-        showToast('Prazo excluído!', 'success');
-        await carregarPrazosPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao excluir prazo.', 'error');
-      }
+      openConfirmModalPrazo({
+        title: 'Excluir Prazo',
+        message: 'Excluir este prazo? Esta ação não poderá ser desfeita.',
+        confirmText: 'Excluir',
+        onConfirm: async () => {
+          await PrazoModel.deletar(id);
+          showToast('Prazo excluído!', 'success');
+          await carregarPrazosPorStatus();
+        }
+      });
       return;
     }
 
@@ -620,46 +680,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!id) return;
 
     if (btnCumprir) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+      openConfirmModalPrazo({
+        title: 'Cumprir Prazo',
+        message: 'Marcar este prazo como cumprido?',
+        confirmText: 'Marcar como cumprido',
+        onConfirm: async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-        const apiUrl = `${getApiUrl()}/prazos/${id}/cumprir`;
-        const resp = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+            const apiUrl = `${getApiUrlSafe()}/prazos/${id}/cumprir`;
+            const resp = await fetch(apiUrl, {
+              method: 'PATCH',
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
 
-        if (!resp.ok) throw new Error('Falha ao marcar como cumprido.');
-        showToast('Prazo marcado como cumprido!', 'success');
-        await carregarPrazosPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao marcar como cumprido.', 'error');
-      }
+            if (!resp.ok) throw new Error('Falha ao marcar como cumprido.');
+            showToast('Prazo marcado como cumprido!', 'success');
+            await carregarPrazosPorStatus();
+          } catch (err) {
+            console.error(err);
+            showToast('Erro ao marcar como cumprido.', 'error');
+            throw err;
+          }
+        }
+      });
       return;
     }
 
     if (btnArquivar) {
-      if (!confirm('Arquivar este prazo?')) return;
+      openConfirmModalPrazo({
+        title: 'Arquivar Prazo',
+        message: 'Arquivar este prazo (mover para a lista de arquivados)?',
+        confirmText: 'Arquivar',
+        onConfirm: async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+            const apiUrl = `${getApiUrlSafe()}/prazos/${id}/arquivar`;
+            const resp = await fetch(apiUrl, {
+              method: 'PATCH',
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
 
-        const apiUrl = `${getApiUrl()}/prazos/${id}/arquivar`;
-        const resp = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-
-        if (!resp.ok) throw new Error('Falha ao arquivar.');
-        showToast('Prazo arquivado!', 'success');
-        await carregarPrazosPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao arquivar prazo.', 'error');
-      }
+            if (!resp.ok) throw new Error('Falha ao arquivar.');
+            showToast('Prazo arquivado!', 'success');
+            await carregarPrazosPorStatus();
+          } catch (err) {
+            console.error(err);
+            showToast('Erro ao arquivar prazo.', 'error');
+            throw err;
+          }
+        }
+      });
+      return;
     }
   });
 
@@ -725,44 +800,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (btnDelete) {
       const id = btnDelete.dataset.id;
-      if (!confirm('Excluir este prazo?')) return;
-      try {
-        await PrazoModel.deletar(id);
-        showToast('Prazo excluído!', 'success');
-        await carregarPrazosPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao excluir prazo.', 'error');
-      }
+
+      openConfirmModalPrazo({
+        title: 'Excluir Prazo',
+        message: 'Excluir este prazo?',
+        confirmText: 'Excluir',
+        onConfirm: async () => {
+          await PrazoModel.deletar(id);
+          showToast('Prazo excluído!', 'success');
+          await carregarPrazosPorStatus();
+        }
+      });
       return;
     }
 
     if (btnArquivar) {
       const id = btnArquivar.dataset.id;
       if (!id) return;
-      if (!confirm('Arquivar este prazo?')) return;
 
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+      openConfirmModalPrazo({
+        title: 'Arquivar Prazo',
+        message: 'Arquivar este prazo?',
+        confirmText: 'Arquivar',
+        onConfirm: async () => {
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-        const apiUrl = `${getApiUrl()}/prazos/${id}/arquivar`;
-        const resp = await fetch(apiUrl, {
-          method: 'PATCH',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
+            const apiUrl = `${getApiUrlSafe()}/prazos/${id}/arquivar`;
+            const resp = await fetch(apiUrl, {
+              method: 'PATCH',
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
 
-        if (!resp.ok) throw new Error('Falha ao arquivar.');
-        showToast('Prazo arquivado!', 'success');
-        await carregarPrazosPorStatus();
-      } catch (err) {
-        console.error(err);
-        showToast('Erro ao arquivar prazo.', 'error');
-      }
+            if (!resp.ok) throw new Error('Falha ao arquivar.');
+            showToast('Prazo arquivado!', 'success');
+            await carregarPrazosPorStatus();
+          } catch (err) {
+            console.error(err);
+            showToast('Erro ao arquivar prazo.', 'error');
+            throw err;
+          }
+        }
+      });
+      return;
     }
   });
 
   document.getElementById('lista-prazos-arquivados')?.addEventListener('click', async (e) => {
+    const btnRestaurar = e.target.closest('.btn-restaurar');
     if (!btnRestaurar) return;
 
     const id = btnRestaurar.dataset.id;
@@ -772,7 +858,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      const apiUrl = `${getApiUrl()}/prazos/${id}/restaurar`;
+      const apiUrl = `${getApiUrlSafe()}/prazos/${id}/restaurar`;
       const resp = await fetch(apiUrl, {
         method: 'PATCH',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
