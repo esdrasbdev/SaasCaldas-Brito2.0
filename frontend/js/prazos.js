@@ -81,6 +81,7 @@ const listaPrazos = document.getElementById('lista-prazos');
 
 let seletorResp = null;
 let processosCache = [];
+let isPopulandoModal = false;
 
 // Helper para obter valor de input, tratando string vazia como null
 const getVal = (id) => {
@@ -134,6 +135,32 @@ async function carregarProcessos() {
 
     processoSelect.appendChild(option);
   });
+}
+
+function obterClienteIdPorProcessoId(processoId) {
+  if (!processoId) return null;
+  const proc = (processosCache || []).find(p => String(p.id) === String(processoId));
+  return proc?.cliente_id ?? null;
+}
+
+function sincronizarClienteComProcesso() {
+  const processoId = processoSelect?.value || '';
+  if (!processoId) return;
+
+  const clienteId = obterClienteIdPorProcessoId(processoId);
+
+  // Se o cliente já estiver correto, não mexe (evita loop de update)
+  if ((clienteSelect?.value || '') === String(clienteId || '')) return;
+
+  const atualProcessoId = processoSelect.value;
+
+  clienteSelect.value = clienteId || '';
+  atualizarProcessosPorCliente();
+
+  // Reaplica o processo após recarregar as opções filtradas
+  if (processoSelect && atualProcessoId) {
+    processoSelect.value = atualProcessoId;
+  }
 }
 
 // Filtra opções do processo com base no cliente selecionado
@@ -562,6 +589,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     atualizarProcessosPorCliente();
   });
 
+  // Ao selecionar processo, já seleciona automaticamente o cliente que contém o processo
+  processoSelect?.addEventListener('change', () => {
+    if (isPopulandoModal) return;
+    sincronizarClienteComProcesso();
+  });
+
   seletorResp = criarSeletorResponsaveis({
     inputEl: document.getElementById('prazo-responsaveis-busca'),
     dropdownEl: document.getElementById('prazo-responsaveis-dropdown'),
@@ -607,6 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnArquivar = e.target.closest('.btn-arquivar');
 
     if (btnView) {
+      isPopulandoModal = true;
       const id = btnView.dataset.id;
       const { data, error } = await supabase
         .from('prazos')
@@ -638,15 +672,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('prazo-observacoes').value = data.observacoes || '';
 
       // Cliente / Processo
-      clienteSelect.value = data.cliente_id || '';
+      const processoId = data.processo_id || '';
+      const clienteId = data.cliente_id || '';
+
+      clienteSelect.value = clienteId;
+
       if (clienteSelect.value) {
         atualizarProcessosPorCliente();
       } else {
-        processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+        // se vier só o processo (cliente vazio), infere o cliente a partir do processo
+        const inferredClienteId = obterClienteIdPorProcessoId(processoId);
+        if (inferredClienteId) {
+          clienteSelect.value = inferredClienteId;
+          atualizarProcessosPorCliente();
+        } else {
+          processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+        }
       }
 
       // setar somente depois do option existir
-      processoSelect.value = data.processo_id || '';
+      processoSelect.value = processoId;
 
       const responsaveisSelecionados = (data.responsaveis_prazo || []).map(r => ({
         id: r.usuario_id,
@@ -657,6 +702,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       formContainer.style.display = 'flex';
       document.querySelector('.modal-header h2').textContent = 'Editar Prazo';
+      isPopulandoModal = false;
       return;
     }
 
@@ -777,14 +823,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('prazo-observacoes').value = data.observacoes || '';
 
       // Cliente / Processo
-      clienteSelect.value = data.cliente_id || '';
+      const processoId = data.processo_id || '';
+      const clienteId = data.cliente_id || '';
+
+      clienteSelect.value = clienteId;
+
       if (clienteSelect.value) {
         atualizarProcessosPorCliente();
       } else {
-        processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+        // se vier só o processo (cliente vazio), infere o cliente a partir do processo
+        const inferredClienteId = obterClienteIdPorProcessoId(processoId);
+        if (inferredClienteId) {
+          clienteSelect.value = inferredClienteId;
+          atualizarProcessosPorCliente();
+        } else {
+          processoSelect.innerHTML = '<option value="">(Opcional) Selecione...</option>';
+        }
       }
 
-      processoSelect.value = data.processo_id || '';
+      processoSelect.value = processoId;
 
       const responsaveisSelecionados = (data.responsaveis_prazo || []).map(r => ({
         id: r.usuario_id,
@@ -795,6 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       formContainer.style.display = 'flex';
       document.querySelector('.modal-header h2').textContent = 'Editar Prazo';
+      isPopulandoModal = false;
       return;
     }
 
