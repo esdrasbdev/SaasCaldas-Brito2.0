@@ -84,6 +84,20 @@
                   <div id="proc-responsaveis-dropdown" style="display:none; position:relative; z-index:20; background:#fff; border:1px solid #e2e8f0; border-radius:8px; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
                   <div id="proc-responsaveis-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
                 </div>
+
+                <div class="form-group" id="bloco-fase-processo" style="display:none;">
+                  <label>Fase Atual (histórico completo abaixo)</label>
+                  <select id="fase-processo-select">
+                    <!-- opções injetadas via JS a partir de FASES_CATALOGO -->
+                  </select>
+                  <label style="margin-top:10px;">Observações desta fase</label>
+                  <textarea id="fase-processo-observacoes" rows="3" placeholder="Detalhes, andamentos, próximos passos..."></textarea>
+                  <button type="button" id="btn-registrar-fase" class="btn-secondary" style="margin-top:8px;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Registrar Fase
+                  </button>
+
+                  <div id="lista-historico-fases" style="margin-top:14px;"></div>
+                </div>
               </div>
 
               <!-- View Mode -->
@@ -118,6 +132,9 @@
                 <div id="view-audiencias">Carregando...</div>
                 <h3>Perícias</h3>
                 <div id="view-pericias">Carregando...</div>
+
+                <h3>Fase do Processo</h3>
+                <div id="view-fases">Carregando...</div>
               </div>
             </div>
             <div class="modal-footer">

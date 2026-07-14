@@ -7,6 +7,7 @@ import { supabase, initSupabase } from './supabase.js';
 import { AuthAPI } from './auth.js';
 import { showToast } from './utils.js';
 import { criarSeletorResponsaveis } from './responsaveis-select.js';
+import { FaseProcessoModel, FASES_CATALOGO, rotuloFase } from './fases-processo.js';
 
 // ==========================================
 // MODEL
@@ -130,6 +131,7 @@ const ProcessoView = {
                 <th>Processo/Cliente</th>
                 <th>Tribunal/Vara</th>
                 <th>Status</th>
+                <th>Fase Atual</th>
                 <th>Criação</th>
                 <th>Responsáveis</th>
                 <th>Ações</th>
@@ -142,10 +144,10 @@ const ProcessoView = {
     `;
   },
 
-  renderizarTabela(processos, isAdmin) {
+  renderizarTabela(processos, isAdmin, mapaFases = {}) {
     const tbody = document.getElementById('lista-processos-body');
     if (!processos?.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center p-5"><i class="fa-solid fa-folder-open fa-2x mb-2"></i><br>Nenhum processo.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center p-5"><i class="fa-solid fa-folder-open fa-2x mb-2"></i><br>Nenhum processo.</td></tr>';
       return;
     }
 
@@ -176,6 +178,9 @@ const ProcessoView = {
           </td>
           <td>
             <span class="status-badge ${sit.badgeClass}">${sit.label}</span>
+          </td>
+          <td>
+            <span class="status-badge status-fase">${mapaFases[p.id] ? rotuloFase(mapaFases[p.id].fase) : 'Não informada'}</span>
           </td>
           <td>${p.criado_em ? new Date(p.criado_em).toLocaleDateString('pt-BR') : '-'}</td>
           <td style="max-width:220px;">${resp}</td>
@@ -243,6 +248,7 @@ const ProcessoView = {
 const ProcessoController = {
   seletorResp: null,
   data: [],
+  mapaFases: {},
 
   async init() {
     ProcessoView.init();
@@ -258,7 +264,7 @@ const ProcessoController = {
     if (clienteIdUrl) {
       const filtrados = this.data.filter(p => String(p.cliente_id || p.clientes?.id || '') === String(clienteIdUrl));
       const isAdmin = AuthAPI.getRole() === 'ADMIN';
-      ProcessoView.renderizarTabela(filtrados, isAdmin);
+      ProcessoView.renderizarTabela(filtrados, isAdmin, this.mapaFases || {});
       const nomeCliente = filtrados[0]?.clientes?.nome;
       if (nomeCliente) {
         const buscaEl = document.getElementById('busca-processo');
@@ -282,10 +288,36 @@ const ProcessoController = {
         this.seletorResp?.setSelecionados(responsaveis);
         this.seletorResp?.setDisabled(true);
 
+        // Fase do processo (modo view: somente exibição)
+        const blocoFase = document.getElementById('bloco-fase-processo');
+        const viewFases = document.getElementById('view-fases');
+        const listaHistorico = document.getElementById('lista-historico-fases');
+        const btnRegistrarFase = document.getElementById('btn-registrar-fase');
+        if (blocoFase) blocoFase.style.display = 'block';
+
+        const historico = await FaseProcessoModel.listarHistorico(id);
+        const historicoHtml = historico.length
+          ? historico.map(h => `
+              <div class="historico-fase-item">
+                <strong>${rotuloFase(h.fase)}</strong>
+                <span class="historico-fase-data">${new Date(h.criado_em).toLocaleString('pt-BR')}</span>
+                ${h.observacoes ? `<p>${h.observacoes}</p>` : ''}
+              </div>
+            `).join('')
+          : '<p class="text-muted">Nenhuma fase registrada ainda.</p>';
+
+        if (listaHistorico) listaHistorico.innerHTML = historicoHtml;
+        if (viewFases) viewFases.innerHTML = historicoHtml;
+
+        const faseAtual = await FaseProcessoModel.buscarAtualPorProcesso(id);
+        const select = document.getElementById('fase-processo-select');
+        if (select && faseAtual?.fase) select.value = faseAtual.fase;
+
         // Desabilita submit e inputs no modo view
         const form = document.getElementById('form-processo');
         Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
         form.classList.add('mode-view');
+        if (btnRegistrarFase) btnRegistrarFase.style.display = 'none';
 
         // Limpa a query string após abrir para evitar reabrir no refresh
         const url = new URL(window.location.href);
@@ -396,10 +428,103 @@ const ProcessoController = {
       this.seletorResp?.setSelecionados(responsaveis);
       this.seletorResp?.setDisabled(isView);
 
+      // Fase do processo (bloco só aparece para processos existentes)
+      const blocoFase = document.getElementById('bloco-fase-processo');
+      const viewFases = document.getElementById('view-fases');
+      const listaHistorico = document.getElementById('lista-historico-fases');
+      const btnRegistrarFase = document.getElementById('btn-registrar-fase');
+
+      if (blocoFase) blocoFase.style.display = 'block';
+
+      const historico = await FaseProcessoModel.listarHistorico(id);
+      const historicoHtml = historico.length
+        ? historico.map(h => `
+            <div class="historico-fase-item">
+              <strong>${rotuloFase(h.fase)}</strong>
+              <span class="historico-fase-data">${new Date(h.criado_em).toLocaleString('pt-BR')}</span>
+              ${h.usuarios?.nome ? `<span class="historico-fase-autor"> — ${h.usuarios.nome}</span>` : ''}
+              ${h.observacoes ? `<p>${h.observacoes}</p>` : ''}
+            </div>
+          `).join('')
+        : '<p class="text-muted">Nenhuma fase registrada ainda.</p>';
+
+      if (listaHistorico) listaHistorico.innerHTML = historicoHtml;
+      if (viewFases) viewFases.innerHTML = historicoHtml;
+
+      // Seleciona fase atual
+      if (blocoFase && viewFases) {
+        const faseAtual = await FaseProcessoModel.buscarAtualPorProcesso(id);
+        const select = document.getElementById('fase-processo-select');
+        if (select) {
+          if (faseAtual?.fase) select.value = faseAtual.fase;
+        }
+      }
+
       // modo view desabilita submit via view; também desabilita inputs.
       if (isView) {
         const form = document.getElementById('form-processo');
         Array.from(form.querySelectorAll('input, select, textarea')).forEach(el => (el.disabled = true));
+        if (btnRegistrarFase) btnRegistrarFase.style.display = 'none';
+      }
+    };
+
+    document.getElementById('btn-registrar-fase').onclick = async () => {
+      const processoId = document.getElementById('proc-id')?.value;
+      if (!processoId) {
+        showToast('Salve o processo antes de registrar uma fase.', 'error');
+        return;
+      }
+
+      const fase = document.getElementById('fase-processo-select')?.value;
+      const observacoes = document.getElementById('fase-processo-observacoes')?.value.trim() || '';
+
+      let usuarioId = null;
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const email = userData?.user?.email;
+        if (email) {
+          const { data: u } = await supabase.from('usuarios').select('id').eq('email', email).single();
+          usuarioId = u?.id || null;
+        }
+      } catch (e) {
+        usuarioId = null;
+      }
+
+      try {
+        await FaseProcessoModel.registrar({
+          processoId,
+          fase,
+          observacoes,
+          usuarioId
+        });
+
+        showToast('Fase registrada!', 'success');
+        const obsEl = document.getElementById('fase-processo-observacoes');
+        if (obsEl) obsEl.value = '';
+
+        const historico = await FaseProcessoModel.listarHistorico(processoId);
+        const listaHistorico = document.getElementById('lista-historico-fases');
+        const viewFases = document.getElementById('view-fases');
+
+        const historicoHtml = historico.length
+          ? historico.map(h => `
+              <div class="historico-fase-item">
+                <strong>${rotuloFase(h.fase)}</strong>
+                <span class="historico-fase-data">${new Date(h.criado_em).toLocaleString('pt-BR')}</span>
+                ${h.observacoes ? `<p>${h.observacoes}</p>` : ''}
+              </div>
+            `).join('')
+          : '<p class="text-muted">Nenhuma fase registrada ainda.</p>';
+
+        if (listaHistorico) listaHistorico.innerHTML = historicoHtml;
+        if (viewFases) viewFases.innerHTML = historicoHtml;
+
+        // atualiza a tabela sem reabrir o modal
+        this.mapaFases = await FaseProcessoModel.mapaFaseAtualPorProcessos(this.data.map(p => p.id));
+        ProcessoView.renderizarTabela(this.data, AuthAPI.getRole() === 'ADMIN', this.mapaFases);
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao registrar fase: ' + (err?.message || err), 'error');
       }
     };
 
@@ -454,9 +579,18 @@ const ProcessoController = {
 
   async loadAll() {
     this.data = await ProcessoModel.listarTodos();
+    const ids = (this.data || []).map(p => p.id);
+    this.mapaFases = await FaseProcessoModel.mapaFaseAtualPorProcessos(ids);
+
     const isAdmin = AuthAPI.getRole() === 'ADMIN';
-    ProcessoView.renderizarTabela(this.data, isAdmin);
+    ProcessoView.renderizarTabela(this.data, isAdmin, this.mapaFases);
     await this.loadClientes();
+
+    // Popular seletor do modal (1x)
+    const selectEl = document.getElementById('fase-processo-select');
+    if (selectEl) {
+      selectEl.innerHTML = FASES_CATALOGO.map(f => `<option value="${f.valor}">${f.rotulo}</option>`).join('');
+    }
   },
 
   filter() {
@@ -484,7 +618,7 @@ const ProcessoController = {
       return matchTerm && matchStatus;
     });
 
-    ProcessoView.renderizarTabela(filtered, AuthAPI.getRole() === 'ADMIN');
+    ProcessoView.renderizarTabela(filtered, AuthAPI.getRole() === 'ADMIN', this.mapaFases || {});
   },
 
   async loadClientes() {

@@ -504,9 +504,21 @@ textarea:focus {
 
 
 .status-ativo    { background: #d1fae5; color: var(--status-ativo); }
+.status-fase { background:#e0e7ff; color:#4338ca; }
+
 .prazo-verde     { background: #d1fae5; color: var(--status-prazo-verde); }
 .prazo-amarelo   { background: #fef3c7; color: var(--status-prazo-amarelo); }
 .prazo-vermelho  { background: #fecaca; color: var(--status-prazo-vermelho); }
+
+.historico-fase-item {
+  border-left: 3px solid #4338ca;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: #f8fafc;
+  border-radius: 0 6px 6px 0;
+}
+.historico-fase-data { font-size: 0.78rem; color: var(--cinza-medio); margin-left: 8px; }
+.historico-fase-autor { font-size: 0.78rem; color: var(--cinza-medio); }
 
 .badge-tipo-judicial {
   background: #fef3c7;
